@@ -80,7 +80,16 @@ The server handles user management, onboarding conversations, article storage, a
 
 ## Recent Changes
 
-### Prompt 3 - Rebrand (Current)
+### Prompt 4 - Indonesian-First Search (Current)
+- Implemented Indonesian-First Search Strategy with 60% minimum local source requirement
+- Prioritized sources: Kontan, Bisnis Indonesia, Kompas, Tempo, Detik, CNBC Indonesia
+- Added sourceType and isPaywalled fields to articles with normalization layer for backward compatibility
+- BriefCard shows Indonesian flag 🇮🇩 for local sources and paywall badge for paid content
+- Added /api/test/council endpoint for development testing
+- Added error state UI to Dashboard with Indonesian messaging
+- All council prompts now in Bahasa Indonesia
+
+### Prompt 3 - Rebrand
 - Rebranded from CurateAI to Kurasi.ai
 - Updated all logos, meta tags, and branding across the app
 - Created reusable Logo component
