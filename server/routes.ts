@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { randomUUID } from "crypto";
 import { storage } from "./storage";
+import bcrypt from "bcrypt";
 import { 
   insertUserSchema, 
   insertUserTopicSchema, 
@@ -33,9 +35,10 @@ import {
   sendDailyBriefEmail,
 } from "./services/emailDeliveryService";
 import { handleDemoChat } from "./services/demoChatService";
+import { handleOnboardingChat, extractProfileFromConversation } from "./services/onboardingChatService";
 import { z } from "zod";
 import { db } from "./db";
-import { userProfiles, dailyBriefs, briefFeedback } from "@shared/schema";
+import { userProfiles, dailyBriefs, briefFeedback, users, sessions } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
 export async function registerRoutes(
@@ -84,6 +87,131 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
+    }
+  });
+
+  // New Onboarding Chat (for landing page - no user ID required)
+  app.post("/api/onboarding/chat", async (req, res) => {
+    try {
+      const { message, history = [] } = req.body;
+      if (!message) {
+        return res.status(400).json({ error: "Message is required" });
+      }
+      const result = await handleOnboardingChat(message, history);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Onboarding chat error:", error);
+      res.status(500).json({
+        response: "Maaf, ada gangguan teknis. Coba lagi ya.",
+        onboardingComplete: false,
+      });
+    }
+  });
+
+  // Authentication Routes
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { email, password, name, profile } = req.body;
+
+      if (!email || !password || !name) {
+        return res.status(400).json({ error: "Email, password, dan nama harus diisi." });
+      }
+
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ error: "Email sudah terdaftar." });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          email,
+          passwordHash,
+          fullName: name,
+          role: profile?.role || null,
+          organization: profile?.organization || null,
+          onboardingCompleted: !!profile,
+        })
+        .returning();
+
+      if (profile && profile.councilSystemPrompt) {
+        await db.insert(userProfiles).values({
+          userId: newUser.id,
+          personaSummary: `${profile.role || ""} di ${profile.organization || ""}`.trim() || null,
+          roleDescription: profile.role || null,
+          organizationContext: profile.organization || null,
+          primaryTopics: profile.primaryTopics || [],
+          preferredSources: profile.readingSources || [],
+          entitiesToTrack: profile.specificEntities || [],
+          decisionContext: profile.currentDecisions || null,
+          councilSystemPrompt: profile.councilSystemPrompt,
+          languagePreference: "id",
+        });
+      }
+
+      const sessionToken = randomUUID();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30);
+
+      await db.insert(sessions).values({
+        userId: newUser.id,
+        token: sessionToken,
+        expiresAt,
+      });
+
+      res.json({
+        success: true,
+        userId: newUser.id,
+        token: sessionToken,
+      });
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email dan password harus diisi." });
+      }
+
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email));
+
+      if (!user || !user.passwordHash) {
+        return res.status(401).json({ error: "Email atau password salah." });
+      }
+
+      const validPassword = await bcrypt.compare(password, user.passwordHash);
+      if (!validPassword) {
+        return res.status(401).json({ error: "Email atau password salah." });
+      }
+
+      const sessionToken = randomUUID();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30);
+
+      await db.insert(sessions).values({
+        userId: user.id,
+        token: sessionToken,
+        expiresAt,
+      });
+
+      res.json({
+        success: true,
+        userId: user.id,
+        token: sessionToken,
+      });
+    } catch (error: any) {
+      console.error("Login error:", error);
+      res.status(500).json({ error: error.message });
     }
   });
 

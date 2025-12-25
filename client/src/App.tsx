@@ -11,11 +11,15 @@ import Dashboard from "@/pages/Dashboard";
 import Archive from "@/pages/Archive";
 import Saved from "@/pages/Saved";
 import Pricing from "@/pages/Pricing";
+import Register from "@/pages/Register";
+import Login from "@/pages/Login";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+      <Route path="/register" component={Register} />
+      <Route path="/login" component={Login} />
       <Route path="/onboarding" component={OnboardingChat} />
       <Route path="/onboarding-legacy" component={Onboarding} />
       <Route path="/dashboard" component={Dashboard} />

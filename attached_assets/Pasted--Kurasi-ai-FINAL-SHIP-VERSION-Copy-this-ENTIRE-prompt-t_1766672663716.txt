@@ -1,0 +1,747 @@
+# Kurasi.ai - FINAL SHIP VERSION 🚀
+
+## Copy this ENTIRE prompt to Replit. Let's GO!
+
+---
+
+## DESIGN: Perplexity-Style, Clean & Professional
+
+Complete redesign of the homepage:
+- Sidebar on left (like Perplexity)
+- Clean centered chat
+- Kurasi asks FIRST
+- Users talk about themselves
+- Generate hyper-personal system prompt
+
+---
+
+## Part A: Complete Homepage Redesign
+
+```tsx
+// pages/index.tsx - REPLACE ENTIRE FILE
+
+import { useState, useRef, useEffect } from 'react';
+import { Send, Sparkles, BookOpen, Settings, User, LogIn } from 'lucide-react';
+
+interface Message {
+  role: 'assistant' | 'user';
+  content: string;
+}
+
+// Kurasi's opening - warm, inviting, makes them want to share
+const OPENING_MESSAGE = `Halo! Saya **Kurasi**.
+
+Saya akan menyiapkan brief harian yang benar-benar personal untuk Anda - bukan berita generik, tapi informasi yang spesifik untuk kebutuhan dan keputusan Anda.
+
+Tapi pertama, saya perlu mengenal Anda sedikit.
+
+**Ceritakan tentang diri Anda** - apa peran Anda saat ini, dan apa yang sedang menjadi fokus utama Anda?`;
+
+export default function Home() {
+  const [messages, setMessages] = useState<Message[]>([
+    { role: 'assistant', content: OPENING_MESSAGE }
+  ]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const sendMessage = async () => {
+    if (!input.trim() || isLoading) return;
+    
+    const userMessage = input.trim();
+    setInput('');
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setIsLoading(true);
+
+    try {
+      const res = await fetch('/api/onboarding/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          message: userMessage,
+          history: messages 
+        })
+      });
+
+      const data = await res.json();
+      
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: data.response 
+      }]);
+
+      // If onboarding complete, redirect to register
+      if (data.onboardingComplete && data.profileData) {
+        // Store profile in sessionStorage for registration
+        sessionStorage.setItem('kurasiProfile', JSON.stringify(data.profileData));
+        setTimeout(() => {
+          window.location.href = '/register';
+        }, 2000);
+      }
+    } catch (err) {
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: 'Maaf, ada gangguan. Coba lagi ya.' 
+      }]);
+    }
+    
+    setIsLoading(false);
+  };
+
+  return (
+    <div className="min-h-screen bg-white flex">
+      
+      {/* SIDEBAR */}
+      <aside className="hidden lg:flex w-60 bg-slate-50 border-r border-slate-200 flex-col">
+        <div className="p-5 flex-1">
+          {/* Logo */}
+          <div className="flex items-center gap-3 mb-10">
+            <div className="w-9 h-9 bg-slate-900 rounded-xl flex items-center justify-center">
+              <span className="text-white font-bold">K</span>
+            </div>
+            <span className="text-xl font-semibold text-slate-900">Kurasi</span>
+          </div>
+
+          {/* Nav */}
+          <nav className="space-y-1">
+            <a href="/" className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-200/70 text-slate-900 font-medium text-sm">
+              <Sparkles className="w-4 h-4" />
+              Mulai
+            </a>
+            <a href="/dashboard" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 hover:bg-slate-100 text-sm">
+              <BookOpen className="w-4 h-4" />
+              Brief Saya
+            </a>
+            <a href="/settings" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 hover:bg-slate-100 text-sm">
+              <Settings className="w-4 h-4" />
+              Pengaturan
+            </a>
+          </nav>
+        </div>
+
+        {/* Login */}
+        <div className="p-5 border-t border-slate-200">
+          <a href="/login" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 hover:bg-slate-100 text-sm">
+            <LogIn className="w-4 h-4" />
+            Masuk
+          </a>
+        </div>
+      </aside>
+
+      {/* MAIN */}
+      <main className="flex-1 flex flex-col">
+        
+        {/* Mobile Header */}
+        <header className="lg:hidden flex items-center justify-between p-4 border-b">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">K</span>
+            </div>
+            <span className="font-semibold">Kurasi</span>
+          </div>
+          <a href="/login" className="text-sm text-slate-500">Masuk</a>
+        </header>
+
+        {/* Chat */}
+        <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-8 flex flex-col">
+          
+          {/* Messages */}
+          <div className="flex-1 space-y-6">
+            {messages.map((msg, idx) => (
+              <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                {msg.role === 'assistant' ? (
+                  <div className="max-w-[90%]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-7 h-7 bg-slate-900 rounded-lg flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">K</span>
+                      </div>
+                      <span className="text-sm font-medium text-slate-700">Kurasi</span>
+                    </div>
+                    <div className="text-slate-700 leading-relaxed pl-9">
+                      {msg.content.split('**').map((part, i) => 
+                        i % 2 === 1 ? <strong key={i} className="font-semibold text-slate-900">{part}</strong> : part
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="max-w-[85%] bg-slate-900 text-white px-4 py-3 rounded-2xl rounded-br-sm">
+                    {msg.content}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {isLoading && (
+              <div className="flex items-center gap-2 pl-9">
+                <div className="flex gap-1">
+                  <div className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" />
+                  <div className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{animationDelay: '0.1s'}} />
+                  <div className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{animationDelay: '0.2s'}} />
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input */}
+          <div className="mt-6">
+            <div className="relative">
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+                placeholder="Ceritakan..."
+                rows={1}
+                className="w-full px-4 py-3 pr-12 bg-slate-100 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white text-slate-900 placeholder-slate-400"
+              />
+              <button
+                onClick={sendMessage}
+                disabled={!input.trim() || isLoading}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-slate-900 text-white rounded-lg disabled:bg-slate-300 disabled:cursor-not-allowed"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-center text-xs text-slate-400 mt-3">
+              6 AI bekerja untuk Anda. Setiap pagi.
+            </p>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+```
+
+---
+
+## Part B: Smart Onboarding Backend (Makes Users TALK)
+
+```typescript
+// server/routes/onboarding.ts
+
+import { Router } from 'express';
+import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
+
+const router = Router();
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const deepseek = new OpenAI({
+  apiKey: process.env.DEEPSEEK_API_KEY,
+  baseURL: 'https://api.deepseek.com/v1'
+});
+
+// THE KEY: Questions that make people WANT to share
+const ONBOARDING_PROMPT = `Anda adalah Kurasi, asisten yang membangun profil pengguna untuk brief berita personal.
+
+TUJUAN: Buat pengguna NYAMAN BERCERITA tentang diri mereka. Semakin banyak mereka cerita, semakin bagus brief-nya.
+
+GAYA BICARA:
+- Hangat seperti teman yang curious
+- Gunakan "Anda" bukan "kamu"
+- React terhadap jawaban mereka (tunjukkan Anda mendengar!)
+- Satu pertanyaan per giliran
+- Follow-up yang natural dari jawaban mereka
+
+ALUR PERTANYAAN (fleksibel, ikuti flow percakapan):
+
+1. SUDAH DITANYAKAN: "Ceritakan tentang diri Anda - peran dan fokus utama"
+   → Dengarkan, react, lalu tanyakan lebih dalam
+
+2. KEBIASAAN BACA:
+   "Oh menarik! Ngomong-ngomong, **sumber berita atau website apa yang biasa Anda baca** setiap hari? Yang Anda percaya untuk dapat informasi?"
+   
+3. TOPIK SPESIFIK:
+   "Dari yang Anda sebutkan, **topik atau isu spesifik apa** yang kalau ada update, Anda harus tahu segera? Yang bisa mempengaruhi keputusan Anda?"
+
+4. ORANG/PERUSAHAAN YANG DIIKUTI:
+   "Ada **nama-nama spesifik** yang perlu saya pantau? Bisa tokoh, perusahaan, kompetitor, atau regulator tertentu..."
+
+5. KEPUTUSAN SAAT INI (PALING PENTING!):
+   "Ini penting nih - **keputusan atau project apa** yang sedang Anda kerjakan saat ini? Supaya saya bisa prioritaskan berita yang relevan untuk itu."
+
+6. CLOSING:
+   Setelah dapat cukup info (minimal jawab 4 pertanyaan), rangkum dan tutup:
+   
+   "Oke, saya sudah cukup mengenal Anda!
+   
+   [Rangkum 3-4 poin kunci tentang mereka]
+   
+   Brief pertama Anda akan saya siapkan. Saya akan fokuskan pada [topik mereka] dari [sumber mereka].
+   
+   Silakan buat akun untuk menerima brief-nya.
+   
+   [ONBOARDING_COMPLETE]"
+
+TIPS BUAT MEREKA BICARA:
+- Kalau jawaban singkat, tanya "Bisa ceritakan lebih detail?"
+- Kalau mereka mention sesuatu menarik, follow up!
+- Validasi jawaban mereka: "Wah, itu area yang dinamis ya..."
+- Jangan interogasi - ini ngobrol santai tapi bermakna
+
+JANGAN:
+- Jangan tanya lebih dari 6 pertanyaan
+- Jangan skip langkah
+- Jangan terdengar seperti robot/form
+- Jangan tutup sebelum dapat info tentang: role, sumber bacaan, topik spesifik, dan keputusan saat ini
+
+CONTOH REACT YANG BAIK:
+User: "Saya di fintech, ngurusin compliance"
+Kurasi: "Oh compliance di fintech - pasti regulasi OJK dan BI jadi makanan sehari-hari ya! Nah, **sumber berita apa** yang biasa Anda andalkan untuk update regulasi?"`;
+
+router.post('/api/onboarding/chat', async (req, res) => {
+  try {
+    const { message, history = [] } = req.body;
+
+    // Use Claude for better conversation
+    let response: string;
+    
+    if (process.env.ANTHROPIC_API_KEY) {
+      const result = await anthropic.messages.create({
+        model: 'claude-opus-4-5-20251101',
+        max_tokens: 800,
+        system: ONBOARDING_PROMPT,
+        messages: history
+          .filter((m: any) => m.role !== 'system')
+          .concat([{ role: 'user', content: message }])
+          .map((m: any) => ({ role: m.role, content: m.content }))
+      });
+      response = result.content[0].type === 'text' ? result.content[0].text : '';
+    } else {
+      // Fallback to DeepSeek
+      const result = await deepseek.chat.completions.create({
+        model: 'deepseek-v3',
+        messages: [
+          { role: 'system', content: ONBOARDING_PROMPT },
+          ...history.map((m: any) => ({ role: m.role, content: m.content })),
+          { role: 'user', content: message }
+        ],
+        temperature: 0.7,
+        max_tokens: 800
+      });
+      response = result.choices[0].message.content || '';
+    }
+
+    const isComplete = response.includes('[ONBOARDING_COMPLETE]');
+    const cleanResponse = response.replace('[ONBOARDING_COMPLETE]', '').trim();
+
+    if (isComplete) {
+      // Generate the personalized profile
+      const fullHistory = [
+        ...history,
+        { role: 'user', content: message },
+        { role: 'assistant', content: cleanResponse }
+      ];
+      
+      const profileData = await generateProfile(fullHistory);
+      
+      res.json({
+        response: cleanResponse,
+        onboardingComplete: true,
+        profileData
+      });
+    } else {
+      res.json({
+        response: cleanResponse,
+        onboardingComplete: false
+      });
+    }
+
+  } catch (error: any) {
+    console.error('Onboarding error:', error);
+    res.status(500).json({ 
+      response: 'Maaf, ada gangguan teknis. Coba lagi ya.',
+      onboardingComplete: false 
+    });
+  }
+});
+
+// Generate hyper-personal profile from conversation
+async function generateProfile(history: any[]) {
+  const conversation = history
+    .map(m => `${m.role === 'user' ? 'USER' : 'KURASI'}: ${m.content}`)
+    .join('\n\n');
+
+  const extractPrompt = `Dari percakapan ini, ekstrak profil pengguna untuk brief berita personal.
+
+PERCAKAPAN:
+${conversation}
+
+---
+
+Buat JSON dengan format ini. ISI SEDETAIL MUNGKIN dari percakapan:
+
+{
+  "name": "nama jika disebutkan, atau null",
+  "role": "jabatan/peran lengkap",
+  "organization": "perusahaan/organisasi jika disebutkan",
+  "industry": "industri/sektor",
+  
+  "readingSources": ["sumber berita yang mereka baca/percaya"],
+  "primaryTopics": ["topik utama yang HARUS dipantau"],
+  "specificEntities": ["nama orang/perusahaan/regulasi spesifik"],
+  "currentDecisions": "keputusan/project yang sedang dikerjakan",
+  
+  "councilSystemPrompt": "Tulis system prompt 400-600 kata yang SANGAT SPESIFIK untuk 6 AI Council. 
+
+Harus mencakup:
+1. Siapa pengguna ini (role, context)
+2. Sumber yang mereka percaya (PRIORITASKAN ini dalam pencarian)
+3. Topik spesifik yang harus dicari
+4. Entity/nama yang harus di-track
+5. Keputusan apa yang sedang mereka hadapi (ini menentukan apa yang RELEVAN)
+6. Definisi berita yang 'actionable' untuk orang INI
+
+Tulis seolah memberi brief ke tim research: 'Cari berita untuk [orang ini] yang sedang [melakukan X]. Fokuskan pada [topik]. Pantau [entity]. Prioritaskan sumber [X, Y, Z]. Berita relevan adalah yang membantu mereka [keputusan].'"
+}
+
+Respond dengan valid JSON saja.`;
+
+  const result = await deepseek.chat.completions.create({
+    model: 'deepseek-v3',
+    messages: [
+      { role: 'system', content: 'Extract user profile. Respond with valid JSON only, no markdown.' },
+      { role: 'user', content: extractPrompt }
+    ],
+    temperature: 0.3
+  });
+
+  const content = result.choices[0].message.content || '{}';
+  return JSON.parse(content.replace(/```json\n?|\n?```/g, '').trim());
+}
+
+export default router;
+```
+
+---
+
+## Part C: Registration Page (Saves Profile)
+
+```tsx
+// pages/register.tsx
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+
+export default function Register() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    // Get profile from sessionStorage
+    const saved = sessionStorage.getItem('kurasiProfile');
+    if (saved) {
+      const p = JSON.parse(saved);
+      setProfile(p);
+      if (p.name) setName(p.name);
+    }
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name, profile })
+      });
+
+      const data = await res.json();
+      
+      if (data.success) {
+        sessionStorage.removeItem('kurasiProfile');
+        router.push('/dashboard');
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    
+    setLoading(false);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <span className="text-white font-bold text-xl">K</span>
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900">Buat Akun</h1>
+          <p className="text-slate-500 mt-2">Untuk menerima brief personal Anda</p>
+        </div>
+
+        {profile && (
+          <div className="bg-white rounded-xl p-4 mb-6 border border-slate-200">
+            <p className="text-sm text-slate-500 mb-2">Brief Anda akan fokus pada:</p>
+            <div className="flex flex-wrap gap-2">
+              {profile.primaryTopics?.slice(0, 4).map((t: string, i: number) => (
+                <span key={i} className="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded">
+                  {t}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Nama</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                required
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full mt-6 bg-slate-900 text-white py-3 rounded-lg font-medium hover:bg-slate-800 disabled:bg-slate-300"
+          >
+            {loading ? 'Membuat akun...' : 'Buat Akun'}
+          </button>
+        </form>
+
+        <p className="text-center text-sm text-slate-500 mt-4">
+          Sudah punya akun? <a href="/login" className="text-slate-900 font-medium">Masuk</a>
+        </p>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## Part D: Auth Route (Save Profile to DB)
+
+```typescript
+// server/routes/auth.ts
+
+router.post('/api/auth/register', async (req, res) => {
+  try {
+    const { email, password, name, profile } = req.body;
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Create user
+    const userResult = await db.query(`
+      INSERT INTO users (email, password_hash, full_name)
+      VALUES ($1, $2, $3)
+      RETURNING id
+    `, [email, passwordHash, name]);
+
+    const userId = userResult.rows[0].id;
+
+    // Save profile if exists
+    if (profile) {
+      await db.query(`
+        INSERT INTO user_profiles (
+          user_id,
+          role,
+          organization,
+          industry,
+          reading_sources,
+          primary_topics,
+          specific_entities,
+          current_decisions,
+          council_system_prompt,
+          created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+      `, [
+        userId,
+        profile.role,
+        profile.organization,
+        profile.industry,
+        JSON.stringify(profile.readingSources || []),
+        JSON.stringify(profile.primaryTopics || []),
+        JSON.stringify(profile.specificEntities || []),
+        profile.currentDecisions,
+        profile.councilSystemPrompt
+      ]);
+    }
+
+    // Create session
+    const sessionToken = crypto.randomUUID();
+    await db.query(`
+      INSERT INTO sessions (user_id, token, expires_at)
+      VALUES ($1, $2, NOW() + INTERVAL '30 days')
+    `, [userId, sessionToken]);
+
+    res.json({ 
+      success: true,
+      token: sessionToken
+    });
+
+  } catch (error: any) {
+    console.error('Registration error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+```
+
+---
+
+## Part E: Database Schema
+
+```sql
+-- Run this in your database
+
+CREATE TABLE IF NOT EXISTS user_profiles (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id),
+  role TEXT,
+  organization TEXT,
+  industry TEXT,
+  reading_sources JSONB DEFAULT '[]',
+  primary_topics JSONB DEFAULT '[]',
+  specific_entities JSONB DEFAULT '[]',
+  current_decisions TEXT,
+  council_system_prompt TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_user_profiles_user_id ON user_profiles(user_id);
+```
+
+---
+
+## THE CONVERSATION FLOW:
+
+```
+KURASI: "Halo! Ceritakan tentang diri Anda - peran dan fokus utama?"
+
+USER: "Saya head of investment di family office, fokus ke public equity Indonesia"
+
+KURASI: "Oh menarik, public equity Indonesia! Sumber berita apa yang 
+         biasa Anda baca untuk riset saham?"
+
+USER: "Biasanya Stockbit, Kontan, kadang Bloomberg kalau ada yang 
+       regional. Suka baca riset dari Mandiri Sekuritas juga"
+
+KURASI: "Noted! Stockbit, Kontan, Bloomberg, riset Mandiri. Nah, dari 
+         semua sektor, ada yang lagi Anda fokuskan atau pantau ketat?"
+
+USER: "Lagi deep dive ke banking sama coal. BCA, BMRI, BBNI. Terus 
+       ADRO, ITMG untuk coal"
+
+KURASI: "Banking dan coal - klasik tapi selalu menarik. Keputusan apa 
+         yang sedang Anda kerjakan? Mau tambah posisi atau...?"
+
+USER: "Lagi mikir mau average down BMRI atau tunggu. Sama coal lagi 
+       evaluasi apakah harus reduce karena sentimen ESG"
+
+KURASI: "Oke, saya sudah cukup mengenal Anda!
+
+         • Head of Investment di family office, fokus public equity ID
+         • Baca: Stockbit, Kontan, Bloomberg, riset Mandiri Sekuritas
+         • Fokus: Banking (BCA, BMRI, BBNI) dan Coal (ADRO, ITMG)
+         • Sedang decide: average down BMRI & evaluasi coal exposure
+         
+         Brief pertama akan saya siapkan. Fokus pada banking & coal 
+         news dari sumber yang Anda percaya.
+         
+         [ONBOARDING_COMPLETE]"
+```
+
+---
+
+## GENERATED SYSTEM PROMPT (Example):
+
+```
+Cari berita untuk Head of Investment di family office yang fokus pada 
+public equity Indonesia.
+
+KONTEKS KEPUTUSAN:
+- Sedang mempertimbangkan average down BMRI
+- Mengevaluasi posisi coal (ADRO, ITMG) terkait sentimen ESG
+Setiap berita harus dievaluasi: apakah ini mempengaruhi keputusan di atas?
+
+SUMBER PRIORITAS (WAJIB DICEK):
+- Stockbit discussions & analysis
+- Kontan.co.id
+- Bloomberg (regional news)
+- Riset Mandiri Sekuritas, jika tersedia publik
+
+SAHAM YANG DIPANTAU:
+- Banking: BCA (BBCA), BMRI, BBNI
+- Coal: ADRO, ITMG
+
+TOPIK PRIORITAS TINGGI (🔴):
+- Earnings/hasil keuangan BMRI, BCA, BBNI
+- Kebijakan BI yang mempengaruhi NIM bank
+- Harga batubara (Newcastle benchmark)
+- Regulasi ESG atau carbon tax yang mempengaruhi coal
+- Foreign flow di banking & coal stocks
+
+TOPIK SEKUNDER (🟡):
+- NPL trends perbankan
+- Kebijakan ekspor batubara
+- DMO (Domestic Market Obligation) coal
+- MSCI rebalancing yang affect ID stocks
+
+DEFINISI "RELEVAN":
+Berita yang akan membuat pengguna:
+- Mengubah target price BMRI
+- Decide untuk buy/hold/sell coal positions
+- Alert ke investment committee
+
+FORMAT: Bahasa Indonesia, ringkas, langsung ke implikasi untuk saham.
+```
+
+---
+
+## COPY TO REPLIT NOW! 🚀
+
+This creates:
+1. ✅ Perplexity-style clean design
+2. ✅ Kurasi asks FIRST
+3. ✅ Open questions that make users TALK
+4. ✅ Asks about their reading sources
+5. ✅ Generates hyper-personal system prompt
+6. ✅ Saves to database on registration
+
+LET'S SHIP! 🇮🇩🔥

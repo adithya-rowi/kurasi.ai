@@ -7,13 +7,23 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: text("email").notNull().unique(),
+  passwordHash: text("password_hash"),
   fullName: text("full_name").notNull(),
-  role: text("role").notNull(),
-  organization: text("organization").notNull(),
-  languagePreference: text("language_preference").notNull().default("en"),
+  role: text("role"),
+  organization: text("organization"),
+  languagePreference: text("language_preference").notNull().default("id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   onboardingCompleted: boolean("onboarding_completed").default(false).notNull(),
   subscriptionStatus: text("subscription_status").default("free").notNull(),
+});
+
+// Sessions table for auth
+export const sessions = pgTable("sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Chat integration tables
@@ -227,7 +237,6 @@ export const insertUserProfileSchema = createInsertSchema(userProfiles).omit({
 
 export const insertSubscriptionPlanSchema = createInsertSchema(subscriptionPlans).omit({
   id: true,
-  createdAt: true,
 });
 
 export const insertUserSubscriptionSchema = createInsertSchema(userSubscriptions).omit({

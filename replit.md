@@ -63,8 +63,9 @@ The server handles user management, onboarding conversations, article storage, a
   - `articles`, `userTopics`, `userPreferences`, `savedArticles`: Content and preference management
 
 ### Session Management
-- Client-side session using localStorage (`kurasi_user_id`)
-- No authentication system implemented yet (designed for but not built)
+- Client-side session using localStorage (`kurasi_user_id`, `kurasi_session_token`)
+- Full authentication system with bcrypt password hashing
+- Sessions table for token-based authentication
 
 ## External Dependencies
 
@@ -88,7 +89,20 @@ The server handles user management, onboarding conversations, article storage, a
 
 ## Recent Changes
 
-### Prompt 6 - 6 AI Council Implementation (Current)
+### Prompt 7 - Perplexity-Style Redesign (Current)
+- Complete Landing page redesign with Perplexity-style sidebar navigation
+- Kurasi speaks first - opens conversation to draw users in
+- Clean white/slate aesthetic (moved from dark navy/gold)
+- New onboardingChatService.ts with improved prompts that make users share more
+- Profile extraction generates hyper-personalized councilSystemPrompt
+- New Register page that saves profile from onboarding chat
+- New Login page with email/password authentication
+- Added /api/onboarding/chat endpoint (no user ID required for anonymous onboarding)
+- Added /api/auth/register and /api/auth/login endpoints with bcrypt password hashing
+- Added sessions table and passwordHash field to users table
+- Session tokens stored client-side for future authenticated API calls
+
+### Prompt 6 - 6 AI Council Implementation
 - Complete rewrite of llmCouncil.ts to support 6 AI providers running in parallel
 - Claude (Anthropic) serves as HAKIM AKHIR (Final Judge) - always included
 - GPT-4o (OpenAI) - requires OPENAI_API_KEY
