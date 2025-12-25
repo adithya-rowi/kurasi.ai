@@ -37,12 +37,20 @@ The frontend follows a page-based architecture with shared components. Key pages
 
 The server handles user management, onboarding conversations, article storage, and LLM Council orchestration for news curation.
 
-### AI Integration (LLM Council)
-- **Provider**: Anthropic Claude via SDK
+### AI Integration (6-Model LLM Council)
+- **Architecture**: 6 AI models run in parallel, Claude serves as Final Judge
+- **Providers**:
+  - Claude (Anthropic) - HAKIM AKHIR, always required
+  - GPT-4o (OpenAI) - optional
+  - DeepSeek - optional
+  - Perplexity - optional, real-time web search
+  - Gemini (Google) - optional
+  - Grok (xAI) - optional, X/Twitter insights
 - **Demo Chat**: Claude Haiku for fast, cost-effective demo responses on landing page
 - **Onboarding Flow**: Conversational AI that conducts 5-7 message exchanges to understand user needs
-- **Brief Generation**: Multiple LLM "council members" search and curate news in parallel
+- **Brief Generation**: All configured models search in parallel, Claude judges and curates final brief
 - **Streaming**: Server-Sent Events (SSE) for real-time message streaming during onboarding
+- **Fallback**: System works with just Anthropic configured, shows active models in UI
 
 ### Database Design
 - **ORM**: Drizzle ORM with PostgreSQL dialect
@@ -80,7 +88,21 @@ The server handles user management, onboarding conversations, article storage, a
 
 ## Recent Changes
 
-### Prompt 5 - Trust & Transparency (Current)
+### Prompt 6 - 6 AI Council Implementation (Current)
+- Complete rewrite of llmCouncil.ts to support 6 AI providers running in parallel
+- Claude (Anthropic) serves as HAKIM AKHIR (Final Judge) - always included
+- GPT-4o (OpenAI) - requires OPENAI_API_KEY
+- DeepSeek - requires DEEPSEEK_API_KEY
+- Perplexity (real-time web search) - requires PERPLEXITY_API_KEY
+- Gemini (Google) - requires GOOGLE_AI_API_KEY
+- Grok (xAI/Twitter) - requires XAI_API_KEY
+- Graceful fallback when API keys not configured - system works with just Anthropic
+- CouncilFooter now dynamically shows which models were used with icons/badges
+- Added modelsUsed field to DailyBriefContent interface
+- Updated /api/test/council endpoint to show all 6 AI status
+- All models run in parallel for maximum speed
+
+### Prompt 5 - Trust & Transparency
 - Enhanced BriefCard with trust badges (Sangat Terpercaya/Terpercaya/Perlu Verifikasi)
 - Added verification score progress bar and regional source flags (🇮🇩/🌏/🌍)
 - Added "Transparansi & Verifikasi" section showing source URL, AI perspectives, verification score
