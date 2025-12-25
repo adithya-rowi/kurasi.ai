@@ -22,6 +22,7 @@ function Router() {
       <Route path="/register" component={Register} />
       <Route path="/login" component={Login} />
       <Route path="/how-it-works" component={HowItWorks} />
+      <Route path="/cara-kerja" component={HowItWorks} />
       <Route path="/onboarding" component={OnboardingChat} />
       <Route path="/onboarding-legacy" component={Onboarding} />
       <Route path="/dashboard" component={Dashboard} />
