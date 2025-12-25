@@ -6,8 +6,8 @@ import { eq, desc } from "drizzle-orm";
 
 const AI_COUNCIL = {
   anthropic: {
-    name: "Claude",
-    model: "claude-sonnet-4-5",
+    name: "Claude Opus 4.5",
+    model: "claude-opus-4-5-20251101",
     provider: "Anthropic",
     icon: "🟤",
     color: "#d4a574",
@@ -15,15 +15,15 @@ const AI_COUNCIL = {
     bestFor: "HAKIM AKHIR - Final judgment",
   },
   openai: {
-    name: "GPT-4o",
-    model: "gpt-4o",
+    name: "GPT-5.2",
+    model: "gpt-5.2",
     provider: "OpenAI",
     icon: "🟢",
     color: "#10a37f",
     bestFor: "General reasoning",
   },
   deepseek: {
-    name: "DeepSeek",
+    name: "DeepSeek V3",
     model: "deepseek-chat",
     provider: "DeepSeek",
     icon: "🟣",
@@ -32,7 +32,7 @@ const AI_COUNCIL = {
   },
   perplexity: {
     name: "Perplexity",
-    model: "sonar-pro",
+    model: "sonar",
     provider: "Perplexity",
     icon: "🔴",
     color: "#1fb8cd",
@@ -40,16 +40,16 @@ const AI_COUNCIL = {
     bestFor: "REAL-TIME web search",
   },
   gemini: {
-    name: "Gemini",
-    model: "gemini-1.5-pro",
+    name: "Gemini 3 Pro",
+    model: "gemini-3-flash-preview",
     provider: "Google",
     icon: "🔵",
     color: "#4285f4",
     bestFor: "Long context & Google data",
   },
   grok: {
-    name: "Grok",
-    model: "grok-beta",
+    name: "Grok 4",
+    model: "grok-4",
     provider: "xAI",
     icon: "🟠",
     color: "#f97316",
@@ -267,9 +267,9 @@ Respond ONLY with valid JSON.`;
 
 async function searchWithAnthropic(prompt: string): Promise<SearchResult> {
   try {
-    console.log("🟤 Claude searching...");
+    console.log("🟤 Claude Opus 4.5 searching...");
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-5",
+      model: "claude-opus-4-5-20251101",
       max_tokens: 2048,
       messages: [{ role: "user", content: prompt }],
     });
@@ -287,29 +287,29 @@ async function searchWithAnthropic(prompt: string): Promise<SearchResult> {
 
 async function searchWithOpenAI(prompt: string): Promise<SearchResult> {
   if (!openai) {
-    return { model: "GPT-4o", provider: "OpenAI", articles: [], error: "Not configured" };
+    return { model: "GPT-5.2", provider: "OpenAI", articles: [], error: "Not configured" };
   }
 
   try {
-    console.log("🟢 GPT-4o searching...");
+    console.log("🟢 GPT-5.2 searching...");
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-5.2",
       messages: [
         { role: "system", content: "You are a news research assistant for Indonesian executives. Respond with valid JSON only." },
         { role: "user", content: prompt },
       ],
       temperature: 0.3,
-      max_tokens: 2048,
+      max_completion_tokens: 2048,
     });
 
     const content = response.choices[0].message.content || "{}";
     const parsed = JSON.parse(content.replace(/```json\n?|\n?```/g, "").trim());
     const articles = normalizeArticles(parsed.articles || []);
 
-    return { model: "GPT-4o", provider: "OpenAI", articles, searchQueries: parsed.searchQueries };
+    return { model: "GPT-5.2", provider: "OpenAI", articles, searchQueries: parsed.searchQueries };
   } catch (error: any) {
-    console.error("❌ GPT-4o error:", error.message);
-    return { model: "GPT-4o", provider: "OpenAI", articles: [], error: error.message };
+    console.error("❌ GPT-5.2 error:", error.message);
+    return { model: "GPT-5.2", provider: "OpenAI", articles: [], error: error.message };
   }
 }
 
@@ -349,7 +349,7 @@ async function searchWithPerplexity(prompt: string): Promise<SearchResult> {
   try {
     console.log("🔴 Perplexity searching LIVE web...");
     const response = await perplexity.chat.completions.create({
-      model: "sonar-pro",
+      model: "sonar",
       messages: [
         { role: "system", content: "You search the LIVE web for latest Indonesian business news. Include source URLs. Respond with valid JSON." },
         { role: "user", content: prompt },
@@ -375,13 +375,13 @@ async function searchWithPerplexity(prompt: string): Promise<SearchResult> {
 
 async function searchWithGemini(prompt: string): Promise<SearchResult> {
   if (!geminiApiKey) {
-    return { model: "Gemini", provider: "Google", articles: [], error: "Not configured" };
+    return { model: "Gemini 3 Pro", provider: "Google", articles: [], error: "Not configured" };
   }
 
   try {
-    console.log("🔵 Gemini searching...");
+    console.log("🔵 Gemini 3 Pro searching...");
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${geminiApiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${geminiApiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -397,22 +397,22 @@ async function searchWithGemini(prompt: string): Promise<SearchResult> {
     const parsed = JSON.parse(content.replace(/```json\n?|\n?```/g, "").trim());
     const articles = normalizeArticles(parsed.articles || []);
 
-    return { model: "Gemini", provider: "Google", articles, searchQueries: parsed.searchQueries };
+    return { model: "Gemini 3 Pro", provider: "Google", articles, searchQueries: parsed.searchQueries };
   } catch (error: any) {
-    console.error("❌ Gemini error:", error.message);
-    return { model: "Gemini", provider: "Google", articles: [], error: error.message };
+    console.error("❌ Gemini 3 Pro error:", error.message);
+    return { model: "Gemini 3 Pro", provider: "Google", articles: [], error: error.message };
   }
 }
 
 async function searchWithGrok(prompt: string): Promise<SearchResult> {
   if (!grok) {
-    return { model: "Grok", provider: "xAI", articles: [], error: "Not configured" };
+    return { model: "Grok 4", provider: "xAI", articles: [], error: "Not configured" };
   }
 
   try {
-    console.log("🟠 Grok searching (X/Twitter)...");
+    console.log("🟠 Grok 4 searching (X/Twitter)...");
     const response = await grok.chat.completions.create({
-      model: "grok-beta",
+      model: "grok-4",
       messages: [
         {
           role: "system",
@@ -428,10 +428,10 @@ async function searchWithGrok(prompt: string): Promise<SearchResult> {
     const parsed = JSON.parse(content.replace(/```json\n?|\n?```/g, "").trim());
     const articles = normalizeArticles(parsed.articles || []);
 
-    return { model: "Grok", provider: "xAI", articles, searchQueries: parsed.searchQueries };
+    return { model: "Grok 4", provider: "xAI", articles, searchQueries: parsed.searchQueries };
   } catch (error: any) {
-    console.error("❌ Grok error:", error.message);
-    return { model: "Grok", provider: "xAI", articles: [], error: error.message };
+    console.error("❌ Grok 4 error:", error.message);
+    return { model: "Grok 4", provider: "xAI", articles: [], error: error.message };
   }
 }
 
@@ -510,7 +510,7 @@ OUTPUT JSON (Bahasa Indonesia):
     "url": "URL lengkap",
     "isPaywalled": boolean,
     "whyItMatters": "PERSONAL untuk user ini",
-    "foundByPerspectives": ["Claude", "GPT-4o"],
+    "foundByPerspectives": ["Claude Opus 4.5", "GPT-5.2"],
     "verificationScore": 9,
     "publishedDate": "YYYY-MM-DD",
     "isRealTime": boolean
@@ -525,7 +525,7 @@ Respond ONLY with valid JSON.`;
 
   try {
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-5",
+      model: "claude-opus-4-5-20251101",
       max_tokens: 4096,
       messages: [{ role: "user", content: judgePrompt }],
     });
@@ -574,8 +574,8 @@ export async function runCouncilForUser(userId: string): Promise<{
   const configuredCount = Object.values(apis).filter(Boolean).length;
   console.log(`\n✅ ${configuredCount}/6 AI models configured`);
   console.log("📊 Active models:");
-  if (apis.anthropic) console.log("   🟤 Claude (Anthropic) - HAKIM AKHIR");
-  if (apis.openai) console.log("   🟢 GPT-4o (OpenAI)");
+  if (apis.anthropic) console.log("   🟤 Claude Opus 4.5 (Anthropic) - HAKIM AKHIR");
+  if (apis.openai) console.log("   🟢 GPT-5.2 (OpenAI)");
   if (apis.deepseek) console.log("   🟣 DeepSeek");
   if (apis.perplexity) console.log("   🔴 Perplexity - REAL-TIME WEB");
   if (apis.gemini) console.log("   🔵 Gemini (Google)");
