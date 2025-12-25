@@ -1,0 +1,783 @@
+# CurateAI - Phase 2: LLM Council with Personalized System Prompts
+
+## 🎯 Copy this prompt into Replit AFTER Phase 1 is complete
+
+-----
+
+## Overview
+
+Now that each user has a unique `council_system_prompt` generated from their onboarding conversation, we implement the LLM Council that uses this personalized prompt to search and curate news.
+
+**Key insight**: Every user’s council runs with DIFFERENT instructions based on who they are.
+
+-----
+
+## The Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              LLM COUNCIL WITH PERSONALIZED PROMPTS              │
+└─────────────────────────────────────────────────────────────────┘
+
+From Phase 1, we have:
+┌─────────────────────────────────────────────────────────────────┐
+│ PAK HALIM'S UNIQUE SYSTEM PROMPT:                               │
+│                                                                  │
+│ "You are researching news for Halim Alamsyah, former Deputy    │
+│  Governor of Bank Indonesia. He currently advises multiple      │
+│  fintech platforms, particularly in P2P lending. His primary    │
+│  focus areas are:                                               │
+│  1. OJK regulations for P2P lending (CRITICAL - immediate)      │
+│  2. Bank Indonesia monetary policy decisions                    │
+│  3. CBDC development in Indonesia (digital rupiah)              │
+│  4. Regional comparisons: Singapore MAS, Thailand BOT           │
+│                                                                  │
+│  He trusts: Kontan, Bloomberg, Reuters                          │
+│  He avoids: Sensational online portals                          │
+│                                                                  │
+│  A good article for him: Actionable intelligence about          │
+│  regulatory changes that affect his advisory clients.           │
+│  Success = He can call someone with important news by 7 AM."    │
+└─────────────────────────────────────────────────────────────────┘
+
+THIS PROMPT IS DIFFERENT FOR EVERY USER!
+
+              │
+              ▼
+    ┌─────────────────────────────────────────┐
+    │         5 LLMs SEARCH IN PARALLEL       │
+    │     (All using Pak Halim's prompt)      │
+    └─────────────────────────────────────────┘
+              │
+              ▼
+    ┌─────────────────────────────────────────┐
+    │      CLAUDE JUDGE VALIDATES             │
+    │    (Also using Pak Halim's prompt)      │
+    │                                         │
+    │  "Does this match what Pak Halim        │
+    │   said he needs? Would this help        │
+    │   him make a decision?"                 │
+    └─────────────────────────────────────────┘
+              │
+              ▼
+    ┌─────────────────────────────────────────┐
+    │      PERSONALIZED DAILY BRIEF           │
+    └─────────────────────────────────────────┘
+```
+
+-----
+
+## Implementation
+
+### 1. Update LLM Council Service
+
+Update file: `server/services/llmCouncil.ts`
+
+```typescript
+import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { db } from '../db';
+
+// Initialize clients
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const gemini = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
+
+const deepseek = new OpenAI({
+  apiKey: process.env.DEEPSEEK_API_KEY,
+  baseURL: 'https://api.deepseek.com/v1'
+});
+
+const grok = new OpenAI({
+  apiKey: process.env.XAI_API_KEY,
+  baseURL: 'https://api.x.ai/v1'
+});
+
+// Types
+interface UserProfile {
+  id: string;
+  user_id: string;
+  persona_summary: string;
+  role_description: string;
+  organization_context: string;
+  primary_topics: { topic: string; priority: number; reason: string }[];
+  secondary_topics: { topic: string; priority: number; reason: string }[];
+  keywords_to_track: string[];
+  entities_to_track: string[];
+  preferred_sources: { source: string; reason: string }[];
+  avoid_topics: string[];
+  language_preference: 'id' | 'en';
+  success_definition: string;
+  decision_context: string;
+  council_system_prompt: string; // THE KEY FIELD
+}
+
+interface FoundArticle {
+  title: string;
+  summary: string;
+  source: string;
+  url: string;
+  relevanceReason: string;
+  publishedDate: string;
+  confidence: number;
+}
+
+interface LLMResponse {
+  model: string;
+  articles: FoundArticle[];
+  searchQueries: string[];
+  error?: string;
+}
+
+// Get user profile from database
+async function getUserProfile(userId: string): Promise<UserProfile | null> {
+  const result = await db.query(
+    'SELECT * FROM user_profiles WHERE user_id = $1',
+    [userId]
+  );
+  
+  if (result.rows.length === 0) {
+    return null;
+  }
+  
+  return result.rows[0];
+}
+
+// Create the search prompt using user's unique system prompt
+function createSearchPrompt(profile: UserProfile, modelName: string): string {
+  const today = new Date().toISOString().split('T')[0];
+  const language = profile.language_preference === 'id' ? 'Indonesian' : 'English';
+  
+  return `${profile.council_system_prompt}
+
+---
+
+TODAY'S DATE: ${today}
+YOU ARE: ${modelName} - part of a council of 5 AI models searching for news
+
+YOUR SPECIFIC TASK:
+Search for the 5 MOST RELEVANT news items from the past 24-48 hours for this user.
+
+Use your unique strengths:
+${modelName === 'GPT-4' ? '- You have strong general knowledge and reasoning' : ''}
+${modelName === 'Gemini' ? '- You have access to Google search data' : ''}
+${modelName === 'DeepSeek' ? '- You specialize in Asian markets and emerging economies' : ''}
+${modelName === 'Grok' ? '- You have real-time access to X/Twitter trends and discussions' : ''}
+${modelName === 'Claude' ? '- You excel at nuanced analysis and verification' : ''}
+
+For each article found, provide:
+1. Title (in original language)
+2. Summary (2-3 sentences in ${language})
+3. Source name
+4. URL (actual if known, or "search required")
+5. Why this matters to THIS SPECIFIC USER (reference their role/needs)
+6. Publication date (approximate if unsure)
+7. Confidence score (1-10): How sure are you this is real and current?
+
+QUALITY RULES:
+- Only include news you're confident is REAL
+- Prioritize news that matches the user's "success definition"
+- Consider what decisions this user needs to make
+- Better to return 3 high-quality items than 5 questionable ones
+
+AVOID:
+${profile.avoid_topics?.length > 0 ? profile.avoid_topics.map(t => `- ${t}`).join('\n') : '- No specific avoidance rules'}
+
+Respond in JSON:
+{
+  "searchQueries": ["what you searched for"],
+  "articles": [
+    {
+      "title": "...",
+      "summary": "...",
+      "source": "...",
+      "url": "...",
+      "relevanceReason": "Matters to you because...",
+      "publishedDate": "YYYY-MM-DD",
+      "confidence": 8
+    }
+  ]
+}`;
+}
+
+// Individual LLM search functions
+async function searchWithGPT4(profile: UserProfile): Promise<LLMResponse> {
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4-turbo-preview',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a news research assistant. Always respond in valid JSON format.'
+        },
+        {
+          role: 'user',
+          content: createSearchPrompt(profile, 'GPT-4')
+        }
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.3
+    });
+
+    const content = response.choices[0].message.content;
+    const parsed = JSON.parse(content || '{}');
+    
+    return {
+      model: 'GPT-4',
+      articles: parsed.articles || [],
+      searchQueries: parsed.searchQueries || []
+    };
+  } catch (error: any) {
+    console.error('GPT-4 error:', error.message);
+    return { model: 'GPT-4', articles: [], searchQueries: [], error: error.message };
+  }
+}
+
+async function searchWithGemini(profile: UserProfile): Promise<LLMResponse> {
+  try {
+    const model = gemini.getGenerativeModel({ 
+      model: 'gemini-2.0-flash-exp',
+      generationConfig: {
+        temperature: 0.3,
+        responseMimeType: 'application/json'
+      }
+    });
+    
+    const result = await model.generateContent(createSearchPrompt(profile, 'Gemini'));
+    const content = result.response.text();
+    const cleanJson = content.replace(/```json\n?|\n?```/g, '').trim();
+    const parsed = JSON.parse(cleanJson);
+    
+    return {
+      model: 'Gemini',
+      articles: parsed.articles || [],
+      searchQueries: parsed.searchQueries || []
+    };
+  } catch (error: any) {
+    console.error('Gemini error:', error.message);
+    return { model: 'Gemini', articles: [], searchQueries: [], error: error.message };
+  }
+}
+
+async function searchWithDeepSeek(profile: UserProfile): Promise<LLMResponse> {
+  try {
+    const response = await deepseek.chat.completions.create({
+      model: 'deepseek-chat',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a news research assistant specializing in Asian markets. Respond in valid JSON.'
+        },
+        {
+          role: 'user',
+          content: createSearchPrompt(profile, 'DeepSeek')
+        }
+      ],
+      temperature: 0.3
+    });
+
+    const content = response.choices[0].message.content || '{}';
+    const cleanJson = content.replace(/```json\n?|\n?```/g, '').trim();
+    const parsed = JSON.parse(cleanJson);
+    
+    return {
+      model: 'DeepSeek',
+      articles: parsed.articles || [],
+      searchQueries: parsed.searchQueries || []
+    };
+  } catch (error: any) {
+    console.error('DeepSeek error:', error.message);
+    return { model: 'DeepSeek', articles: [], searchQueries: [], error: error.message };
+  }
+}
+
+async function searchWithGrok(profile: UserProfile): Promise<LLMResponse> {
+  try {
+    const response = await grok.chat.completions.create({
+      model: 'grok-beta',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a news research assistant with real-time access to social media. Respond in valid JSON.'
+        },
+        {
+          role: 'user',
+          content: createSearchPrompt(profile, 'Grok')
+        }
+      ],
+      temperature: 0.3
+    });
+
+    const content = response.choices[0].message.content || '{}';
+    const cleanJson = content.replace(/```json\n?|\n?```/g, '').trim();
+    const parsed = JSON.parse(cleanJson);
+    
+    return {
+      model: 'Grok',
+      articles: parsed.articles || [],
+      searchQueries: parsed.searchQueries || []
+    };
+  } catch (error: any) {
+    console.error('Grok error:', error.message);
+    return { model: 'Grok', articles: [], searchQueries: [], error: error.message };
+  }
+}
+
+async function searchWithClaude(profile: UserProfile): Promise<LLMResponse> {
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4096,
+      messages: [
+        {
+          role: 'user',
+          content: createSearchPrompt(profile, 'Claude') + '\n\nRespond ONLY with valid JSON.'
+        }
+      ]
+    });
+
+    const content = response.content[0].type === 'text' ? response.content[0].text : '';
+    const cleanJson = content.replace(/```json\n?|\n?```/g, '').trim();
+    const parsed = JSON.parse(cleanJson);
+    
+    return {
+      model: 'Claude',
+      articles: parsed.articles || [],
+      searchQueries: parsed.searchQueries || []
+    };
+  } catch (error: any) {
+    console.error('Claude search error:', error.message);
+    return { model: 'Claude', articles: [], searchQueries: [], error: error.message };
+  }
+}
+
+// CLAUDE AS JUDGE - Uses the user's profile to validate
+async function claudeJudge(
+  profile: UserProfile,
+  allArticles: any[],
+  councilResults: LLMResponse[]
+): Promise<any> {
+  
+  const language = profile.language_preference === 'id' ? 'Indonesian' : 'English';
+  
+  const judgePrompt = `You are the FINAL JUDGE in an LLM Council for news curation.
+
+USER PROFILE:
+${profile.council_system_prompt}
+
+SUCCESS CRITERIA (from user's own words):
+"${profile.success_definition}"
+
+DECISION CONTEXT:
+${profile.decision_context}
+
+---
+
+COUNCIL RESULTS:
+Five AI models searched for news. Here are their combined ${allArticles.length} findings:
+
+${JSON.stringify(allArticles.map(a => ({
+  ...a,
+  foundBy: a.foundBy
+})), null, 2)}
+
+---
+
+YOUR JUDGE TASKS:
+
+1. **DEDUPLICATE**: Same story from different models = keep one, note agreement
+
+2. **VERIFY AGAINST USER NEEDS**: For each article, ask:
+   - Does this match what ${profile.persona_summary.split('.')[0]} needs?
+   - Would this help them "${profile.success_definition}"?
+   - Is this from a source they trust? (${profile.preferred_sources?.map(s => s.source).join(', ')})
+
+3. **CROSS-VALIDATE**: 
+   - Found by 3+ models = High confidence
+   - Found by 1 model with low score = Skeptical (maybe hallucinated)
+
+4. **CATEGORIZE**:
+   - 🔴 CRITICAL: Directly affects their work, needs action today
+   - 🟡 IMPORTANT: Should know, might affect decisions this week
+   - 🟢 BACKGROUND: Good context, monitor for later
+
+5. **PERSONALIZE**: Write "Why This Matters" that references THEIR specific role
+
+OUTPUT (in ${language}):
+{
+  "briefDate": "${new Date().toISOString().split('T')[0]}",
+  "recipientName": "Extract from profile",
+  "greeting": "Personalized ${language} greeting",
+  "executiveSummary": "2-3 sentences summarizing what matters TODAY for this person",
+  "critical": [
+    {
+      "title": "...",
+      "summary": "...",
+      "source": "...",
+      "url": "...",
+      "whyItMatters": "Specifically for THIS user...",
+      "foundByModels": ["list", "of", "models"],
+      "verificationScore": 9
+    }
+  ],
+  "important": [...],
+  "background": [...],
+  "sourcesUsed": ["..."],
+  "councilAgreement": "How much did the 5 models agree? Any notable disagreements?",
+  "confidenceNote": "Overall confidence in today's brief"
+}`;
+
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 8192,
+      messages: [{ role: 'user', content: judgePrompt }]
+    });
+
+    const content = response.content[0].type === 'text' ? response.content[0].text : '';
+    const cleanJson = content.replace(/```json\n?|\n?```/g, '').trim();
+    return JSON.parse(cleanJson);
+    
+  } catch (error: any) {
+    console.error('Claude Judge error:', error);
+    throw error;
+  }
+}
+
+// MAIN FUNCTION: Run council for a specific user
+export async function runCouncilForUser(userId: string): Promise<{
+  success: boolean;
+  profile?: UserProfile;
+  councilResults?: LLMResponse[];
+  finalBrief?: any;
+  error?: string;
+}> {
+  console.log(`\n🏛️ Starting LLM Council for user ${userId}...`);
+  
+  // Step 1: Get user's profile
+  const profile = await getUserProfile(userId);
+  
+  if (!profile) {
+    return { 
+      success: false, 
+      error: 'User profile not found. Complete onboarding first.' 
+    };
+  }
+  
+  console.log(`👤 User: ${profile.persona_summary?.split('.')[0]}`);
+  console.log(`📋 Using personalized system prompt (${profile.council_system_prompt?.length} chars)`);
+  
+  // Step 2: Run all 5 LLMs in parallel
+  console.log('\n📡 Dispatching to council members...');
+  const startTime = Date.now();
+  
+  const councilResults = await Promise.all([
+    searchWithGPT4(profile),
+    searchWithGemini(profile),
+    searchWithDeepSeek(profile),
+    searchWithGrok(profile),
+    searchWithClaude(profile)
+  ]);
+  
+  // Log results
+  councilResults.forEach(result => {
+    const status = result.error ? '❌' : '✅';
+    console.log(`${status} ${result.model}: ${result.articles.length} articles ${result.error ? `(${result.error})` : ''}`);
+  });
+  
+  // Step 3: Aggregate
+  const allArticles = councilResults.flatMap(r => 
+    r.articles.map(a => ({ ...a, foundBy: r.model }))
+  );
+  
+  console.log(`\n📚 Total articles: ${allArticles.length}`);
+  
+  if (allArticles.length === 0) {
+    return {
+      success: false,
+      profile,
+      councilResults,
+      error: 'No articles found by any model'
+    };
+  }
+  
+  // Step 4: Claude Judge
+  console.log('⚖️ Claude Judge evaluating...');
+  
+  const finalBrief = await claudeJudge(profile, allArticles, councilResults);
+  
+  const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+  console.log(`\n⏱️ Council completed in ${duration}s`);
+  
+  // Step 5: Save to database
+  await db.query(`
+    INSERT INTO daily_briefs (user_id, content, generated_at)
+    VALUES ($1, $2, NOW())
+  `, [userId, JSON.stringify(finalBrief)]);
+  
+  return {
+    success: true,
+    profile,
+    councilResults,
+    finalBrief
+  };
+}
+
+export { getUserProfile, UserProfile, LLMResponse };
+```
+
+-----
+
+### 2. Create API Routes for Council
+
+Update file: `server/routes/council.ts`
+
+```typescript
+import { Router } from 'express';
+import { runCouncilForUser, getUserProfile } from '../services/llmCouncil';
+import { db } from '../db';
+
+const router = Router();
+
+// Run council for current user
+router.post('/api/council/run', async (req, res) => {
+  try {
+    const userId = req.user?.id; // From auth middleware
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    
+    const result = await runCouncilForUser(userId);
+    
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+    
+    res.json({
+      success: true,
+      councilSummary: result.councilResults?.map(r => ({
+        model: r.model,
+        articlesFound: r.articles.length,
+        error: r.error
+      })),
+      brief: result.finalBrief
+    });
+    
+  } catch (error: any) {
+    console.error('Council error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Run council for specific user (admin)
+router.post('/api/admin/council/run/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const result = await runCouncilForUser(userId);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get user's profile (for debugging/display)
+router.get('/api/council/profile', async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    
+    const profile = await getUserProfile(userId);
+    
+    if (!profile) {
+      return res.status(404).json({ error: 'Profile not found' });
+    }
+    
+    res.json(profile);
+    
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get today's brief
+router.get('/api/brief/today', async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    
+    const result = await db.query(`
+      SELECT * FROM daily_briefs 
+      WHERE user_id = $1 
+      AND DATE(generated_at) = CURRENT_DATE
+      ORDER BY generated_at DESC
+      LIMIT 1
+    `, [userId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'No brief for today',
+        message: 'Brief will be generated soon'
+      });
+    }
+    
+    res.json(result.rows[0]);
+    
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get brief history
+router.get('/api/brief/history', async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const limit = parseInt(req.query.limit as string) || 7;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    
+    const result = await db.query(`
+      SELECT id, generated_at, 
+             content->>'executiveSummary' as summary,
+             jsonb_array_length(content->'critical') as critical_count,
+             jsonb_array_length(content->'important') as important_count
+      FROM daily_briefs 
+      WHERE user_id = $1 
+      ORDER BY generated_at DESC
+      LIMIT $2
+    `, [userId, limit]);
+    
+    res.json(result.rows);
+    
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+export default router;
+```
+
+-----
+
+### 3. Add Cron Job for Daily Generation
+
+Create file: `server/cron/generateBriefs.ts`
+
+```typescript
+import cron from 'node-cron';
+import { runCouncilForUser } from '../services/llmCouncil';
+import { db } from '../db';
+
+// Generate briefs for all users at 5 AM Jakarta time
+// (10 PM UTC the day before)
+cron.schedule('0 22 * * *', async () => {
+  console.log('\n🌅 Starting daily brief generation for all users...');
+  const startTime = Date.now();
+  
+  try {
+    // Get all users who completed onboarding
+    const users = await db.query(`
+      SELECT u.id, u.email, u.full_name
+      FROM users u
+      JOIN user_profiles up ON u.id = up.user_id
+      WHERE u.onboarding_completed = true
+    `);
+    
+    console.log(`📊 Found ${users.rows.length} users to process`);
+    
+    let successCount = 0;
+    let errorCount = 0;
+    
+    for (const user of users.rows) {
+      try {
+        console.log(`\n--- Processing ${user.full_name} (${user.email}) ---`);
+        
+        const result = await runCouncilForUser(user.id);
+        
+        if (result.success) {
+          successCount++;
+          console.log(`✅ Brief generated for ${user.full_name}`);
+        } else {
+          errorCount++;
+          console.log(`❌ Failed: ${result.error}`);
+        }
+        
+        // Small delay between users to avoid rate limits
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+      } catch (err: any) {
+        errorCount++;
+        console.error(`❌ Error for ${user.email}:`, err.message);
+      }
+    }
+    
+    const duration = ((Date.now() - startTime) / 1000 / 60).toFixed(2);
+    console.log(`\n📊 Daily generation complete:`);
+    console.log(`   ✅ Success: ${successCount}`);
+    console.log(`   ❌ Errors: ${errorCount}`);
+    console.log(`   ⏱️ Duration: ${duration} minutes`);
+    
+  } catch (error) {
+    console.error('Cron job error:', error);
+  }
+});
+
+// Also allow manual trigger
+export async function generateAllBriefs() {
+  // Same logic as cron job
+}
+```
+
+-----
+
+## Testing
+
+1. Complete Phase 1 (onboarding) for a test user
+1. Check the generated `council_system_prompt` in database
+1. Call `POST /api/council/run`
+1. Verify that:
+- Each LLM received the user’s unique prompt
+- Results are personalized to the user
+- Claude Judge references the user’s specific needs
+
+-----
+
+## Expected Console Output
+
+```
+🏛️ Starting LLM Council for user abc-123...
+👤 User: Halim Alamsyah, former Deputy Governor of Bank Indonesia
+📋 Using personalized system prompt (847 chars)
+
+📡 Dispatching to council members...
+✅ GPT-4: 5 articles
+✅ Gemini: 4 articles
+✅ DeepSeek: 5 articles
+✅ Grok: 3 articles
+✅ Claude: 4 articles
+
+📚 Total articles: 21
+⚖️ Claude Judge evaluating...
+
+⏱️ Council completed in 38.45s
+```
+
+-----
+
+## Next Phase
+
+After Phase 2, we’ll implement:
+
+- **Phase 3**: Display brief in app UI (beautiful dashboard)
+- **Phase 4**: Email delivery with paywall
+
+Ready for Phase 2? Copy to Replit!

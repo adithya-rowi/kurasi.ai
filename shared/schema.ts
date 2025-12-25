@@ -111,6 +111,14 @@ export const savedArticles = pgTable("saved_articles", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const dailyBriefs = pgTable("daily_briefs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  content: jsonb("content").notNull(),
+  councilMetadata: jsonb("council_metadata"),
+  generatedAt: timestamp("generated_at").defaultNow().notNull(),
+});
+
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -173,3 +181,4 @@ export type SavedArticle = typeof savedArticles.$inferSelect;
 
 export type OnboardingConversation = typeof onboardingConversations.$inferSelect;
 export type UserProfile = typeof userProfiles.$inferSelect;
+export type DailyBrief = typeof dailyBriefs.$inferSelect;
