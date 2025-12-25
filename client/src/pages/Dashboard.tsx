@@ -1,9 +1,12 @@
-import { useState } from "react";
-import { Link } from "wouter";
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { MOCK_USER, MOCK_BRIEF, Article } from "@/lib/mockData";
+import { Article } from "@shared/schema";
+import { articlesApi, userApi } from "@/lib/api";
+import { session } from "@/lib/session";
+import { useQuery } from "@tanstack/react-query";
 import { 
   LayoutDashboard, 
   Archive, 
@@ -24,6 +27,33 @@ import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [_, setLocation] = useLocation();
+  const userId = session.getUserId();
+
+  useEffect(() => {
+    if (!userId) {
+      setLocation("/onboarding");
+    }
+  }, [userId, setLocation]);
+
+  const { data: user } = useQuery({
+    queryKey: ['user', userId],
+    queryFn: () => userId ? userApi.getById(userId) : null,
+    enabled: !!userId,
+  });
+
+  const { data: articles = [], isLoading } = useQuery({
+    queryKey: ['articles'],
+    queryFn: () => articlesApi.getAll(20),
+  });
+
+  const criticalArticles = articles.filter(a => a.category === "Critical");
+  const importantArticles = articles.filter(a => a.category === "Important");
+  const backgroundArticles = articles.filter(a => a.category === "Background");
+
+  if (!userId) {
+    return null;
+  }
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -55,10 +85,10 @@ export default function Dashboard() {
                 <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center font-bold text-xs">
                     PH
                 </div>
-                {sidebarOpen && (
+                {sidebarOpen && user && (
                     <div className="overflow-hidden">
-                        <p className="text-sm font-medium truncate">{MOCK_USER.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{MOCK_USER.organization}</p>
+                        <p className="text-sm font-medium truncate">{user.fullName}</p>
+                        <p className="text-xs text-muted-foreground truncate">{user.organization}</p>
                     </div>
                 )}
             </div>
@@ -97,52 +127,68 @@ export default function Dashboard() {
             <div className="max-w-4xl mx-auto p-6 md:p-10 space-y-10 pb-20">
                 
                 <div className="space-y-2">
-                    <h1 className="text-3xl md:text-4xl font-serif font-bold">Good Morning, Pak Halim</h1>
-                    <p className="text-lg text-muted-foreground">Here is your intelligence brief. 5 items require your attention.</p>
+                    <h1 className="text-3xl md:text-4xl font-serif font-bold">Good Morning, {user?.fullName?.split(' ')[0] || 'there'}</h1>
+                    <p className="text-lg text-muted-foreground">
+                      {isLoading ? "Loading your brief..." : `Here is your intelligence brief. ${articles.length} items curated for you.`}
+                    </p>
                 </div>
 
-                {/* CRITICAL SECTION */}
-                <section>
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="h-3 w-3 rounded-full bg-destructive animate-pulse" />
-                        <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Requires Attention</h2>
-                    </div>
-                    <div className="space-y-6">
-                        {MOCK_BRIEF.filter(a => a.category === "Critical").map(article => (
+                {isLoading ? (
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : (
+                  <>
+                    {/* CRITICAL SECTION */}
+                    {criticalArticles.length > 0 && (
+                      <section>
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="h-3 w-3 rounded-full bg-destructive animate-pulse" />
+                          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Requires Attention</h2>
+                        </div>
+                        <div className="space-y-6">
+                          {criticalArticles.map(article => (
                             <BriefItem key={article.id} article={article} />
-                        ))}
-                    </div>
-                </section>
+                          ))}
+                        </div>
+                      </section>
+                    )}
 
-                <Separator />
+                    {criticalArticles.length > 0 && importantArticles.length > 0 && <Separator />}
 
-                {/* IMPORTANT SECTION */}
-                <section>
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="h-3 w-3 rounded-full bg-amber-400" />
-                        <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Worth Knowing</h2>
-                    </div>
-                    <div className="space-y-6">
-                        {MOCK_BRIEF.filter(a => a.category === "Important").map(article => (
+                    {/* IMPORTANT SECTION */}
+                    {importantArticles.length > 0 && (
+                      <section>
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="h-3 w-3 rounded-full bg-amber-400" />
+                          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Worth Knowing</h2>
+                        </div>
+                        <div className="space-y-6">
+                          {importantArticles.map(article => (
                             <BriefItem key={article.id} article={article} />
-                        ))}
-                    </div>
-                </section>
+                          ))}
+                        </div>
+                      </section>
+                    )}
 
-                 <Separator />
+                    {importantArticles.length > 0 && backgroundArticles.length > 0 && <Separator />}
 
-                {/* BACKGROUND SECTION */}
-                <section>
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="h-3 w-3 rounded-full bg-emerald-500" />
-                        <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">On Your Radar</h2>
-                    </div>
-                    <div className="grid md:grid-cols-2 gap-4">
-                        {MOCK_BRIEF.filter(a => a.category === "Background").map(article => (
-                             <BackgroundItem key={article.id} article={article} />
-                        ))}
-                    </div>
-                </section>
+                    {/* BACKGROUND SECTION */}
+                    {backgroundArticles.length > 0 && (
+                      <section>
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="h-3 w-3 rounded-full bg-emerald-500" />
+                          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">On Your Radar</h2>
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          {backgroundArticles.map(article => (
+                            <BackgroundItem key={article.id} article={article} />
+                          ))}
+                        </div>
+                      </section>
+                    )}
+                  </>
+                )}
 
                 {/* Footer Feedback */}
                 <div className="bg-secondary/30 rounded-xl p-8 text-center space-y-4 mt-12">

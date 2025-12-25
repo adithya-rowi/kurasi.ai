@@ -60,6 +60,16 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Seed database on startup in development
+  if (process.env.NODE_ENV === "development") {
+    const { seedDatabase } = await import("./seed");
+    try {
+      await seedDatabase();
+    } catch (error) {
+      console.log("Database already seeded or seed failed:", error);
+    }
+  }
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

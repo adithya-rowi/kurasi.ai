@@ -10,11 +10,22 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowRight, Check, X, Loader2, ChevronRight, Briefcase, Building2, User } from "lucide-react";
 import { useLocation } from "wouter";
 import { MOCK_TOPICS } from "@/lib/mockData";
+import { userApi, topicsApi, preferencesApi } from "@/lib/api";
+import { session } from "@/lib/session";
+import { toast } from "sonner";
 
 export default function Onboarding() {
   const [step, setStep] = useState(1);
   const [_, setLocation] = useLocation();
   const [progress, setProgress] = useState(25);
+  const [userData, setUserData] = useState({
+    fullName: "",
+    email: "",
+    role: "",
+    organization: "",
+  });
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const nextStep = () => {
     setStep(s => s + 1);
@@ -45,7 +56,7 @@ export default function Onboarding() {
             exit={{ opacity: 0, x: -20 }}
             className="w-full max-w-md"
           >
-            <ProfileStep onNext={nextStep} />
+            <ProfileStep onNext={nextStep} userData={userData} setUserData={setUserData} setUserId={setUserId} />
           </motion.div>
         )}
         {step === 2 && (
@@ -56,7 +67,7 @@ export default function Onboarding() {
             exit={{ opacity: 0, x: -20 }}
             className="w-full max-w-md"
           >
-            <TopicSwipeStep onNext={nextStep} />
+            <TopicSwipeStep onNext={nextStep} userId={userId} selectedTopics={selectedTopics} setSelectedTopics={setSelectedTopics} />
           </motion.div>
         )}
         {step === 3 && (
@@ -67,7 +78,7 @@ export default function Onboarding() {
             exit={{ opacity: 0, x: -20 }}
             className="w-full max-w-lg"
           >
-            <PreferencesStep onFinish={handleFinish} />
+            <PreferencesStep onFinish={handleFinish} userId={userId} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -75,7 +86,37 @@ export default function Onboarding() {
   );
 }
 
-function ProfileStep({ onNext }: { onNext: () => void }) {
+function ProfileStep({ onNext, userData, setUserData, setUserId }: { 
+  onNext: () => void; 
+  userData: any;
+  setUserData: (data: any) => void;
+  setUserId: (id: string) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  const handleContinue = async () => {
+    if (!userData.fullName || !userData.email || !userData.role || !userData.organization) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const user = await userApi.create({
+        ...userData,
+        languagePreference: "en",
+        onboardingCompleted: false,
+      });
+      setUserId(user.id);
+      session.setUserId(user.id);
+      onNext();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create profile");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Card className="p-8 shadow-xl border-border/60">
       <div className="mb-8 text-center">
@@ -88,24 +129,41 @@ function ProfileStep({ onNext }: { onNext: () => void }) {
           <Label htmlFor="name">Full Name</Label>
           <div className="relative">
             <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input id="name" placeholder="Halim Kusuma" className="pl-9" />
+            <Input 
+              id="name" 
+              placeholder="Halim Kusuma" 
+              className="pl-9" 
+              value={userData.fullName}
+              onChange={(e) => setUserData({ ...userData, fullName: e.target.value })}
+            />
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input 
+            id="email" 
+            type="email"
+            placeholder="halim@nusantara.cap" 
+            value={userData.email}
+            onChange={(e) => setUserData({ ...userData, email: e.target.value })}
+          />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="role">Role / Title</Label>
           <div className="relative">
             <Briefcase className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Select>
+            <Select value={userData.role} onValueChange={(value) => setUserData({ ...userData, role: value })}>
               <SelectTrigger className="pl-9">
                 <SelectValue placeholder="Select your role" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ceo">Chief Executive Officer (CEO)</SelectItem>
-                <SelectItem value="cio">Chief Investment Officer (CIO)</SelectItem>
-                <SelectItem value="director">Director</SelectItem>
-                <SelectItem value="policy">Policy Maker</SelectItem>
-                <SelectItem value="investor">Investor</SelectItem>
+                <SelectItem value="Chief Executive Officer (CEO)">Chief Executive Officer (CEO)</SelectItem>
+                <SelectItem value="Chief Investment Officer (CIO)">Chief Investment Officer (CIO)</SelectItem>
+                <SelectItem value="Director">Director</SelectItem>
+                <SelectItem value="Policy Maker">Policy Maker</SelectItem>
+                <SelectItem value="Investor">Investor</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -115,11 +173,18 @@ function ProfileStep({ onNext }: { onNext: () => void }) {
           <Label htmlFor="org">Organization</Label>
           <div className="relative">
             <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input id="org" placeholder="Nusantara Capital" className="pl-9" />
+            <Input 
+              id="org" 
+              placeholder="Nusantara Capital" 
+              className="pl-9"
+              value={userData.organization}
+              onChange={(e) => setUserData({ ...userData, organization: e.target.value })}
+            />
           </div>
         </div>
 
-        <Button onClick={onNext} className="w-full h-12 text-lg">
+        <Button onClick={handleContinue} className="w-full h-12 text-lg" disabled={loading}>
+          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           Continue <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
@@ -127,12 +192,27 @@ function ProfileStep({ onNext }: { onNext: () => void }) {
   );
 }
 
-function TopicSwipeStep({ onNext }: { onNext: () => void }) {
+function TopicSwipeStep({ onNext, userId, selectedTopics, setSelectedTopics }: { 
+  onNext: () => void;
+  userId: string | null;
+  selectedTopics: string[];
+  setSelectedTopics: (topics: string[]) => void;
+}) {
   const [cards, setCards] = useState(MOCK_TOPICS);
-  const [swiped, setSwiped] = useState<string[]>([]); // To force re-render or track
 
-  const handleSwipe = (direction: 'left' | 'right', id: string) => {
-    // In a real app, track interest
+  const handleSwipe = async (direction: 'left' | 'right', id: string, topicName: string) => {
+    if (direction === 'right' && userId) {
+      try {
+        await topicsApi.create({
+          userId,
+          topicName,
+          priority: 5,
+        });
+        setSelectedTopics([...selectedTopics, topicName]);
+      } catch (error) {
+        console.error("Failed to save topic:", error);
+      }
+    }
     setCards(current => current.filter(c => c.id !== id));
     if (cards.length <= 1) {
       setTimeout(onNext, 500);
@@ -153,7 +233,7 @@ function TopicSwipeStep({ onNext }: { onNext: () => void }) {
               key={topic.id}
               topic={topic}
               isTop={index === cards.length - 1}
-              onSwipe={(dir) => handleSwipe(dir, topic.id)}
+              onSwipe={(dir) => handleSwipe(dir, topic.id, topic.name)}
             />
           ))}
         </AnimatePresence>
@@ -170,7 +250,7 @@ function TopicSwipeStep({ onNext }: { onNext: () => void }) {
           variant="outline" 
           size="icon" 
           className="h-14 w-14 rounded-full border-2 border-destructive/20 text-destructive hover:bg-destructive/10 hover:border-destructive"
-          onClick={() => cards.length > 0 && handleSwipe('left', cards[cards.length - 1].id)}
+          onClick={() => cards.length > 0 && handleSwipe('left', cards[cards.length - 1].id, cards[cards.length - 1].name)}
         >
           <X className="h-6 w-6" />
         </Button>
@@ -178,7 +258,7 @@ function TopicSwipeStep({ onNext }: { onNext: () => void }) {
           variant="outline" 
           size="icon" 
           className="h-14 w-14 rounded-full border-2 border-primary/20 text-primary hover:bg-primary/10 hover:border-primary"
-          onClick={() => cards.length > 0 && handleSwipe('right', cards[cards.length - 1].id)}
+          onClick={() => cards.length > 0 && handleSwipe('right', cards[cards.length - 1].id, cards[cards.length - 1].name)}
         >
           <Check className="h-6 w-6" />
         </Button>
@@ -250,12 +330,31 @@ function SwipeCard({ topic, isTop, onSwipe }: { topic: any, isTop: boolean, onSw
 }
 
 
-function PreferencesStep({ onFinish }: { onFinish: () => void }) {
+function PreferencesStep({ onFinish, userId }: { onFinish: () => void; userId: string | null }) {
     const [loading, setLoading] = useState(false);
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
+        if (!userId) {
+          toast.error("No user session found");
+          return;
+        }
+
         setLoading(true);
-        setTimeout(onFinish, 2000);
+        try {
+          await preferencesApi.create({
+            userId,
+            deliveryTime: "06:00",
+            deliveryDays: [1, 2, 3, 4, 5],
+            formatPreference: "brief",
+            maxItems: 10,
+            timezone: "Asia/Jakarta",
+          });
+          await userApi.updateOnboarding(userId, true);
+          setTimeout(onFinish, 1000);
+        } catch (error: any) {
+          toast.error(error.message || "Failed to save preferences");
+          setLoading(false);
+        }
     };
 
   return (
