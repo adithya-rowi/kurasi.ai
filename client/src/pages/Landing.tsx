@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, ArrowRight, Zap } from 'lucide-react';
+import { Send, Sparkles, Zap } from 'lucide-react';
 import { Link } from 'wouter';
 
 interface Message {
@@ -70,10 +70,22 @@ export default function Landing() {
   };
 
   const quickPrompts = [
-    "Apa berita penting hari ini untuk sektor perbankan Indonesia?",
-    "Update terbaru tentang kebijakan Bank Indonesia",
-    "Perkembangan fintech dan P2P lending di Indonesia",
-    "Berita komoditas: nikel, batubara, kelapa sawit"
+    {
+      text: "Apa yang perlu saya tahu tentang keputusan BI hari ini?",
+      icon: "🏦"
+    },
+    {
+      text: "Rangkum berita OJK terbaru tentang fintech",
+      icon: "📋"
+    },
+    {
+      text: "Update harga komoditas: nikel, CPO, batubara",
+      icon: "📈"
+    },
+    {
+      text: "Kebijakan pemerintah yang mempengaruhi bisnis minggu ini",
+      icon: "🏛️"
+    }
   ];
   
   return (
@@ -104,20 +116,20 @@ export default function Landing() {
           <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
             
             <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-2 bg-amber-100 text-amber-800 px-4 py-2 rounded-full text-sm font-medium mb-6">
+              <div className="inline-flex items-center gap-2 bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium mb-4">
                 <Zap className="w-4 h-4" />
-                5 AI bekerja untuk Anda
+                5 AI • 100+ Sumber • 1 Brief untuk Anda
               </div>
               
-              <h1 className="text-4xl md:text-5xl font-serif font-bold text-slate-900 mb-4 leading-tight">
-                Brief Intelijen
+              <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
+                Intelijen Bisnis
                 <br />
-                <span className="text-slate-400">Khusus untuk Anda</span>
+                <span className="text-amber-600">untuk Eksekutif Indonesia</span>
               </h1>
               
-              <p className="text-lg text-slate-600 max-w-xl mx-auto leading-relaxed">
-                Tanyakan apa saja tentang berita bisnis, ekonomi, atau kebijakan Indonesia. 
-                AI kami akan merangkum yang paling relevan untuk Anda.
+              <p className="text-lg text-slate-600 max-w-xl mx-auto">
+                Setiap pagi, 5 AI menyaring ratusan berita dan menyajikan hanya yang 
+                <strong> penting untuk keputusan Anda</strong>. Coba sekarang.
               </p>
             </div>
             
@@ -127,12 +139,12 @@ export default function Landing() {
                 {quickPrompts.map((prompt, idx) => (
                   <button
                     key={idx}
-                    onClick={() => sendMessage(prompt)}
+                    onClick={() => sendMessage(prompt.text)}
                     className="text-left p-4 bg-white border border-slate-200 rounded-xl hover:border-amber-300 hover:shadow-md transition-all group"
                     data-testid={`button-quick-prompt-${idx}`}
                   >
-                    <p className="text-slate-700 text-sm leading-relaxed">{prompt}</p>
-                    <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-amber-500 mt-2 transition-colors" />
+                    <span className="text-2xl mb-2 block">{prompt.icon}</span>
+                    <p className="text-slate-700 text-sm">{prompt.text}</p>
                   </button>
                 ))}
               </div>
@@ -225,18 +237,18 @@ export default function Landing() {
             </div>
             
             {messages.length >= 2 && (
-              <div className="mt-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl">
+              <div className="mt-4 p-4 bg-gradient-to-r from-slate-900 to-slate-800 rounded-xl text-white">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div>
-                    <p className="font-medium text-amber-900">Suka dengan hasilnya?</p>
-                    <p className="text-sm text-amber-700">Daftar untuk brief personal setiap pagi</p>
+                    <p className="font-semibold">Brief seperti ini, setiap pagi.</p>
+                    <p className="text-sm text-slate-300">Gratis untuk 7 hari pertama</p>
                   </div>
                   <Link href="/onboarding">
                     <button
-                      className="bg-amber-500 hover:bg-amber-600 text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors"
+                      className="bg-amber-500 hover:bg-amber-400 text-slate-900 px-5 py-2.5 rounded-lg font-semibold text-sm transition-colors whitespace-nowrap"
                       data-testid="button-register-cta"
                     >
-                      Daftar Gratis
+                      Coba Gratis →
                     </button>
                   </Link>
                 </div>
