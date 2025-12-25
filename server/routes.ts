@@ -344,7 +344,8 @@ export async function registerRoutes(
       res.json({
         success: true,
         councilSummary: result.councilResults?.map((r) => ({
-          perspective: r.perspective,
+          model: r.model,
+          provider: r.provider,
           articlesFound: r.articles.length,
           error: r.error,
         })),
@@ -523,20 +524,32 @@ export async function registerRoutes(
     }
   });
 
-  // Test Endpoint - Check API key status (Development only - does not expose actual keys)
+  // Test Endpoint - Check all 6 AI status (Development only)
   app.get("/api/test/council", async (req, res) => {
     try {
-      const hasAnthropic = !!process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
+      const status = {
+        anthropic: { ok: !!process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY, name: "Claude", badge: "⚖️ HAKIM" },
+        openai: { ok: !!process.env.OPENAI_API_KEY, name: "GPT-4o", badge: "" },
+        deepseek: { ok: !!process.env.DEEPSEEK_API_KEY, name: "DeepSeek", badge: "" },
+        perplexity: { ok: !!process.env.PERPLEXITY_API_KEY, name: "Perplexity", badge: "🔥 LIVE" },
+        gemini: { ok: !!process.env.GOOGLE_AI_API_KEY, name: "Gemini", badge: "" },
+        grok: { ok: !!process.env.XAI_API_KEY, name: "Grok", badge: "🐦 X" },
+      };
+      
+      const aiCount = Object.values(status).filter(s => s.ok).length;
       const hasResend = !!process.env.RESEND_API_KEY;
       
       res.json({
-        message: "Status Kurasi.ai Council",
-        readyToTest: hasAnthropic,
-        aiConfigured: hasAnthropic,
-        emailConfigured: hasResend,
-        recommendation: hasAnthropic
-          ? "Siap untuk testing! 🚀"
-          : "Konfigurasi AI diperlukan"
+        title: "🏛️ Kurasi.ai - Dewan AI Status",
+        configuredAI: `${aiCount}/6`,
+        emailReady: hasResend,
+        models: status,
+        ready: aiCount >= 1,
+        message: aiCount === 6 
+          ? "🎉 SEMPURNA! Semua 6 AI siap!" 
+          : aiCount >= 1
+            ? `${aiCount} AI aktif, ${6 - aiCount} tersedia untuk ditambahkan`
+            : "Konfigurasi AI diperlukan"
       });
       
     } catch (error: any) {

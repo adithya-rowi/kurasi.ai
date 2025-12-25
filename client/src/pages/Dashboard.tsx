@@ -425,7 +425,7 @@ export default function Dashboard() {
                       </div>
                     )}
                     
-                    <CouncilFooter />
+                    <CouncilFooter modelsUsed={briefContent.modelsUsed} />
                   </>
                 )}
 

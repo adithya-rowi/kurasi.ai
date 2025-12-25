@@ -1,0 +1,716 @@
+# Kurasi.ai - Prompt 6 FINAL: All 6 AI with Latest 2025 Models!
+
+## 🎯 FINAL VERSION - Copy to Replit NOW! LET'S SHIP!
+
+---
+
+## 🏛️ YOUR 6 AI COUNCIL (Yes, 6! Even Better!)
+
+| AI | Model ID | Context | Strength |
+|----|----------|---------|----------|
+| 🟢 **GPT-5.2** | `gpt-5.2` | - | Fast reasoning |
+| 🟤 **Claude Opus 4.5** | `claude-opus-4-5-20251101` | - | **HAKIM AKHIR** |
+| 🔵 **Gemini 3 Pro** | `gemini-3-pro-preview` | 1M+ | Long context |
+| 🟣 **DeepSeek V3** | `deepseek-v3` | - | 94% cheaper |
+| 🔴 **Perplexity** | `sonar-pro` | - | **REAL-TIME WEB** |
+| 🟠 **Grok 4.1 Fast** | `grok-4-1-fast-reasoning` | **2M!** | **X/Twitter + Reasoning** |
+
+---
+
+## Part A: Complete LLM Council Service
+
+```typescript
+// server/services/llmCouncil.ts
+
+/**
+ * KURASI.AI - DEWAN 6 AI
+ * 
+ * December 2025 - ALL LATEST MODELS!
+ */
+
+import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
+
+// ============================================
+// AI COUNCIL CONFIGURATION - LATEST MODELS!
+// ============================================
+
+const AI_COUNCIL = {
+  
+  // 1. GPT-5.2 - OpenAI
+  openai: {
+    name: 'GPT-5.2',
+    model: 'gpt-5.2',
+    provider: 'OpenAI',
+    color: '#10a37f',
+    strengths: ['Fast inference (187 tok/s)', 'General reasoning', 'Wide knowledge'],
+    bestFor: 'General analysis & reasoning'
+  },
+
+  // 2. Claude Opus 4.5 - Anthropic (JUDGE)
+  anthropic: {
+    name: 'Claude Opus 4.5',
+    model: 'claude-opus-4-5-20251101',
+    provider: 'Anthropic',
+    color: '#d4a574',
+    strengths: ['Best coding (80.9% SWE-bench)', 'Nuanced judgment', 'Quality control'],
+    bestFor: 'HAKIM AKHIR - Final judgment',
+    isJudge: true
+  },
+
+  // 3. Gemini 3 Pro - Google
+  gemini: {
+    name: 'Gemini 3 Pro',
+    model: 'gemini-3-pro-preview',
+    provider: 'Google',
+    color: '#4285f4',
+    strengths: ['1M+ context window', 'Multimodal', 'Google Search grounding'],
+    bestFor: 'Long context & Google data'
+  },
+
+  // 4. DeepSeek V3
+  deepseek: {
+    name: 'DeepSeek V3',
+    model: 'deepseek-v3',
+    provider: 'DeepSeek',
+    color: '#7c3aed',
+    strengths: ['94% cost savings', 'Long context', 'Asian markets focus'],
+    bestFor: 'Cost-efficient & ASEAN coverage'
+  },
+
+  // 5. Perplexity Sonar Pro - REAL-TIME WEB
+  perplexity: {
+    name: 'Perplexity',
+    model: 'sonar-pro',
+    provider: 'Perplexity',
+    color: '#1fb8cd',
+    strengths: ['🔥 REAL-TIME web search', 'Live citations', 'Breaking news'],
+    bestFor: 'Breaking news & live verification',
+    isRealTime: true
+  },
+
+  // 6. Grok 4.1 Fast - xAI (X/Twitter data!)
+  grok: {
+    name: 'Grok 4.1 Fast',
+    model: 'grok-4-1-fast-reasoning',  // ✅ LATEST! With reasoning!
+    provider: 'xAI',
+    color: '#f97316',
+    contextWindow: 2000000,  // 2M tokens!
+    strengths: ['X/Twitter data access', 'Reasoning mode', '2M context', 'Lightning fast', 'Low cost ($0.20/M)'],
+    bestFor: 'Social sentiment & X data',
+    hasSearch: true
+  }
+};
+
+// ============================================
+// API CLIENTS
+// ============================================
+
+// OpenAI - GPT-5.2
+const openai = new OpenAI({ 
+  apiKey: process.env.OPENAI_API_KEY 
+});
+
+// Anthropic - Claude Opus 4.5
+const anthropic = new Anthropic({ 
+  apiKey: process.env.ANTHROPIC_API_KEY 
+});
+
+// Google Gemini 3 Pro
+const geminiApiKey = process.env.GOOGLE_AI_API_KEY;
+
+// DeepSeek V3 (OpenAI-compatible)
+const deepseek = new OpenAI({
+  apiKey: process.env.DEEPSEEK_API_KEY,
+  baseURL: 'https://api.deepseek.com/v1'
+});
+
+// Perplexity Sonar Pro (OpenAI-compatible)
+const perplexity = new OpenAI({
+  apiKey: process.env.PERPLEXITY_API_KEY,
+  baseURL: 'https://api.perplexity.ai'
+});
+
+// xAI Grok 4.1 Fast (OpenAI-compatible)
+const grok = new OpenAI({
+  apiKey: process.env.XAI_API_KEY,
+  baseURL: 'https://api.x.ai/v1'
+});
+
+// ============================================
+// INTERFACES
+// ============================================
+
+interface SearchResult {
+  model: string;
+  provider: string;
+  articles: Article[];
+  searchQueries?: string[];
+  error?: string;
+}
+
+interface Article {
+  title: string;
+  summary: string;
+  source: string;
+  sourceType: 'local' | 'regional' | 'global';
+  url: string;
+  isPaywalled: boolean;
+  whyItMatters: string;
+  publishedDate?: string;
+  confidence: number;
+  isRealTime?: boolean;
+}
+
+// ============================================
+// SEARCH FUNCTIONS
+// ============================================
+
+// 1. GPT-5.2
+async function searchWithGPT5(searchPrompt: string): Promise<SearchResult> {
+  try {
+    console.log('🟢 GPT-5.2 searching...');
+    
+    const response = await openai.chat.completions.create({
+      model: 'gpt-5.2',
+      messages: [
+        { role: 'system', content: 'You are a news research assistant for Indonesian executives. Respond with valid JSON only.' },
+        { role: 'user', content: searchPrompt }
+      ],
+      temperature: 0.3,
+      max_tokens: 4000
+    });
+    
+    const content = response.choices[0].message.content || '{}';
+    const parsed = JSON.parse(content.replace(/```json\n?|\n?```/g, '').trim());
+    
+    return { model: 'GPT-5.2', provider: 'OpenAI', articles: parsed.articles || [] };
+  } catch (error: any) {
+    console.error('❌ GPT-5.2 error:', error.message);
+    return { model: 'GPT-5.2', provider: 'OpenAI', articles: [], error: error.message };
+  }
+}
+
+// 2. Claude Opus 4.5
+async function searchWithClaude(searchPrompt: string): Promise<SearchResult> {
+  try {
+    console.log('🟤 Claude Opus 4.5 searching...');
+    
+    const response = await anthropic.messages.create({
+      model: 'claude-opus-4-5-20251101',
+      max_tokens: 4000,
+      messages: [{ role: 'user', content: searchPrompt }]
+    });
+    
+    const content = response.content[0].type === 'text' ? response.content[0].text : '{}';
+    const parsed = JSON.parse(content.replace(/```json\n?|\n?```/g, '').trim());
+    
+    return { model: 'Claude Opus 4.5', provider: 'Anthropic', articles: parsed.articles || [] };
+  } catch (error: any) {
+    console.error('❌ Claude error:', error.message);
+    return { model: 'Claude Opus 4.5', provider: 'Anthropic', articles: [], error: error.message };
+  }
+}
+
+// 3. Gemini 3 Pro
+async function searchWithGemini(searchPrompt: string): Promise<SearchResult> {
+  try {
+    console.log('🔵 Gemini 3 Pro searching...');
+    
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=${geminiApiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: searchPrompt }] }],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 4000 }
+        })
+      }
+    );
+    
+    const data = await response.json();
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    const parsed = JSON.parse(content.replace(/```json\n?|\n?```/g, '').trim());
+    
+    return { model: 'Gemini 3 Pro', provider: 'Google', articles: parsed.articles || [] };
+  } catch (error: any) {
+    console.error('❌ Gemini error:', error.message);
+    return { model: 'Gemini 3 Pro', provider: 'Google', articles: [], error: error.message };
+  }
+}
+
+// 4. DeepSeek V3
+async function searchWithDeepSeek(searchPrompt: string): Promise<SearchResult> {
+  try {
+    console.log('🟣 DeepSeek V3 searching...');
+    
+    const response = await deepseek.chat.completions.create({
+      model: 'deepseek-v3',
+      messages: [
+        { role: 'system', content: 'You are a news research assistant. Respond with valid JSON only.' },
+        { role: 'user', content: searchPrompt }
+      ],
+      temperature: 0.3,
+      max_tokens: 4000
+    });
+    
+    const content = response.choices[0].message.content || '{}';
+    const parsed = JSON.parse(content.replace(/```json\n?|\n?```/g, '').trim());
+    
+    return { model: 'DeepSeek V3', provider: 'DeepSeek', articles: parsed.articles || [] };
+  } catch (error: any) {
+    console.error('❌ DeepSeek error:', error.message);
+    return { model: 'DeepSeek V3', provider: 'DeepSeek', articles: [], error: error.message };
+  }
+}
+
+// 5. Perplexity Sonar Pro - REAL-TIME WEB SEARCH
+async function searchWithPerplexity(searchPrompt: string): Promise<SearchResult> {
+  try {
+    console.log('🔴 Perplexity searching LIVE web...');
+    
+    const response = await perplexity.chat.completions.create({
+      model: 'sonar-pro',
+      messages: [
+        { role: 'system', content: 'You search the LIVE web for latest Indonesian business news. Include source URLs. Respond with valid JSON.' },
+        { role: 'user', content: searchPrompt }
+      ],
+      temperature: 0.2,
+      max_tokens: 4000
+    });
+    
+    const content = response.choices[0].message.content || '{}';
+    const parsed = JSON.parse(content.replace(/```json\n?|\n?```/g, '').trim());
+    
+    // Boost confidence for real-time results
+    const articles = (parsed.articles || []).map((a: any) => ({
+      ...a,
+      isRealTime: true,
+      confidence: Math.min((a.confidence || 7) + 1, 10)
+    }));
+    
+    return { model: 'Perplexity', provider: 'Perplexity', articles };
+  } catch (error: any) {
+    console.error('❌ Perplexity error:', error.message);
+    return { model: 'Perplexity', provider: 'Perplexity', articles: [], error: error.message };
+  }
+}
+
+// 6. Grok 4.1 Fast - X/Twitter Data + Reasoning
+async function searchWithGrok(searchPrompt: string): Promise<SearchResult> {
+  try {
+    console.log('🟠 Grok 4.1 Fast searching (X/Twitter + Reasoning)...');
+    
+    const response = await grok.chat.completions.create({
+      model: 'grok-4-1-fast-reasoning',  // ✅ LATEST with reasoning!
+      messages: [
+        { 
+          role: 'system', 
+          content: `You are Grok with access to X/Twitter data. Search for:
+1. Trending topics in Indonesia
+2. What influential accounts (ministers, CEOs, analysts) are saying
+3. Social sentiment on business/policy news
+4. Breaking news from X before mainstream media
+
+Respond with valid JSON. Include X post references where relevant.`
+        },
+        { role: 'user', content: searchPrompt }
+      ],
+      temperature: 0.3,
+      max_tokens: 4000
+    });
+    
+    const content = response.choices[0].message.content || '{}';
+    const parsed = JSON.parse(content.replace(/```json\n?|\n?```/g, '').trim());
+    
+    // Tag as social/X source
+    const articles = (parsed.articles || []).map((a: any) => ({
+      ...a,
+      fromX: true,
+      sourceType: a.sourceType || 'social'
+    }));
+    
+    return { model: 'Grok 4.1 Fast', provider: 'xAI', articles };
+  } catch (error: any) {
+    console.error('❌ Grok error:', error.message);
+    return { model: 'Grok 4.1 Fast', provider: 'xAI', articles: [], error: error.message };
+  }
+}
+
+// ============================================
+// MAIN COUNCIL ORCHESTRATION
+// ============================================
+
+export async function runCouncilForUser(userId: string): Promise<any> {
+  console.log('');
+  console.log('🏛️ ══════════════════════════════════════════════════════════════');
+  console.log('🏛️  KURASI.AI - DEWAN 6 AI MULAI BEKERJA');
+  console.log('🏛️  Latest 2025 Models - Indonesian Executive Intelligence');
+  console.log('🏛️ ══════════════════════════════════════════════════════════════');
+  console.log('');
+  console.log('📊 Council Members:');
+  console.log('   🟢 GPT-5.2 (OpenAI) - General reasoning');
+  console.log('   🟤 Claude Opus 4.5 (Anthropic) - JUDGE');
+  console.log('   🔵 Gemini 3 Pro (Google) - 1M+ context');
+  console.log('   🟣 DeepSeek V3 (DeepSeek) - Cost-efficient');
+  console.log('   🔴 Perplexity Sonar Pro - REAL-TIME WEB');
+  console.log('   🟠 Grok 4.1 Fast (xAI) - X/Twitter data');
+  console.log('');
+
+  // Get user profile
+  const profile = await getUserProfile(userId);
+  if (!profile) {
+    return { success: false, error: 'Profile not found' };
+  }
+
+  // Create search prompt
+  const searchPrompt = createSearchPrompt(profile);
+
+  // Check configured APIs
+  const apis = {
+    openai: !!process.env.OPENAI_API_KEY,
+    anthropic: !!process.env.ANTHROPIC_API_KEY,
+    gemini: !!process.env.GOOGLE_AI_API_KEY,
+    deepseek: !!process.env.DEEPSEEK_API_KEY,
+    perplexity: !!process.env.PERPLEXITY_API_KEY,
+    grok: !!process.env.XAI_API_KEY
+  };
+
+  const configuredCount = Object.values(apis).filter(Boolean).length;
+  console.log(`✅ ${configuredCount}/6 AI models configured\n`);
+
+  // Build search promises for configured APIs
+  const searches: Promise<SearchResult>[] = [];
+  
+  if (apis.openai) searches.push(searchWithGPT5(searchPrompt));
+  if (apis.anthropic) searches.push(searchWithClaude(searchPrompt));
+  if (apis.gemini) searches.push(searchWithGemini(searchPrompt));
+  if (apis.deepseek) searches.push(searchWithDeepSeek(searchPrompt));
+  if (apis.perplexity) searches.push(searchWithPerplexity(searchPrompt));
+  if (apis.grok) searches.push(searchWithGrok(searchPrompt));
+
+  if (searches.length === 0) {
+    return { success: false, error: 'No API keys configured!' };
+  }
+
+  console.log(`🚀 Running ${searches.length} AI models in parallel...\n`);
+
+  // Execute all searches in parallel
+  const startTime = Date.now();
+  const results = await Promise.all(searches);
+  const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+
+  // Log results
+  console.log('\n📊 HASIL PENCARIAN DEWAN AI:');
+  console.log('─'.repeat(65));
+  results.forEach(r => {
+    const status = r.error ? '❌' : '✅';
+    const badge = r.model === 'Perplexity' ? ' [REAL-TIME]' : 
+                  r.model === 'Grok 4.1 Fast' ? ' [X/Twitter]' : '';
+    console.log(`${status} ${r.model} (${r.provider}): ${r.articles.length} artikel${badge}`);
+  });
+  console.log('─'.repeat(65));
+  console.log(`⏱️  Waktu total: ${duration} detik`);
+
+  // Combine all articles
+  const allArticles = results.flatMap(r => 
+    r.articles.map(a => ({ 
+      ...a, 
+      foundBy: r.model,
+      foundByProvider: r.provider
+    }))
+  );
+
+  const successfulModels = results.filter(r => !r.error && r.articles.length > 0);
+  console.log(`\n📚 Total: ${allArticles.length} artikel dari ${successfulModels.length} model\n`);
+
+  // Claude Opus 4.5 as final judge
+  const finalBrief = await claudeOpusJudge(profile, allArticles, results);
+
+  // Save brief
+  await saveBrief(userId, finalBrief);
+
+  console.log('');
+  console.log('🏛️ ══════════════════════════════════════════════════════════════');
+  console.log('🏛️  BRIEF SELESAI! ✅');
+  console.log('🏛️ ══════════════════════════════════════════════════════════════');
+  console.log('');
+
+  return { success: true, brief: finalBrief };
+}
+
+// ============================================
+// CLAUDE OPUS 4.5 AS FINAL JUDGE
+// ============================================
+
+async function claudeOpusJudge(profile: any, articles: any[], councilResults: SearchResult[]): Promise<any> {
+  console.log('\n⚖️  Claude Opus 4.5 mengevaluasi sebagai Hakim Akhir...\n');
+
+  const modelsUsed = councilResults
+    .filter(r => !r.error && r.articles.length > 0)
+    .map(r => r.model);
+
+  const judgePrompt = `Anda adalah HAKIM AKHIR untuk brief Kurasi.ai, menggunakan Claude Opus 4.5 - model terbaik untuk judgment.
+
+PROFIL PENGGUNA:
+${profile.council_system_prompt}
+
+---
+
+DEWAN 6 AI YANG BERPARTISIPASI:
+${modelsUsed.join(', ')}
+
+Catatan khusus:
+- Artikel dari Perplexity = REAL-TIME dari web (sangat fresh)
+- Artikel dari Grok 4.1 = dari X/Twitter (social sentiment)
+
+TOTAL ARTIKEL: ${articles.length}
+
+ARTIKEL:
+${JSON.stringify(articles, null, 2)}
+
+---
+
+TUGAS:
+
+1. DEDUPLIKASI - Gabungkan berita sama, catat foundByModels
+2. VERIFIKASI - URL valid? Sumber kredibel? 
+3. KATEGORIKAN:
+   🔴 KRITIS (1-3): Perlu tindakan HARI INI
+   🟡 PENTING (3-5): Perlu tahu minggu ini
+   🟢 LATAR (2-4): Untuk dipantau
+4. PERSONALISASI - "whyItMatters" SPESIFIK untuk user ini
+5. TRUST SCORE (1-10):
+   - 9-10: Sumber resmi + multiple AI agree
+   - 7-8: Media terpercaya
+   - 5-6: Perlu verifikasi
+   - Bonus +1 jika dari Perplexity (real-time)
+
+OUTPUT JSON (Bahasa Indonesia):
+{
+  "briefDate": "${new Date().toISOString().split('T')[0]}",
+  "executiveSummary": "2-3 kalimat ringkasan PERSONAL",
+  "modelsUsed": ${JSON.stringify(modelsUsed)},
+  "totalArticlesAnalyzed": ${articles.length},
+  "critical": [{
+    "title": "...",
+    "summary": "...",
+    "source": "Nama sumber",
+    "sourceType": "local|regional|global|social",
+    "url": "URL lengkap",
+    "isPaywalled": boolean,
+    "whyItMatters": "PERSONAL untuk user ini",
+    "foundByModels": ["GPT-5.2", "Perplexity"],
+    "verificationScore": 9,
+    "publishedDate": "YYYY-MM-DD",
+    "isRealTime": boolean,
+    "fromX": boolean
+  }],
+  "important": [...],
+  "background": [...],
+  "councilNotes": "Catatan konsensus 6 AI"
+}`;
+
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-opus-4-5-20251101',
+      max_tokens: 8000,
+      messages: [{ role: 'user', content: judgePrompt }]
+    });
+
+    const content = response.content[0].type === 'text' ? response.content[0].text : '{}';
+    return JSON.parse(content.replace(/```json\n?|\n?```/g, '').trim());
+  } catch (error: any) {
+    console.error('❌ Claude Judge error, falling back to DeepSeek:', error.message);
+    
+    const response = await deepseek.chat.completions.create({
+      model: 'deepseek-v3',
+      messages: [
+        { role: 'system', content: 'Respond with valid JSON only.' },
+        { role: 'user', content: judgePrompt }
+      ],
+      temperature: 0.3
+    });
+    
+    const content = response.choices[0].message.content || '{}';
+    return JSON.parse(content.replace(/```json\n?|\n?```/g, '').trim());
+  }
+}
+
+// ============================================
+// SEARCH PROMPT GENERATOR
+// ============================================
+
+function createSearchPrompt(profile: any): string {
+  const today = new Date().toISOString().split('T')[0];
+  
+  return `${profile.council_system_prompt}
+
+TANGGAL: ${today}
+BAHASA OUTPUT: Bahasa Indonesia
+
+PRIORITAS SUMBER:
+1. 🇮🇩 INDONESIA: Kontan, Bisnis Indonesia, CNBC Indonesia, Kompas, Tempo, Katadata
+2. 🌏 ASEAN: Straits Times, Nikkei Asia, CNA, Bangkok Post
+3. 🌍 GLOBAL: Bloomberg, Reuters, FT, WSJ
+
+CARI 5 BERITA PALING RELEVAN (24-48 jam terakhir).
+
+FORMAT JSON:
+{
+  "searchQueries": ["query yang digunakan"],
+  "articles": [
+    {
+      "title": "Judul (bahasa asli)",
+      "summary": "Ringkasan 2-3 kalimat dalam Bahasa Indonesia",
+      "source": "Nama sumber",
+      "sourceType": "local|regional|global",
+      "url": "URL lengkap",
+      "isPaywalled": true/false,
+      "whyItMatters": "Relevansi untuk user ini",
+      "publishedDate": "YYYY-MM-DD",
+      "confidence": 1-10
+    }
+  ]
+}
+
+PENTING:
+- Minimal 60% dari sumber Indonesia
+- Jangan buat berita palsu
+- Lebih baik 3 valid daripada 5 meragukan`;
+}
+
+// ============================================
+// TEST ENDPOINT
+// ============================================
+
+// server/routes/test.ts
+
+router.get('/api/test/council', async (req, res) => {
+  const status = {
+    openai: { 
+      ok: !!process.env.OPENAI_API_KEY,
+      model: 'GPT-5.2',
+      strength: 'Fast reasoning'
+    },
+    anthropic: { 
+      ok: !!process.env.ANTHROPIC_API_KEY,
+      model: 'Claude Opus 4.5',
+      strength: '⚖️ HAKIM AKHIR'
+    },
+    gemini: { 
+      ok: !!process.env.GOOGLE_AI_API_KEY,
+      model: 'Gemini 3 Pro',
+      strength: '1M+ context'
+    },
+    deepseek: { 
+      ok: !!process.env.DEEPSEEK_API_KEY,
+      model: 'DeepSeek V3',
+      strength: '94% cheaper'
+    },
+    perplexity: { 
+      ok: !!process.env.PERPLEXITY_API_KEY,
+      model: 'Sonar Pro',
+      strength: '🔥 REAL-TIME WEB'
+    },
+    grok: { 
+      ok: !!process.env.XAI_API_KEY,
+      model: 'Grok 4.1 Fast',
+      strength: '🐦 X/Twitter + Reasoning'
+    },
+    resend: {
+      ok: !!process.env.RESEND_API_KEY,
+      model: 'Resend',
+      strength: '📧 Email'
+    }
+  };
+
+  const aiCount = ['openai', 'anthropic', 'gemini', 'deepseek', 'perplexity', 'grok']
+    .filter(k => status[k].ok).length;
+
+  res.json({
+    title: '🏛️ Kurasi.ai - Dewan 6 AI Status',
+    configuredAI: `${aiCount}/6`,
+    emailReady: status.resend.ok,
+    models: status,
+    ready: aiCount >= 3,
+    message: aiCount === 6 
+      ? '🎉 SEMPURNA! Semua 6 AI siap! LET\'S SHIP! 🚀' 
+      : `${6 - aiCount} API key lagi untuk lengkap`
+  });
+});
+
+// ============================================
+// EXPORT FOR UI
+// ============================================
+
+export function getCouncilInfo() {
+  return {
+    name: 'Dewan 6 AI Kurasi.ai',
+    description: '6 model AI terbaik 2025 bekerja paralel untuk brief Anda',
+    models: [
+      { name: 'GPT-5.2', provider: 'OpenAI', color: '#10a37f', icon: '🟢' },
+      { name: 'Claude Opus 4.5', provider: 'Anthropic', color: '#d4a574', icon: '🟤', badge: 'JUDGE' },
+      { name: 'Gemini 3 Pro', provider: 'Google', color: '#4285f4', icon: '🔵' },
+      { name: 'DeepSeek V3', provider: 'DeepSeek', color: '#7c3aed', icon: '🟣' },
+      { name: 'Perplexity', provider: 'Perplexity', color: '#1fb8cd', icon: '🔴', badge: 'LIVE' },
+      { name: 'Grok 4.1 Fast', provider: 'xAI', color: '#f97316', icon: '🟠', badge: 'X' }
+    ]
+  };
+}
+```
+
+---
+
+## Part B: API Keys for Replit Secrets
+
+Add these 7 secrets in Replit:
+
+```
+┌─────────────────────┬──────────────────────────────┬────────────────┐
+│ Secret Name         │ Model                        │ Source         │
+├─────────────────────┼──────────────────────────────┼────────────────┤
+│ OPENAI_API_KEY      │ GPT-5.2                      │ platform.openai.com │
+│ ANTHROPIC_API_KEY   │ Claude Opus 4.5 (JUDGE)      │ console.anthropic.com │
+│ GOOGLE_AI_API_KEY   │ Gemini 3 Pro                 │ aistudio.google.com │
+│ DEEPSEEK_API_KEY    │ DeepSeek V3                  │ platform.deepseek.com │
+│ PERPLEXITY_API_KEY  │ Sonar Pro (REAL-TIME)        │ perplexity.ai │
+│ XAI_API_KEY         │ Grok 4.1 Fast (X/Twitter)    │ x.ai │
+│ RESEND_API_KEY      │ Email delivery               │ resend.com │
+└─────────────────────┴──────────────────────────────┴────────────────┘
+```
+
+---
+
+## YOUR 6 AI COUNCIL - FINAL! 🏛️
+
+```
+┌────────────────────────────────────────────────────────────┐
+│                 KURASI.AI - DEWAN 6 AI                     │
+│              Latest 2025 Models - Indonesia First          │
+├────────────────────────────────────────────────────────────┤
+│  🟢 GPT-5.2          │ Fast reasoning & analysis          │
+│  🟤 Claude Opus 4.5  │ HAKIM AKHIR - Best judgment        │
+│  🔵 Gemini 3 Pro     │ 1M+ context, Google data           │
+│  🟣 DeepSeek V3      │ 94% cheaper, ASEAN focus           │
+│  🔴 Perplexity       │ 🔥 REAL-TIME WEB SEARCH            │
+│  🟠 Grok 4.1 Fast    │ 🐦 X/Twitter data + 2M context     │
+├────────────────────────────────────────────────────────────┤
+│          All results → Claude Opus 4.5 (Judge)             │
+│                    → Final Brief                           │
+└────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## CHECKLIST TO SHIP:
+
+1. [ ] Copy this prompt to Replit
+2. [ ] Add 7 API keys to Replit Secrets
+3. [ ] Test: `/api/test/council` → Should show 6/6 ✅
+4. [ ] Try demo chat on landing
+5. [ ] Register → Onboard → Generate Brief
+6. [ ] SHIP TO PAK HALIM! 🚀
+
+BISMILLAH LET'S GO! 🇮🇩🔥

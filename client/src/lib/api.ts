@@ -173,6 +173,7 @@ export interface DailyBriefContent {
   background: BriefArticle[];
   councilAgreement: string;
   confidenceNote: string;
+  modelsUsed?: string[];
 }
 
 export interface DailyBrief {
@@ -253,7 +254,8 @@ export const councilApi = {
     fetchApi<{
       success: boolean;
       councilSummary: Array<{
-        perspective: string;
+        model: string;
+        provider: string;
         articlesFound: number;
         error?: string;
       }>;
