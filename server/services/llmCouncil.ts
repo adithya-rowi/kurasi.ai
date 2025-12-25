@@ -58,8 +58,7 @@ const AI_COUNCIL = {
 };
 
 const anthropic = new Anthropic({
-  apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
+  apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 const openai = process.env.OPENAI_API_KEY
@@ -563,7 +562,7 @@ export async function runCouncilForUser(userId: string): Promise<{
   console.log(`👤 User: ${profile.personaSummary?.split(".")[0] || userId}`);
 
   const apis = {
-    anthropic: !!process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
+    anthropic: !!process.env.ANTHROPIC_API_KEY,
     openai: !!process.env.OPENAI_API_KEY,
     deepseek: !!process.env.DEEPSEEK_API_KEY,
     perplexity: !!process.env.PERPLEXITY_API_KEY,
@@ -687,7 +686,7 @@ export async function runCouncilForUser(userId: string): Promise<{
 
 export function getCouncilStatus() {
   return {
-    anthropic: { ok: !!process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY, ...AI_COUNCIL.anthropic },
+    anthropic: { ok: !!process.env.ANTHROPIC_API_KEY, ...AI_COUNCIL.anthropic },
     openai: { ok: !!process.env.OPENAI_API_KEY, ...AI_COUNCIL.openai },
     deepseek: { ok: !!process.env.DEEPSEEK_API_KEY, ...AI_COUNCIL.deepseek },
     perplexity: { ok: !!process.env.PERPLEXITY_API_KEY, ...AI_COUNCIL.perplexity },
