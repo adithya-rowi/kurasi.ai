@@ -148,3 +148,53 @@ export const onboardingApi = {
   getProfile: (userId: string) =>
     fetchApi<any>(`/api/users/${userId}/profile`),
 };
+
+// LLM Council API
+export interface BriefArticle {
+  title: string;
+  summary: string;
+  source: string;
+  url: string;
+  whyItMatters: string;
+  foundByPerspectives: string[];
+  verificationScore: number;
+}
+
+export interface DailyBriefContent {
+  briefDate: string;
+  recipientName: string;
+  greeting: string;
+  executiveSummary: string;
+  critical: BriefArticle[];
+  important: BriefArticle[];
+  background: BriefArticle[];
+  councilAgreement: string;
+  confidenceNote: string;
+}
+
+export interface DailyBrief {
+  id: string;
+  userId: string;
+  content: DailyBriefContent;
+  councilMetadata: any;
+  generatedAt: string;
+}
+
+export const councilApi = {
+  runCouncil: (userId: string) =>
+    fetchApi<{
+      success: boolean;
+      councilSummary: Array<{
+        perspective: string;
+        articlesFound: number;
+        error?: string;
+      }>;
+      brief: DailyBriefContent;
+    }>(`/api/council/${userId}/run`, { method: "POST" }),
+
+  getLatestBrief: (userId: string) =>
+    fetchApi<DailyBrief>(`/api/brief/${userId}/latest`),
+
+  getBriefHistory: (userId: string, limit = 7) =>
+    fetchApi<DailyBrief[]>(`/api/brief/${userId}/history?limit=${limit}`),
+};

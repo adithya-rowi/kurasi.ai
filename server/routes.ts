@@ -16,9 +16,14 @@ import {
   generateUserProfile,
   getOrCreateOnboardingConversation,
 } from "./onboarding-chat";
+import {
+  runCouncilForUser,
+  getLatestBrief,
+  getBriefHistory,
+} from "./services/llmCouncil";
 import { db } from "./db";
-import { userProfiles } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { userProfiles, dailyBriefs } from "@shared/schema";
+import { eq, desc } from "drizzle-orm";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -310,6 +315,56 @@ export async function registerRoutes(
       res.json(profile);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
+    }
+  });
+
+  // LLM Council Routes
+  app.post("/api/council/:userId/run", async (req, res) => {
+    try {
+      console.log(`Running council for user ${req.params.userId}...`);
+      const result = await runCouncilForUser(req.params.userId);
+      
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+      
+      res.json({
+        success: true,
+        councilSummary: result.councilResults?.map((r) => ({
+          perspective: r.perspective,
+          articlesFound: r.articles.length,
+          error: r.error,
+        })),
+        brief: result.finalBrief,
+      });
+    } catch (error: any) {
+      console.error("Council error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/brief/:userId/latest", async (req, res) => {
+    try {
+      const brief = await getLatestBrief(req.params.userId);
+      if (!brief) {
+        return res.status(404).json({ 
+          error: "No brief found",
+          message: "Run the council to generate your first brief" 
+        });
+      }
+      res.json(brief);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/brief/:userId/history", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 7;
+      const briefs = await getBriefHistory(req.params.userId, limit);
+      res.json(briefs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 

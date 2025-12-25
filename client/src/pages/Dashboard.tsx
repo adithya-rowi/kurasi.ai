@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Article } from "@shared/schema";
-import { articlesApi, userApi } from "@/lib/api";
+import { articlesApi, userApi, councilApi, DailyBriefContent, BriefArticle } from "@/lib/api";
 import { session } from "@/lib/session";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { 
   LayoutDashboard, 
   Archive, 
@@ -21,7 +22,11 @@ import {
   ThumbsUp,
   ThumbsDown,
   Share2,
-  Clock
+  Clock,
+  Sparkles,
+  Loader2,
+  RefreshCw,
+  AlertCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +34,7 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [_, setLocation] = useLocation();
   const userId = session.getUserId();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!userId) {
@@ -42,10 +48,34 @@ export default function Dashboard() {
     enabled: !!userId,
   });
 
-  const { data: articles = [], isLoading } = useQuery({
+  const { data: latestBrief, isLoading: briefLoading, error: briefError } = useQuery({
+    queryKey: ['brief', userId],
+    queryFn: () => userId ? councilApi.getLatestBrief(userId) : null,
+    enabled: !!userId,
+    retry: false,
+  });
+
+  const { data: articles = [], isLoading: articlesLoading } = useQuery({
     queryKey: ['articles'],
     queryFn: () => articlesApi.getAll(20),
   });
+
+  const generateBriefMutation = useMutation({
+    mutationFn: () => {
+      if (!userId) throw new Error("No user ID");
+      return councilApi.runCouncil(userId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['brief', userId] });
+      toast.success("Your intelligence brief is ready!");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to generate brief");
+    },
+  });
+
+  const briefContent = latestBrief?.content as DailyBriefContent | undefined;
+  const hasBrief = !!briefContent;
 
   const criticalArticles = articles.filter(a => a.category === "Critical");
   const importantArticles = articles.filter(a => a.category === "Important");
@@ -55,9 +85,15 @@ export default function Dashboard() {
     return null;
   }
 
+  const today = new Date().toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-      {/* Sidebar */}
       <aside 
         className={cn(
           "bg-sidebar border-r border-sidebar-border transition-all duration-300 flex flex-col z-20",
@@ -75,15 +111,15 @@ export default function Dashboard() {
 
         <nav className="flex-1 p-3 space-y-2">
             <NavItem icon={<LayoutDashboard size={20} />} label="Today's Brief" isActive isOpen={sidebarOpen} />
-            <NavItem icon={<Archive size={20} />} label="Archive" isOpen={sidebarOpen} />
-            <NavItem icon={<Bookmark size={20} />} label="Saved Items" isOpen={sidebarOpen} />
+            <NavItem icon={<Archive size={20} />} label="Archive" isOpen={sidebarOpen} href="/archive" />
+            <NavItem icon={<Bookmark size={20} />} label="Saved Items" isOpen={sidebarOpen} href="/saved" />
             <NavItem icon={<Settings size={20} />} label="Settings" isOpen={sidebarOpen} />
         </nav>
 
         <div className="p-3 mt-auto border-t border-sidebar-border">
             <div className={cn("flex items-center gap-3 p-2 rounded-lg hover:bg-sidebar-accent cursor-pointer", !sidebarOpen && "justify-center")}>
                 <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center font-bold text-xs">
-                    PH
+                    {user?.fullName?.split(' ').map(n => n[0]).join('').slice(0, 2) || 'U'}
                 </div>
                 {sidebarOpen && user && (
                     <div className="overflow-hidden">
@@ -95,16 +131,14 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
-        {/* Header */}
         <header className="h-16 border-b border-border bg-background/80 backdrop-blur-sm flex items-center justify-between px-6 shrink-0 z-10 sticky top-0">
             <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
+                <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)} data-testid="button-toggle-sidebar">
                     <Menu className="h-5 w-5" />
                 </Button>
                 <div className="hidden md:block">
-                    <p className="text-sm text-muted-foreground">Wednesday, 25 December 2025</p>
+                    <p className="text-sm text-muted-foreground">{today}</p>
                 </div>
             </div>
             <div className="flex items-center gap-4">
@@ -114,32 +148,148 @@ export default function Dashboard() {
                         type="text" 
                         placeholder="Search intelligence..." 
                         className="w-full h-9 rounded-full bg-secondary/50 border-none pl-9 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                        data-testid="input-search"
                     />
                 </div>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" data-testid="button-notifications">
                     <Bell className="h-5 w-5" />
                 </Button>
             </div>
         </header>
 
-        {/* Content Scroll Area */}
         <ScrollArea className="flex-1">
             <div className="max-w-4xl mx-auto p-6 md:p-10 space-y-10 pb-20">
                 
                 <div className="space-y-2">
-                    <h1 className="text-3xl md:text-4xl font-serif font-bold">Good Morning, {user?.fullName?.split(' ')[0] || 'there'}</h1>
-                    <p className="text-lg text-muted-foreground">
-                      {isLoading ? "Loading your brief..." : `Here is your intelligence brief. ${articles.length} items curated for you.`}
+                    <h1 className="text-3xl md:text-4xl font-serif font-bold" data-testid="text-greeting">
+                      {briefContent?.greeting || `Good Morning, ${user?.fullName?.split(' ')[0] || 'there'}`}
+                    </h1>
+                    <p className="text-lg text-muted-foreground" data-testid="text-summary">
+                      {briefContent?.executiveSummary || (briefLoading ? "Loading your brief..." : "Generate your personalized intelligence brief to get started.")}
                     </p>
                 </div>
 
-                {isLoading ? (
-                  <div className="flex justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                {!hasBrief && !briefLoading && (
+                  <div className="bg-gradient-to-br from-primary/5 to-amber-500/5 border border-primary/20 rounded-xl p-8 text-center space-y-4">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-amber-500 flex items-center justify-center mx-auto">
+                      <Sparkles className="h-8 w-8 text-white" />
+                    </div>
+                    <h3 className="font-serif font-bold text-xl">Generate Your First AI Brief</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto">
+                      Our AI Council will search for news tailored to your unique profile and curate an intelligence brief just for you.
+                    </p>
+                    <Button 
+                      onClick={() => generateBriefMutation.mutate()}
+                      disabled={generateBriefMutation.isPending}
+                      className="gap-2"
+                      size="lg"
+                      data-testid="button-generate-brief"
+                    >
+                      {generateBriefMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          AI Council Working...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4" />
+                          Generate My Brief
+                        </>
+                      )}
+                    </Button>
+                    {generateBriefMutation.isPending && (
+                      <p className="text-xs text-muted-foreground">This may take 30-60 seconds as multiple AI perspectives analyze news for you.</p>
+                    )}
                   </div>
-                ) : (
+                )}
+
+                {hasBrief && (
                   <>
-                    {/* CRITICAL SECTION */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="h-4 w-4" />
+                        <span>Generated {new Date(latestBrief!.generatedAt).toLocaleTimeString()}</span>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => generateBriefMutation.mutate()}
+                        disabled={generateBriefMutation.isPending}
+                        className="gap-2"
+                        data-testid="button-refresh-brief"
+                      >
+                        {generateBriefMutation.isPending ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-3 w-3" />
+                        )}
+                        Refresh
+                      </Button>
+                    </div>
+
+                    {briefContent.critical && briefContent.critical.length > 0 && (
+                      <section>
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="h-3 w-3 rounded-full bg-destructive animate-pulse" />
+                          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Requires Attention</h2>
+                        </div>
+                        <div className="space-y-6">
+                          {briefContent.critical.map((article, idx) => (
+                            <AIBriefItem key={idx} article={article} />
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {briefContent.critical?.length > 0 && briefContent.important?.length > 0 && <Separator />}
+
+                    {briefContent.important && briefContent.important.length > 0 && (
+                      <section>
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="h-3 w-3 rounded-full bg-amber-400" />
+                          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Worth Knowing</h2>
+                        </div>
+                        <div className="space-y-6">
+                          {briefContent.important.map((article, idx) => (
+                            <AIBriefItem key={idx} article={article} />
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {briefContent.important?.length > 0 && briefContent.background?.length > 0 && <Separator />}
+
+                    {briefContent.background && briefContent.background.length > 0 && (
+                      <section>
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="h-3 w-3 rounded-full bg-emerald-500" />
+                          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">On Your Radar</h2>
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          {briefContent.background.map((article, idx) => (
+                            <AIBackgroundItem key={idx} article={article} />
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {briefContent.councilAgreement && (
+                      <div className="bg-secondary/20 rounded-lg p-4 text-sm">
+                        <p className="font-medium mb-1">AI Council Insight</p>
+                        <p className="text-muted-foreground">{briefContent.councilAgreement}</p>
+                        {briefContent.confidenceNote && (
+                          <p className="text-xs text-muted-foreground mt-2">{briefContent.confidenceNote}</p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {!hasBrief && !briefLoading && articles.length > 0 && (
+                  <>
+                    <Separator />
+                    <p className="text-sm text-muted-foreground text-center">While you wait, here are some recent articles from our database:</p>
+                    
                     {criticalArticles.length > 0 && (
                       <section>
                         <div className="flex items-center gap-3 mb-6">
@@ -148,15 +298,12 @@ export default function Dashboard() {
                         </div>
                         <div className="space-y-6">
                           {criticalArticles.map(article => (
-                            <BriefItem key={article.id} article={article} />
+                            <LegacyBriefItem key={article.id} article={article} />
                           ))}
                         </div>
                       </section>
                     )}
 
-                    {criticalArticles.length > 0 && importantArticles.length > 0 && <Separator />}
-
-                    {/* IMPORTANT SECTION */}
                     {importantArticles.length > 0 && (
                       <section>
                         <div className="flex items-center gap-3 mb-6">
@@ -165,24 +312,7 @@ export default function Dashboard() {
                         </div>
                         <div className="space-y-6">
                           {importantArticles.map(article => (
-                            <BriefItem key={article.id} article={article} />
-                          ))}
-                        </div>
-                      </section>
-                    )}
-
-                    {importantArticles.length > 0 && backgroundArticles.length > 0 && <Separator />}
-
-                    {/* BACKGROUND SECTION */}
-                    {backgroundArticles.length > 0 && (
-                      <section>
-                        <div className="flex items-center gap-3 mb-6">
-                          <div className="h-3 w-3 rounded-full bg-emerald-500" />
-                          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">On Your Radar</h2>
-                        </div>
-                        <div className="grid md:grid-cols-2 gap-4">
-                          {backgroundArticles.map(article => (
-                            <BackgroundItem key={article.id} article={article} />
+                            <LegacyBriefItem key={article.id} article={article} />
                           ))}
                         </div>
                       </section>
@@ -190,14 +320,13 @@ export default function Dashboard() {
                   </>
                 )}
 
-                {/* Footer Feedback */}
                 <div className="bg-secondary/30 rounded-xl p-8 text-center space-y-4 mt-12">
                     <h3 className="font-serif font-bold text-lg">How was today's brief?</h3>
                     <div className="flex justify-center gap-4">
-                        <Button variant="outline" className="rounded-full h-12 px-6 hover:bg-green-50 hover:text-green-600 hover:border-green-200">
+                        <Button variant="outline" className="rounded-full h-12 px-6 hover:bg-green-50 hover:text-green-600 hover:border-green-200" data-testid="button-helpful">
                             <ThumbsUp className="mr-2 h-4 w-4" /> Helpful
                         </Button>
-                        <Button variant="outline" className="rounded-full h-12 px-6 hover:bg-red-50 hover:text-red-600 hover:border-red-200">
+                        <Button variant="outline" className="rounded-full h-12 px-6 hover:bg-red-50 hover:text-red-600 hover:border-red-200" data-testid="button-irrelevant">
                             <ThumbsDown className="mr-2 h-4 w-4" /> Irrelevant
                         </Button>
                     </div>
@@ -211,8 +340,8 @@ export default function Dashboard() {
   );
 }
 
-function NavItem({ icon, label, isActive, isOpen }: { icon: React.ReactNode, label: string, isActive?: boolean, isOpen: boolean }) {
-    return (
+function NavItem({ icon, label, isActive, isOpen, href }: { icon: React.ReactNode, label: string, isActive?: boolean, isOpen: boolean, href?: string }) {
+    const content = (
         <div className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors group",
             isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/50 text-muted-foreground hover:text-foreground"
@@ -222,20 +351,29 @@ function NavItem({ icon, label, isActive, isOpen }: { icon: React.ReactNode, lab
             {isOpen && isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />}
         </div>
     );
+
+    if (href) {
+        return <Link href={href}>{content}</Link>;
+    }
+    return content;
 }
 
-function BriefItem({ article }: { article: Article }) {
+function AIBriefItem({ article }: { article: BriefArticle }) {
     const [expanded, setExpanded] = useState(false);
 
     return (
-        <div className="group relative pl-6 border-l-2 border-border hover:border-primary transition-colors">
+        <div className="group relative pl-6 border-l-2 border-border hover:border-primary transition-colors" data-testid={`brief-item-${article.title.slice(0, 20)}`}>
             <div className="absolute -left-[5px] top-1 h-2.5 w-2.5 rounded-full bg-background border-2 border-border group-hover:border-primary transition-colors" />
             
             <div className="space-y-2 mb-3">
                 <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                     <span className="text-primary/80 bg-primary/5 px-2 py-0.5 rounded uppercase tracking-wider text-[10px]">{article.source}</span>
-                    <span>•</span>
-                    <span>{new Date(article.publishedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    {article.verificationScore && (
+                      <>
+                        <span>•</span>
+                        <span className="text-emerald-600">Confidence: {article.verificationScore}/10</span>
+                      </>
+                    )}
                     <span className="ml-auto flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                          <Button variant="ghost" size="icon" className="h-6 w-6"><Bookmark className="h-3.5 w-3.5" /></Button>
                          <Button variant="ghost" size="icon" className="h-6 w-6"><Share2 className="h-3.5 w-3.5" /></Button>
@@ -251,42 +389,85 @@ function BriefItem({ article }: { article: Article }) {
                 </p>
             </div>
 
-            {/* AI Insight Box */}
             <div className="bg-secondary/30 rounded-lg p-3 text-sm border border-secondary relative overflow-hidden">
                 <div className="flex gap-2 items-start">
                     <div className="mt-0.5 min-w-[16px]">✨</div>
                     <div className="space-y-1">
                         <p className="font-medium text-foreground/80">Why this matters to you:</p>
-                        <p className="text-muted-foreground">{article.relevanceReason}</p>
+                        <p className="text-muted-foreground">{article.whyItMatters}</p>
                     </div>
                 </div>
             </div>
             
-            <div className="mt-3 flex gap-2">
-                {article.topics.map(t => (
-                    <span key={t} className="text-xs text-muted-foreground bg-secondary/50 px-2 py-1 rounded-full">{t}</span>
+            <div className="mt-3 flex gap-2 flex-wrap items-center">
+                {article.foundByPerspectives?.map(p => (
+                    <span key={p} className="text-xs text-muted-foreground bg-secondary/50 px-2 py-1 rounded-full">{p}</span>
                 ))}
-                 <Button variant="link" className="ml-auto h-auto p-0 text-xs text-primary" onClick={() => setExpanded(!expanded)}>
-                    {expanded ? "Read Less" : "Read Analysis"} <ChevronRight className="ml-1 h-3 w-3" />
-                </Button>
+                {article.url && article.url !== "search required" && (
+                  <Button variant="link" className="ml-auto h-auto p-0 text-xs text-primary" asChild>
+                    <a href={article.url} target="_blank" rel="noopener noreferrer">
+                      Read Original <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
+                  </Button>
+                )}
             </div>
         </div>
     );
 }
 
-function BackgroundItem({ article }: { article: Article }) {
+function AIBackgroundItem({ article }: { article: BriefArticle }) {
     return (
-        <div className="p-4 rounded-xl border border-border hover:bg-secondary/20 transition-colors group cursor-pointer">
+        <div className="p-4 rounded-xl border border-border hover:bg-secondary/20 transition-colors group cursor-pointer" data-testid={`bg-item-${article.title.slice(0, 20)}`}>
              <div className="flex items-center gap-2 text-[10px] font-medium text-muted-foreground mb-2">
                 <span className="uppercase tracking-wider">{article.source}</span>
-                <span>•</span>
-                <span>4h ago</span>
+                {article.verificationScore && (
+                  <>
+                    <span>•</span>
+                    <span>{article.verificationScore}/10</span>
+                  </>
+                )}
             </div>
             <h4 className="font-serif font-bold text-base mb-2 group-hover:text-primary transition-colors line-clamp-2">{article.title}</h4>
             <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{article.summary}</p>
             <div className="flex items-center text-xs text-primary font-medium">
-                Why: {article.relevanceReason.substring(0, 40)}...
+                <span className="line-clamp-1">{article.whyItMatters?.substring(0, 60)}...</span>
             </div>
         </div>
     )
+}
+
+function LegacyBriefItem({ article }: { article: Article }) {
+    return (
+        <div className="group relative pl-6 border-l-2 border-border hover:border-primary transition-colors">
+            <div className="absolute -left-[5px] top-1 h-2.5 w-2.5 rounded-full bg-background border-2 border-border group-hover:border-primary transition-colors" />
+            
+            <div className="space-y-2 mb-3">
+                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <span className="text-primary/80 bg-primary/5 px-2 py-0.5 rounded uppercase tracking-wider text-[10px]">{article.source}</span>
+                    <span>•</span>
+                    <span>{new Date(article.publishedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                </div>
+                
+                <h3 className="text-xl font-serif font-bold leading-tight group-hover:text-primary transition-colors">
+                    {article.title}
+                </h3>
+                
+                <p className="text-muted-foreground leading-relaxed">
+                    {article.summary}
+                </p>
+            </div>
+
+            {article.relevanceReason && (
+              <div className="bg-secondary/30 rounded-lg p-3 text-sm border border-secondary">
+                  <div className="flex gap-2 items-start">
+                      <div className="mt-0.5 min-w-[16px]">✨</div>
+                      <div className="space-y-1">
+                          <p className="font-medium text-foreground/80">Why this matters:</p>
+                          <p className="text-muted-foreground">{article.relevanceReason}</p>
+                      </div>
+                  </div>
+              </div>
+            )}
+        </div>
+    );
 }
