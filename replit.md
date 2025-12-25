@@ -80,7 +80,16 @@ The server handles user management, onboarding conversations, article storage, a
 
 ## Recent Changes
 
-### Prompt 4 - Indonesian-First Search (Current)
+### Prompt 5 - Trust & Transparency (Current)
+- Enhanced BriefCard with trust badges (Sangat Terpercaya/Terpercaya/Perlu Verifikasi)
+- Added verification score progress bar and regional source flags (🇮🇩/🌏/🌍)
+- Added "Transparansi & Verifikasi" section showing source URL, AI perspectives, verification score
+- Created CouncilFooter component with transparency commitment and AI disclaimer
+- Added Trust Metrics grid to Dashboard (high-trust count, Indonesian source count, AI perspectives count)
+- Updated LLM prompts with TRUST_REQUIREMENTS: anti-misinformation rules, verification scoring guidelines
+- Added publishedDate field to article interfaces
+
+### Prompt 4 - Indonesian-First Search
 - Implemented Indonesian-First Search Strategy with 60% minimum local source requirement
 - Prioritized sources: Kontan, Bisnis Indonesia, Kompas, Tempo, Detik, CNBC Indonesia
 - Added sourceType and isPaywalled fields to articles with normalization layer for backward compatibility
