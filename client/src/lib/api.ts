@@ -180,6 +180,71 @@ export interface DailyBrief {
   generatedAt: string;
 }
 
+// Subscription API
+export interface SubscriptionStatus {
+  isPremium: boolean;
+  plan: string;
+  validUntil?: string;
+  features: {
+    emailDelivery: boolean;
+    breakingAlerts: boolean;
+    archiveDays: number;
+  };
+}
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  priceIdr: number | null;
+  priceUsd: string | null;
+  features: any;
+  isActive: boolean;
+}
+
+export const subscriptionApi = {
+  getPlans: () => fetchApi<SubscriptionPlan[]>("/api/subscription/plans"),
+
+  getStatus: (userId: string) =>
+    fetchApi<SubscriptionStatus>(`/api/subscription/${userId}/status`),
+
+  activate: (userId: string, planName: string) =>
+    fetchApi<{ success: boolean }>(`/api/subscription/${userId}/activate`, {
+      method: "POST",
+      body: JSON.stringify({ planName }),
+    }),
+
+  cancel: (userId: string) =>
+    fetchApi<{ success: boolean }>(`/api/subscription/${userId}/cancel`, {
+      method: "POST",
+    }),
+};
+
+// Email Settings API
+export interface EmailSettings {
+  emailAddress: string;
+  deliveryTime: string;
+  deliveryDays: number[];
+  timezone: string;
+  breakingAlerts: boolean;
+}
+
+export const emailApi = {
+  getSettings: (userId: string) =>
+    fetchApi<EmailSettings | { configured: false }>(`/api/email/${userId}/settings`),
+
+  updateSettings: (userId: string, settings: Partial<EmailSettings>) =>
+    fetchApi<{ success: boolean }>(`/api/email/${userId}/settings`, {
+      method: "POST",
+      body: JSON.stringify(settings),
+    }),
+
+  sendBrief: (userId: string) =>
+    fetchApi<{ success: boolean; messageId?: string; error?: string }>(
+      `/api/email/${userId}/send-brief`,
+      { method: "POST" }
+    ),
+};
+
 export const councilApi = {
   runCouncil: (userId: string) =>
     fetchApi<{

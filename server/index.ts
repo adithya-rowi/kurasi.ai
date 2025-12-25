@@ -70,6 +70,14 @@ app.use((req, res, next) => {
     }
   }
 
+  // Always seed subscription plans
+  const { seedSubscriptionPlans } = await import("./services/subscriptionService");
+  try {
+    await seedSubscriptionPlans();
+  } catch (error) {
+    console.log("Subscription plans already seeded or seed failed");
+  }
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

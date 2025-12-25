@@ -10,6 +10,7 @@ import OnboardingChat from "@/pages/OnboardingChat";
 import Dashboard from "@/pages/Dashboard";
 import Archive from "@/pages/Archive";
 import Saved from "@/pages/Saved";
+import Pricing from "@/pages/Pricing";
 
 function Router() {
   return (
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/archive" component={Archive} />
       <Route path="/saved" component={Saved} />
+      <Route path="/pricing" component={Pricing} />
       <Route component={NotFound} />
     </Switch>
   );

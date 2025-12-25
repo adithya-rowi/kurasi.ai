@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Article } from "@shared/schema";
-import { articlesApi, userApi, councilApi, DailyBriefContent, BriefArticle } from "@/lib/api";
+import { articlesApi, userApi, councilApi, subscriptionApi, DailyBriefContent, BriefArticle } from "@/lib/api";
 import { session } from "@/lib/session";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -26,7 +26,9 @@ import {
   Loader2,
   RefreshCw,
   AlertCircle,
-  FileText
+  FileText,
+  Mail,
+  Crown
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +55,12 @@ export default function Dashboard() {
     queryFn: () => userId ? councilApi.getLatestBrief(userId) : null,
     enabled: !!userId,
     retry: false,
+  });
+
+  const { data: subscription } = useQuery({
+    queryKey: ['subscription', userId],
+    queryFn: () => userId ? subscriptionApi.getStatus(userId) : null,
+    enabled: !!userId,
   });
 
   const { data: articles = [], isLoading: articlesLoading } = useQuery({
@@ -182,6 +190,35 @@ export default function Dashboard() {
                       {briefContent?.executiveSummary || (briefLoading ? "Loading your brief..." : "Generate your personalized intelligence brief to get started.")}
                     </p>
                 </div>
+
+                {subscription && !subscription.isPremium && (
+                  <Link href="/pricing">
+                    <div 
+                      className="bg-gradient-to-r from-primary/10 via-amber-500/10 to-primary/10 border border-primary/20 rounded-xl p-4 cursor-pointer hover:border-primary/40 transition-all group"
+                      data-testid="banner-premium-upsell"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-amber-500 flex items-center justify-center">
+                            <Mail className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-bold">Get your brief delivered to your inbox</h3>
+                              <Crown className="h-4 w-4 text-amber-500" />
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Upgrade to Premium for IDR 79k/month and never miss important news
+                            </p>
+                          </div>
+                        </div>
+                        <Button size="sm" className="group-hover:scale-105 transition-transform" data-testid="button-upgrade-premium">
+                          Upgrade
+                        </Button>
+                      </div>
+                    </div>
+                  </Link>
+                )}
 
                 {!hasBrief && !briefLoading && (
                   <div className="bg-gradient-to-br from-primary/5 to-amber-500/5 border border-primary/20 rounded-xl p-8 text-center space-y-4">

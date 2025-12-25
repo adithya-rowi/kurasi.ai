@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, integer, timestamp, boolean, varchar, serial, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, boolean, varchar, serial, jsonb, time, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -13,6 +13,7 @@ export const users = pgTable("users", {
   languagePreference: text("language_preference").notNull().default("en"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   onboardingCompleted: boolean("onboarding_completed").default(false).notNull(),
+  subscriptionStatus: text("subscription_status").default("free").notNull(),
 });
 
 // Chat integration tables
@@ -128,6 +129,56 @@ export const briefFeedback = pgTable("brief_feedback", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Subscription plans
+export const subscriptionPlans = pgTable("subscription_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  priceIdr: integer("price_idr"),
+  priceUsd: numeric("price_usd", { precision: 10, scale: 2 }),
+  features: jsonb("features"),
+  isActive: boolean("is_active").default(true).notNull(),
+});
+
+// User subscriptions
+export const userSubscriptions = pgTable("user_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
+  planId: varchar("plan_id").notNull().references(() => subscriptionPlans.id),
+  status: text("status").default("active").notNull(),
+  currentPeriodStart: timestamp("current_period_start"),
+  currentPeriodEnd: timestamp("current_period_end"),
+  paymentProvider: text("payment_provider"),
+  paymentId: text("payment_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  cancelledAt: timestamp("cancelled_at"),
+});
+
+// Email delivery settings (premium only)
+export const emailDeliverySettings = pgTable("email_delivery_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
+  emailAddress: text("email_address").notNull(),
+  deliveryTime: text("delivery_time").default("06:00").notNull(),
+  deliveryDays: integer("delivery_days").array().default([1, 2, 3, 4, 5]).notNull(),
+  timezone: text("timezone").default("Asia/Jakarta").notNull(),
+  breakingAlerts: boolean("breaking_alerts").default(true).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Email delivery log
+export const emailDeliveryLog = pgTable("email_delivery_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  briefId: varchar("brief_id").references(() => dailyBriefs.id, { onDelete: "set null" }),
+  emailAddress: text("email_address").notNull(),
+  sentAt: timestamp("sent_at").defaultNow().notNull(),
+  status: text("status").notNull(),
+  resendMessageId: text("resend_message_id"),
+  openedAt: timestamp("opened_at"),
+  clickCount: integer("click_count").default(0).notNull(),
+});
+
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -174,6 +225,26 @@ export const insertUserProfileSchema = createInsertSchema(userProfiles).omit({
   lastUpdated: true,
 });
 
+export const insertSubscriptionPlanSchema = createInsertSchema(subscriptionPlans).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserSubscriptionSchema = createInsertSchema(userSubscriptions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertEmailDeliverySettingsSchema = createInsertSchema(emailDeliverySettings).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertEmailDeliveryLogSchema = createInsertSchema(emailDeliveryLog).omit({
+  id: true,
+  sentAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -199,3 +270,15 @@ export type DailyBrief = typeof dailyBriefs.$inferSelect;
 
 export type InsertBriefFeedback = z.infer<typeof insertBriefFeedbackSchema>;
 export type BriefFeedback = typeof briefFeedback.$inferSelect;
+
+export type InsertSubscriptionPlan = z.infer<typeof insertSubscriptionPlanSchema>;
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+
+export type InsertUserSubscription = z.infer<typeof insertUserSubscriptionSchema>;
+export type UserSubscription = typeof userSubscriptions.$inferSelect;
+
+export type InsertEmailDeliverySettings = z.infer<typeof insertEmailDeliverySettingsSchema>;
+export type EmailDeliverySettings = typeof emailDeliverySettings.$inferSelect;
+
+export type InsertEmailDeliveryLog = z.infer<typeof insertEmailDeliveryLogSchema>;
+export type EmailDeliveryLog = typeof emailDeliveryLog.$inferSelect;

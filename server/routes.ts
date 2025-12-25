@@ -21,6 +21,18 @@ import {
   getLatestBrief,
   getBriefHistory,
 } from "./services/llmCouncil";
+import {
+  getSubscriptionStatus,
+  activateSubscription,
+  cancelSubscription,
+  getPlans,
+} from "./services/subscriptionService";
+import {
+  getEmailSettings,
+  updateEmailSettings,
+  sendDailyBriefEmail,
+} from "./services/emailDeliveryService";
+import { z } from "zod";
 import { db } from "./db";
 import { userProfiles, dailyBriefs, briefFeedback } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
@@ -384,6 +396,111 @@ export async function registerRoutes(
       
       console.log(`Brief feedback saved: ${type} for "${articleTitle}" by user ${userId}`);
       res.json({ success: true, type, articleTitle });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Subscription Routes
+  app.get("/api/subscription/plans", async (req, res) => {
+    try {
+      const plans = await getPlans();
+      res.json(plans);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/subscription/:userId/status", async (req, res) => {
+    try {
+      const status = await getSubscriptionStatus(req.params.userId);
+      res.json(status);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  const activateSubscriptionSchema = z.object({
+    planName: z.enum(["free", "premium", "enterprise"]),
+    paymentProvider: z.string().optional(),
+    paymentId: z.string().optional(),
+  });
+
+  app.post("/api/subscription/:userId/activate", async (req, res) => {
+    try {
+      const validated = activateSubscriptionSchema.safeParse(req.body);
+      if (!validated.success) {
+        return res.status(400).json({ error: validated.error.issues[0]?.message || "Invalid request body" });
+      }
+      const { planName, paymentProvider, paymentId } = validated.data;
+      await activateSubscription(
+        req.params.userId,
+        planName,
+        paymentProvider || "demo",
+        paymentId || `demo-${Date.now()}`
+      );
+      res.json({ success: true, message: "Subscription activated" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/subscription/:userId/cancel", async (req, res) => {
+    try {
+      await cancelSubscription(req.params.userId);
+      res.json({ success: true, message: "Subscription cancelled" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Email Delivery Routes
+  app.get("/api/email/:userId/settings", async (req, res) => {
+    try {
+      const settings = await getEmailSettings(req.params.userId);
+      res.json(settings || { configured: false });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  const updateEmailSettingsSchema = z.object({
+    emailAddress: z.string().email().optional(),
+    deliveryTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+    deliveryDays: z.array(z.number().min(0).max(6)).optional(),
+    timezone: z.string().optional(),
+    breakingAlerts: z.boolean().optional(),
+  });
+
+  app.post("/api/email/:userId/settings", async (req, res) => {
+    try {
+      const validated = updateEmailSettingsSchema.safeParse(req.body);
+      if (!validated.success) {
+        return res.status(400).json({ error: validated.error.issues[0]?.message || "Invalid request body" });
+      }
+      await updateEmailSettings(req.params.userId, validated.data);
+      res.json({ success: true, message: "Email settings updated" });
+    } catch (error: any) {
+      if (error.message.includes("Premium")) {
+        return res.status(403).json({ error: error.message });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/email/:userId/send-brief", async (req, res) => {
+    try {
+      const { briefId } = req.body;
+      const brief = await getLatestBrief(req.params.userId);
+      if (!brief) {
+        return res.status(404).json({ error: "No brief found" });
+      }
+      const result = await sendDailyBriefEmail(
+        req.params.userId,
+        briefId || brief.id,
+        brief.content
+      );
+      res.json(result);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
