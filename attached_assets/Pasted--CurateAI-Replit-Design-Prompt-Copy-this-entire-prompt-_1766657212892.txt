@@ -1,0 +1,632 @@
+# CurateAI - Replit Design Prompt
+
+## 🎯 Copy this entire prompt into Replit Agent/Design
+
+-----
+
+## App Overview
+
+Build a personalized AI news curation platform called **“CurateAI”** (or “Kurasi” in Indonesian). This app creates hyper-personalized daily intelligence briefs for senior executives, policymakers, and business leaders. Think “TikTok algorithm meets Bloomberg Terminal meets personal assistant.”
+
+## Target User Persona
+
+Senior Indonesian executives and policymakers (age 50-70) who:
+
+- Make decisions that move markets and shape policy
+- Are overwhelmed by information but need relevant intelligence
+- Want ONE source that understands them deeply
+- Value their time extremely (max 5-min read)
+
+## Core Concept
+
+Like Flip.id subscribes to all banks so users don’t have to, this app subscribes to all news sources and AI-curates content specific to each individual user.
+
+-----
+
+## Tech Stack Required
+
+- **Frontend**: Next.js 14 with App Router, Tailwind CSS, shadcn/ui
+- **Backend**: Next.js API routes
+- **Database**: Supabase (PostgreSQL + Auth)
+- **AI**: OpenAI GPT-4 or Claude API for summarization and personalization
+- **Vector DB**: Supabase pgvector (for content matching) OR integrate with Ragie.ai
+- **Email**: Resend API (for transactional emails)
+- **Scheduling**: Vercel Cron Jobs or Trigger.dev
+- **News Sources**: NewsAPI, RSS feeds, web scraping with Firecrawl
+
+-----
+
+## Database Schema
+
+```sql
+-- Users table
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email VARCHAR(255) UNIQUE NOT NULL,
+  full_name VARCHAR(255),
+  role VARCHAR(100), -- e.g., "Policy Maker", "CEO", "Investor"
+  organization VARCHAR(255),
+  language_preference VARCHAR(10) DEFAULT 'id', -- 'id' or 'en'
+  created_at TIMESTAMP DEFAULT NOW(),
+  onboarding_completed BOOLEAN DEFAULT FALSE
+);
+
+-- User Topics/Interests
+CREATE TABLE user_topics (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id),
+  topic_name VARCHAR(100),
+  priority INTEGER DEFAULT 5, -- 1-10 scale
+  keywords TEXT[], -- specific keywords within topic
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- User Preferences
+CREATE TABLE user_preferences (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) UNIQUE,
+  delivery_time TIME DEFAULT '06:00',
+  delivery_days INTEGER[] DEFAULT ARRAY[1,2,3,4,5], -- Mon-Fri
+  format_preference VARCHAR(50) DEFAULT 'brief', -- 'brief', 'detailed', 'headlines_only'
+  max_items INTEGER DEFAULT 10,
+  include_full_articles BOOLEAN DEFAULT FALSE,
+  timezone VARCHAR(50) DEFAULT 'Asia/Jakarta'
+);
+
+-- News Sources
+CREATE TABLE news_sources (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(255),
+  url VARCHAR(500),
+  type VARCHAR(50), -- 'rss', 'api', 'scrape'
+  category VARCHAR(100), -- 'international', 'local', 'finance', 'policy'
+  language VARCHAR(10),
+  is_paywalled BOOLEAN DEFAULT FALSE,
+  credibility_score INTEGER DEFAULT 5, -- 1-10
+  is_active BOOLEAN DEFAULT TRUE
+);
+
+-- Articles (raw ingested content)
+CREATE TABLE articles (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  source_id UUID REFERENCES news_sources(id),
+  title TEXT,
+  content TEXT,
+  summary TEXT, -- AI-generated
+  url VARCHAR(500),
+  published_at TIMESTAMP,
+  ingested_at TIMESTAMP DEFAULT NOW(),
+  embedding VECTOR(1536), -- for similarity search
+  topics TEXT[],
+  entities TEXT[] -- extracted people, companies, etc.
+);
+
+-- User Article Interactions (TikTok-like learning)
+CREATE TABLE user_interactions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id),
+  article_id UUID REFERENCES articles(id),
+  interaction_type VARCHAR(50), -- 'viewed', 'clicked', 'read_full', 'saved', 'skipped', 'shared'
+  time_spent_seconds INTEGER,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Daily Briefs (generated output)
+CREATE TABLE daily_briefs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id),
+  generated_at TIMESTAMP DEFAULT NOW(),
+  content JSONB, -- structured brief content
+  email_sent BOOLEAN DEFAULT FALSE,
+  email_sent_at TIMESTAMP,
+  opened BOOLEAN DEFAULT FALSE,
+  opened_at TIMESTAMP
+);
+
+-- Brief Items (individual items in a brief)
+CREATE TABLE brief_items (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  brief_id UUID REFERENCES daily_briefs(id),
+  article_id UUID REFERENCES articles(id),
+  priority_level VARCHAR(20), -- 'critical', 'important', 'fyi'
+  summary TEXT,
+  why_relevant TEXT, -- AI explanation of relevance to user
+  position INTEGER
+);
+```
+
+-----
+
+## Pages & Features Required
+
+### 1. Landing Page (`/`)
+
+- Hero section: “Your Personal Intelligence Unit”
+- Value proposition for busy executives
+- “Get Started” CTA
+- Testimonial placeholders
+- How it works (3 steps)
+- Pricing section (subscription tiers)
+
+### 2. Onboarding Flow (`/onboarding`)
+
+**Step 1: Profile Setup**
+
+- Full name
+- Email
+- Role/Title dropdown (CEO, Director, Policy Maker, Investor, etc.)
+- Organization name
+
+**Step 2: Topic Selection** (TikTok-like swipe interface)
+
+- Show topic cards user can swipe right (interested) or left (not interested)
+- Topics include:
+  - Monetary Policy & Central Banking
+  - Indonesian Politics & Regulation
+  - ASEAN Geopolitics
+  - Commodities (Palm Oil, Coal, Nickel)
+  - Banking & Financial Services
+  - Technology & Digital Economy
+  - Energy Transition & ESG
+  - Property & Real Estate
+  - Capital Markets
+  - Trade & Export/Import
+  - Fiscal Policy & Government Budget
+  - Infrastructure Development
+
+**Step 3: Fine-tune Interests**
+
+- For each selected topic, show sub-topics
+- Allow adding custom keywords
+- “I want to track these companies/people” - free text input
+
+**Step 4: Delivery Preferences**
+
+- Preferred time (dropdown: 5AM, 6AM, 7AM, 8AM)
+- Days (checkboxes: Mon-Sun)
+- Language preference (Indonesian / English / Both)
+- Format preference:
+  - Quick Brief (5 min read)
+  - Detailed Analysis (15 min read)
+  - Headlines Only (1 min scan)
+
+**Step 5: Source Preferences**
+
+- Show available sources with checkboxes
+- Categorized: International (Reuters, Bloomberg, FT, Economist) | Local (Kontan, Bisnis Indonesia, Kompas, Detik)
+- Toggle: Include paywalled sources (premium feature)
+
+### 3. Dashboard (`/dashboard`)
+
+**Main View - Today’s Brief**
+
+- Large card showing today’s personalized brief
+- Sections:
+  - 🔴 **Requires Attention** (1-3 critical items)
+  - 🟡 **Worth Knowing** (3-5 important items)
+  - 🟢 **On Your Radar** (background items, links only)
+- Each item shows:
+  - Headline (click to expand)
+  - One-line summary
+  - Source badge
+  - “Why this matters to you” AI explanation
+  - Action buttons: [Read Full] [Save] [Not Relevant]
+
+**Sidebar**
+
+- User profile avatar
+- Quick stats: “X articles curated for you this week”
+- Navigation: Today | Archive | Saved | Settings
+
+**Interaction Features (TikTok Learning)**
+
+- Every click tracked
+- “Not Relevant” button teaches AI
+- Time spent on expanded articles tracked
+- Hover states tracked
+- These feed back into personalization algorithm
+
+### 4. Archive Page (`/archive`)
+
+- Calendar view of past briefs
+- Search functionality
+- Filter by topic/source
+- “Your reading patterns” visualization
+
+### 5. Saved Items (`/saved`)
+
+- Bookmarked articles
+- Add notes to saved items
+- Export to PDF option
+
+### 6. Settings (`/settings`)
+
+**Profile Tab**
+
+- Edit name, role, organization
+- Change email
+- Delete account
+
+**Topics Tab**
+
+- Manage topics (add/remove/reorder priority)
+- Keyword management
+- Track specific companies/people
+
+**Delivery Tab**
+
+- Change delivery time
+- Change days
+- Pause deliveries (vacation mode)
+- Change format
+
+**Sources Tab**
+
+- Enable/disable specific sources
+- Request new source
+
+**Notification Tab**
+
+- Email preferences
+- Breaking news alerts toggle
+- Weekly digest toggle
+
+### 7. Admin Panel (`/admin`) - Protected
+
+**Dashboard**
+
+- Total users
+- Briefs sent today
+- Email open rates
+- Popular topics
+
+**Content Management**
+
+- View ingested articles
+- Manual article import
+- Source health status
+
+**User Management**
+
+- User list with search
+- View user preferences
+- Impersonate user (for debugging)
+
+-----
+
+## Email Template Design
+
+Create beautiful, mobile-responsive email template:
+
+```html
+Subject: 📊 Your Daily Brief - [Date] | [X] items curated for you
+
+Body:
+- Header with logo
+- Greeting: "Good morning, Pak Halim"
+- Quick summary: "Today: 2 critical updates, 5 worth knowing"
+
+- Section: 🔴 REQUIRES YOUR ATTENTION
+  [Item cards with summary + source + link]
+
+- Section: 🟡 WORTH KNOWING
+  [Consolidated summary paragraph]
+  [Individual links]
+
+- Section: 🟢 ON YOUR RADAR
+  [Bullet points with links only]
+
+- Footer:
+  - "View full brief in app" button
+  - Feedback: "How was today's brief?" [😊] [😐] [😞]
+  - Unsubscribe | Manage Preferences
+  - Source attributions (copyright compliance)
+```
+
+-----
+
+## API Routes Needed
+
+```
+POST /api/auth/signup
+POST /api/auth/login
+POST /api/auth/logout
+
+GET  /api/user/profile
+PUT  /api/user/profile
+GET  /api/user/preferences
+PUT  /api/user/preferences
+GET  /api/user/topics
+POST /api/user/topics
+DELETE /api/user/topics/:id
+
+GET  /api/briefs/today
+GET  /api/briefs/:id
+GET  /api/briefs/archive
+
+POST /api/interactions (track user behavior)
+
+GET  /api/articles/:id
+POST /api/articles/save
+DELETE /api/articles/save/:id
+
+POST /api/admin/ingest (trigger article ingestion)
+GET  /api/admin/sources
+POST /api/admin/sources
+
+POST /api/cron/generate-briefs (called by scheduler)
+POST /api/cron/send-emails (called by scheduler)
+POST /api/cron/ingest-articles (called by scheduler)
+```
+
+-----
+
+## AI Prompt Templates
+
+### For Article Summarization:
+
+```
+You are a senior intelligence analyst preparing briefs for C-suite executives.
+
+Summarize this article in 2-3 sentences. Focus on:
+1. What happened (facts only)
+2. Why it matters for business/policy in Indonesia
+3. What might happen next
+
+Article: {article_content}
+
+Write in {language}. Be concise and actionable.
+```
+
+### For Personalized Relevance:
+
+```
+You are preparing a personalized brief for this executive:
+- Name: {user_name}
+- Role: {user_role}
+- Organization: {user_org}
+- Key interests: {user_topics}
+- Tracked entities: {user_keywords}
+
+For this article: {article_summary}
+
+Explain in ONE sentence why this matters specifically to this person.
+Be specific, not generic. Reference their role or interests directly.
+```
+
+### For Daily Brief Generation:
+
+```
+You are creating a daily intelligence brief for {user_name}, {user_role} at {user_org}.
+
+Their priority topics: {topics_ranked}
+Their tracked keywords: {keywords}
+
+From these {n} articles, select and organize the most relevant ones:
+{article_list}
+
+Create a brief with:
+1. CRITICAL (max 3): Items requiring immediate attention or action
+2. IMPORTANT (max 5): Significant developments worth knowing
+3. BACKGROUND (remainder): Items to keep on radar
+
+For each item, explain why it's relevant to this specific person.
+Prioritize: Indonesia & ASEAN > Global emerging markets > General global news
+```
+
+-----
+
+## TikTok-like Algorithm Logic
+
+```javascript
+// Pseudocode for personalization scoring
+
+function calculateRelevanceScore(article, user) {
+  let score = 0;
+  
+  // 1. Topic match (0-30 points)
+  const topicMatches = user.topics.filter(t => 
+    article.topics.includes(t.name)
+  );
+  score += topicMatches.reduce((sum, t) => sum + t.priority * 3, 0);
+  
+  // 2. Keyword match (0-20 points)
+  const keywordMatches = user.keywords.filter(k => 
+    article.content.toLowerCase().includes(k.toLowerCase())
+  );
+  score += keywordMatches.length * 5;
+  
+  // 3. Source preference (0-10 points)
+  if (user.preferredSources.includes(article.source)) {
+    score += 10;
+  }
+  
+  // 4. Historical behavior (0-30 points) - THE TIKTOK PART
+  const similarArticles = findSimilarArticles(article, user.readHistory);
+  const avgEngagement = calculateAvgEngagement(similarArticles);
+  score += avgEngagement * 30;
+  
+  // 5. Freshness (0-10 points)
+  const hoursOld = (Date.now() - article.publishedAt) / 3600000;
+  score += Math.max(0, 10 - hoursOld);
+  
+  // 6. Negative signals (subtract points)
+  const similarSkipped = findSimilarInSkipped(article, user.skippedArticles);
+  score -= similarSkipped.length * 10;
+  
+  return score;
+}
+
+// Track EVERYTHING
+function trackInteraction(userId, articleId, type, metadata) {
+  // Types: 'impression', 'click', 'expand', 'read_full', 'save', 
+  //        'skip', 'not_relevant', 'share', 'hover'
+  
+  db.insert('user_interactions', {
+    userId,
+    articleId,
+    interactionType: type,
+    timeSpentSeconds: metadata.timeSpent,
+    scrollDepth: metadata.scrollDepth,
+    createdAt: new Date()
+  });
+  
+  // Update user embedding in background
+  queue.add('updateUserEmbedding', { userId });
+}
+```
+
+-----
+
+## Cron Jobs Schedule
+
+```
+# Article Ingestion - Every 2 hours
+0 */2 * * * /api/cron/ingest-articles
+
+# Brief Generation - 5:00 AM Jakarta time
+0 5 * * * /api/cron/generate-briefs
+
+# Email Sending - Based on user preferences (5AM-8AM window)
+0 5-8 * * * /api/cron/send-emails
+
+# Weekly Analytics Digest - Sunday 8 PM
+0 20 * * 0 /api/cron/weekly-digest
+```
+
+-----
+
+## Integration: Email with Resend
+
+```javascript
+// Install: npm install resend
+
+import { Resend } from 'resend';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+async function sendDailyBrief(user, brief) {
+  const { data, error } = await resend.emails.send({
+    from: 'CurateAI <brief@curateai.id>',
+    to: user.email,
+    subject: `📊 Your Daily Brief - ${formatDate(new Date())}`,
+    html: generateBriefEmailHTML(user, brief),
+    tags: [
+      { name: 'type', value: 'daily_brief' },
+      { name: 'user_id', value: user.id }
+    ]
+  });
+  
+  // Track email sent
+  await db.update('daily_briefs', brief.id, { 
+    email_sent: true, 
+    email_sent_at: new Date() 
+  });
+  
+  return { data, error };
+}
+```
+
+-----
+
+## Alternative: Zapier Integration
+
+If using Zapier instead of Resend:
+
+1. Create Zapier webhook trigger endpoint: `/api/zapier/trigger-email`
+1. When brief is ready, POST to Zapier webhook with brief data
+1. Zapier sends email via Gmail/SendGrid/Mailchimp
+1. Zapier webhook callback updates delivery status
+
+-----
+
+## UI/UX Requirements
+
+### Design System
+
+- Clean, professional, minimal
+- Colors: Navy blue (#1a365d) + Gold accent (#d69e2e) + White
+- Font: Inter or similar professional sans-serif
+- Large touch targets (executives may use tablets)
+- High contrast for readability
+- Dark mode support
+
+### Mobile Responsiveness
+
+- Email must look perfect on mobile
+- Dashboard responsive but optimized for desktop/tablet
+- Consider: These users often read on iPad in the morning
+
+### Accessibility
+
+- WCAG 2.1 AA compliance
+- Screen reader friendly
+- Keyboard navigation
+
+-----
+
+## MVP Feature Prioritization
+
+### Phase 1 (Week 1-2): Core MVP
+
+- [ ] Landing page
+- [ ] Auth (signup/login)
+- [ ] Basic onboarding (profile + topics)
+- [ ] Manual article input (admin)
+- [ ] Basic brief generation
+- [ ] Email delivery
+- [ ] Simple dashboard to view brief
+
+### Phase 2 (Week 3-4): Learning Algorithm
+
+- [ ] Interaction tracking
+- [ ] “Not Relevant” feedback
+- [ ] Personalization scoring
+- [ ] Source management
+
+### Phase 3 (Week 5-6): Polish
+
+- [ ] Archive & search
+- [ ] Saved items
+- [ ] Settings page
+- [ ] Admin panel
+- [ ] Analytics
+
+-----
+
+## Environment Variables Needed
+
+```
+DATABASE_URL=
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_KEY=
+
+OPENAI_API_KEY=
+# OR
+ANTHROPIC_API_KEY=
+
+RESEND_API_KEY=
+
+NEWSAPI_KEY=
+FIRECRAWL_API_KEY=
+
+NEXT_PUBLIC_APP_URL=
+```
+
+-----
+
+## Success Metrics to Track
+
+1. **Email open rate** - Target: >70%
+1. **Click-through rate** - Target: >40%
+1. **“Not Relevant” rate** - Target: <10%
+1. **Daily active users** - Track retention
+1. **Time to first click** - How fast they engage
+1. **Feedback scores** - From email emoji feedback
+
+-----
+
+Now build this application with all features described above. Start with the database schema, then authentication, then the onboarding flow, then the dashboard, and finally the email system.
+
+Make it beautiful, professional, and worthy of Indonesia’s top executives.
