@@ -5,7 +5,7 @@ const anthropic = new Anthropic({
   baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
 });
 
-const DEMO_SYSTEM_PROMPT = `Anda adalah CurateAI, asisten intelijen eksekutif untuk pemimpin bisnis Indonesia.
+const DEMO_SYSTEM_PROMPT = `Anda adalah Kurasi.ai, asisten intelijen eksekutif untuk pemimpin bisnis Indonesia.
 
 IDENTITAS:
 - Anda seperti analis senior dari McKinsey atau BCG yang khusus melayani eksekutif Indonesia

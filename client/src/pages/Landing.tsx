@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, Zap } from 'lucide-react';
+import { Send, Zap } from 'lucide-react';
 import { Link } from 'wouter';
 
 interface Message {
@@ -94,12 +94,10 @@ export default function Landing() {
       <header className="bg-white border-b border-slate-200 px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
-              </svg>
+            <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
+              <span className="text-white font-bold">K</span>
             </div>
-            <span className="font-serif font-bold text-lg text-slate-900">CurateAI</span>
+            <span className="font-bold text-lg text-slate-900">Kurasi<span className="text-amber-600">.ai</span></span>
           </div>
           
           <Link href="/onboarding">
@@ -118,7 +116,7 @@ export default function Landing() {
             <div className="text-center mb-8">
               <div className="inline-flex items-center gap-2 bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium mb-4">
                 <Zap className="w-4 h-4" />
-                5 AI • 100+ Sumber • 1 Brief untuk Anda
+                Kurasi.ai • 5 AI • 1 Brief
               </div>
               
               <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
@@ -180,10 +178,10 @@ export default function Landing() {
                   }`}>
                     {msg.role === 'assistant' && (
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
-                        <div className="w-5 h-5 bg-gradient-to-br from-amber-400 to-amber-600 rounded flex items-center justify-center">
-                          <Sparkles className="w-3 h-3 text-white" />
+                        <div className="w-5 h-5 bg-gradient-to-br from-amber-500 to-orange-600 rounded flex items-center justify-center">
+                          <span className="text-white text-xs font-bold">K</span>
                         </div>
-                        <span className="text-xs font-medium text-slate-500">CurateAI</span>
+                        <span className="text-xs font-medium text-slate-500">Kurasi.ai</span>
                       </div>
                     )}
                     <p className={`whitespace-pre-wrap text-sm leading-relaxed ${
@@ -199,8 +197,8 @@ export default function Landing() {
                 <div className="flex justify-start">
                   <div className="bg-white border border-slate-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
                     <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 bg-gradient-to-br from-amber-400 to-amber-600 rounded flex items-center justify-center">
-                        <Sparkles className="w-3 h-3 text-white animate-pulse" />
+                      <div className="w-5 h-5 bg-gradient-to-br from-amber-500 to-orange-600 rounded flex items-center justify-center">
+                        <span className="text-white text-xs font-bold animate-pulse">K</span>
                       </div>
                       <span className="text-sm text-slate-500">Sedang menganalisis...</span>
                     </div>

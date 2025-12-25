@@ -120,7 +120,7 @@ function ProfileStep({ onNext, userData, setUserData, setUserId }: {
   return (
     <Card className="p-8 shadow-xl border-border/60">
       <div className="mb-8 text-center">
-        <h2 className="text-2xl font-serif font-bold mb-2">Welcome to CurateAI</h2>
+        <h2 className="text-2xl font-bold mb-2">Selamat datang di Kurasi<span className="text-amber-600">.ai</span></h2>
         <p className="text-muted-foreground">Let's build your intelligence profile.</p>
       </div>
 

@@ -137,10 +137,10 @@ export default function Dashboard() {
       >
         <div className="h-16 flex items-center px-4 border-b border-sidebar-border">
           <div className="flex items-center gap-2 overflow-hidden">
-            <div className="min-w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-serif font-bold text-xl">
-                C
+            <div className="min-w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center text-white font-bold text-xl">
+                K
             </div>
-            {sidebarOpen && <span className="font-serif font-bold text-lg whitespace-nowrap">CurateAI</span>}
+            {sidebarOpen && <span className="font-bold text-lg whitespace-nowrap">Kurasi<span className="text-amber-600">.ai</span></span>}
           </div>
         </div>
 

@@ -47,12 +47,10 @@ export default function Pricing() {
             </Button>
           </Link>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
-              </svg>
+            <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
+              <span className="text-white font-bold">K</span>
             </div>
-            <span className="font-serif font-bold text-lg text-white">CurateAI</span>
+            <span className="font-bold text-lg text-white">Kurasi<span className="text-amber-400">.ai</span></span>
           </div>
         </div>
       </header>
@@ -174,7 +172,7 @@ export default function Pricing() {
 
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-8 text-center">
           <h3 className="font-serif font-bold text-xl mb-3 text-white">
-            Mengapa eksekutif memilih CurateAI Premium
+            Mengapa eksekutif memilih Kurasi.ai Premium
           </h3>
           <p className="text-white/70 max-w-2xl mx-auto">
             Bayangkan bangun pagi dan langsung menerima brief intelijen personal di inbox Anda, 
