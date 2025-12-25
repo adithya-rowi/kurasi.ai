@@ -4,45 +4,9 @@ import {
   Settings, 
   Workflow,
   LogIn,
-  Scale,
-  FileText,
-  ArrowDown,
-  CheckCircle2
+  ArrowRight
 } from 'lucide-react';
 import { Link } from 'wouter';
-
-function AICard({ 
-  name, 
-  provider, 
-  strength, 
-  color, 
-  badge 
-}: { 
-  name: string; 
-  provider: string; 
-  strength: string; 
-  color: string;
-  badge?: string;
-}) {
-  return (
-    <div className="bg-white rounded-xl p-3 border border-slate-200 relative">
-      {badge && (
-        <span className={`absolute -top-2 -right-2 text-[10px] px-1.5 py-0.5 rounded ${
-          badge === 'JUDGE' ? 'bg-amber-500 text-white' :
-          badge === 'LIVE' ? 'bg-cyan-500 text-white' :
-          badge === 'X' ? 'bg-orange-500 text-white' : 'bg-slate-500 text-white'
-        }`}>
-          {badge}
-        </span>
-      )}
-      <div className="flex items-center gap-2 mb-1">
-        <div className={`w-2 h-2 rounded-full ${color}`} />
-        <span className="font-medium text-sm text-slate-900">{name}</span>
-      </div>
-      <div className="text-xs text-slate-500">{strength}</div>
-    </div>
-  );
-}
 
 export default function HowItWorks() {
   return (
@@ -86,188 +50,86 @@ export default function HowItWorks() {
       </aside>
 
       <main className="flex-1 overflow-auto">
-        <div className="max-w-3xl mx-auto px-6 py-12">
+        <div className="max-w-2xl mx-auto px-6 py-16">
           
-          <div className="text-center mb-12">
-            <h1 className="text-3xl font-bold text-slate-900 mb-3" data-testid="page-title">
-              Bagaimana Kurasi Bekerja
-            </h1>
-            <p className="text-slate-500">
-              6 AI model bekerja paralel, 1 hakim menyeleksi.
-            </p>
-          </div>
+          <h1 className="text-2xl font-semibold text-slate-900 mb-12 text-center" data-testid="page-title">
+            Cara Kerja
+          </h1>
 
-          <div className="space-y-6">
+          <div className="relative">
             
-            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white font-bold">
-                  1
-                </div>
-                <div>
-                  <h3 className="font-semibold text-slate-900">Profil Anda</h3>
-                  <p className="text-sm text-slate-500">Dari percakapan onboarding</p>
-                </div>
+            <div className="absolute left-6 top-8 bottom-8 w-px bg-slate-200" />
+            
+            <div className="relative flex gap-6 mb-12">
+              <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center text-white font-medium text-sm flex-shrink-0 z-10">
+                1
               </div>
-              <div className="ml-14 text-sm text-slate-600">
-                Peran, topik, sumber yang dipercaya, keputusan yang sedang dihadapi
-                → menjadi <strong>system prompt unik</strong> untuk Anda.
-              </div>
-            </div>
-
-            <div className="flex justify-center">
-              <ArrowDown className="w-6 h-6 text-slate-300" />
-            </div>
-
-            <div className="bg-white rounded-2xl p-6 border-2 border-slate-900">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white font-bold">
-                  2
-                </div>
-                <div>
-                  <h3 className="font-semibold text-slate-900">6 AI Mencari Paralel</h3>
-                  <p className="text-sm text-slate-500">Setiap model punya kekuatan berbeda</p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 ml-14">
-                <AICard 
-                  name="GPT-4o" 
-                  provider="OpenAI" 
-                  strength="Reasoning" 
-                  color="bg-green-500"
-                />
-                <AICard 
-                  name="Gemini Pro" 
-                  provider="Google" 
-                  strength="1M+ context" 
-                  color="bg-blue-500"
-                />
-                <AICard 
-                  name="DeepSeek V3" 
-                  provider="DeepSeek" 
-                  strength="Asia focus" 
-                  color="bg-purple-500"
-                />
-                <AICard 
-                  name="Perplexity" 
-                  provider="Real-time" 
-                  strength="Live web search" 
-                  color="bg-cyan-500"
-                  badge="LIVE"
-                />
-                <AICard 
-                  name="Grok" 
-                  provider="xAI" 
-                  strength="X/Twitter data" 
-                  color="bg-orange-500"
-                  badge="X"
-                />
-                <AICard 
-                  name="Claude Opus" 
-                  provider="Anthropic" 
-                  strength="Judgment" 
-                  color="bg-amber-500"
-                  badge="JUDGE"
-                />
-              </div>
-              
-              <div className="ml-14 mt-4 text-sm text-slate-500">
-                Setiap AI mencari ~5 berita → Total ~30 kandidat artikel
+              <div className="pt-2">
+                <h3 className="font-medium text-slate-900 mb-1">Profil Anda</h3>
+                <p className="text-sm text-slate-500">
+                  Dari percakapan, kami memahami peran, topik, dan keputusan Anda 
+                  → menjadi instruksi unik untuk AI.
+                </p>
               </div>
             </div>
 
-            <div className="flex justify-center">
-              <ArrowDown className="w-6 h-6 text-slate-300" />
-            </div>
-
-            <div className="bg-amber-50 rounded-2xl p-6 border border-amber-200">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-white">
-                  <Scale className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-slate-900">Claude Opus Menilai</h3>
-                  <p className="text-sm text-slate-500">Hakim akhir yang memfilter</p>
-                </div>
+            <div className="relative flex gap-6 mb-12">
+              <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center text-white font-medium text-sm flex-shrink-0 z-10">
+                2
               </div>
-              
-              <div className="ml-14 space-y-2 text-sm">
-                <div className="flex items-center gap-2 text-slate-600">
-                  <CheckCircle2 className="w-4 h-4 text-amber-500" />
-                  <span>Deduplikasi berita yang sama</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-600">
-                  <CheckCircle2 className="w-4 h-4 text-amber-500" />
-                  <span>Verifikasi sumber & URL</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-600">
-                  <CheckCircle2 className="w-4 h-4 text-amber-500" />
-                  <span>Cross-check: berapa AI yang setuju?</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-600">
-                  <CheckCircle2 className="w-4 h-4 text-amber-500" />
-                  <span>Kategorikan: 🔴 Kritis, 🟡 Penting, 🟢 Latar</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-600">
-                  <CheckCircle2 className="w-4 h-4 text-amber-500" />
-                  <span>Tulis "Mengapa ini penting untuk ANDA"</span>
+              <div className="pt-2">
+                <h3 className="font-medium text-slate-900 mb-1">6 AI Mencari</h3>
+                <p className="text-sm text-slate-500 mb-3">
+                  Setiap model mencari ~5 berita secara paralel.
+                </p>
+                
+                <div className="text-xs text-slate-400 space-y-1 font-mono">
+                  <div>GPT-5.2 <span className="text-slate-300">— reasoning</span></div>
+                  <div>Gemini 3 Pro <span className="text-slate-300">— 1M context</span></div>
+                  <div>DeepSeek V3 <span className="text-slate-300">— Asia focus</span></div>
+                  <div>Perplexity <span className="text-slate-300">— live web</span></div>
+                  <div>Grok 4.1 <span className="text-slate-300">— X/Twitter</span></div>
+                  <div>Claude Opus 4.5 <span className="text-slate-300">— judge</span></div>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-center">
-              <ArrowDown className="w-6 h-6 text-slate-300" />
+            <div className="relative flex gap-6 mb-12">
+              <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center text-white font-medium text-sm flex-shrink-0 z-10">
+                3
+              </div>
+              <div className="pt-2">
+                <h3 className="font-medium text-slate-900 mb-1">Claude Menilai</h3>
+                <p className="text-sm text-slate-500">
+                  Deduplikasi, verifikasi sumber, cek konsensus antar AI, 
+                  kategorikan prioritas, tulis relevansi untuk Anda.
+                </p>
+              </div>
             </div>
 
-            <div className="bg-slate-900 rounded-2xl p-6 text-white">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-slate-900" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Brief Personal Anda</h3>
-                  <p className="text-sm text-slate-400">8-12 berita tersaring</p>
-                </div>
+            <div className="relative flex gap-6">
+              <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center text-white font-medium text-sm flex-shrink-0 z-10">
+                4
               </div>
-              
-              <div className="ml-14 grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <div className="text-2xl font-bold text-red-400">1-3</div>
-                  <div className="text-xs text-slate-400">🔴 Kritis</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-yellow-400">3-5</div>
-                  <div className="text-xs text-slate-400">🟡 Penting</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-green-400">2-4</div>
-                  <div className="text-xs text-slate-400">🟢 Latar</div>
-                </div>
+              <div className="pt-2">
+                <h3 className="font-medium text-slate-900 mb-1">Brief Anda</h3>
+                <p className="text-sm text-slate-500">
+                  8-12 berita tersaring. Setiap berita menunjukkan sumber, 
+                  URL asli, dan AI mana yang menemukannya.
+                </p>
               </div>
             </div>
 
           </div>
 
-          <div className="mt-12 p-6 bg-slate-50 rounded-2xl border border-slate-200">
-            <h3 className="font-semibold text-slate-900 mb-4">Transparansi & Trust</h3>
-            <div className="space-y-3 text-sm text-slate-600">
-              <p>• Setiap berita menunjukkan <strong>sumber asli + URL</strong></p>
-              <p>• Terlihat <strong>AI mana yang menemukan</strong> berita tersebut</p>
-              <p>• <strong>Skor verifikasi</strong> berdasarkan kredibilitas sumber</p>
-              <p>• Berita dari <strong>multiple AI</strong> = lebih terpercaya</p>
-              <p>• Kami <strong>tidak mengubah fakta</strong> dari sumber asli</p>
-            </div>
-          </div>
-
-          <div className="mt-12 text-center">
+          <div className="mt-16 text-center">
             <Link 
               href="/"
-              className="inline-flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-xl font-medium hover:bg-slate-800"
+              className="inline-flex items-center gap-2 text-sm text-slate-900 hover:text-slate-600"
               data-testid="cta-start"
             >
-              <Sparkles className="w-4 h-4" />
-              Mulai Sekarang
+              Mulai sekarang
+              <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
