@@ -91,13 +91,13 @@ export function BriefCard({ item, priority, onSave, onNotRelevant, defaultExpand
           
           {item.foundByPerspectives && item.foundByPerspectives.length > 1 && (
             <span className={cn("text-xs px-2 py-1 rounded", styles.badge)}>
-              {item.foundByPerspectives.length} perspectives agree
+              {item.foundByPerspectives.length} perspektif setuju
             </span>
           )}
           
           {item.verificationScore && item.verificationScore >= 8 && (
             <span className="text-xs text-emerald-700 bg-emerald-100 px-2 py-1 rounded">
-              High confidence
+              Keyakinan tinggi
             </span>
           )}
         </div>
@@ -111,7 +111,7 @@ export function BriefCard({ item, priority, onSave, onNotRelevant, defaultExpand
           
           <div className="mt-4 p-3 bg-primary/5 rounded-lg border border-primary/10">
             <p className="text-sm font-medium text-primary mb-1 flex items-center gap-1">
-              <span>✨</span> Why this matters to you:
+              <span>✨</span> Mengapa ini penting untuk Anda:
             </p>
             <p className="text-sm text-foreground/70">
               {item.whyItMatters}
@@ -129,7 +129,7 @@ export function BriefCard({ item, priority, onSave, onNotRelevant, defaultExpand
                   onClick={(e) => e.stopPropagation()}
                   data-testid="link-read-article"
                 >
-                  Read full article <ExternalLink size={14} />
+                  Baca artikel lengkap <ExternalLink size={14} />
                 </a>
               )}
             </div>
@@ -147,7 +147,7 @@ export function BriefCard({ item, priority, onSave, onNotRelevant, defaultExpand
                   "h-8 px-2",
                   saved && "text-primary"
                 )}
-                title={saved ? "Saved" : "Save for later"}
+                title={saved ? "Tersimpan" : "Simpan"}
                 data-testid="button-save-article"
               >
                 {saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
@@ -162,7 +162,7 @@ export function BriefCard({ item, priority, onSave, onNotRelevant, defaultExpand
                   onNotRelevant?.(item);
                 }}
                 className="h-8 px-2 hover:text-destructive hover:bg-destructive/10"
-                title="Not relevant"
+                title="Tidak relevan"
                 data-testid="button-not-relevant"
               >
                 <ThumbsDown size={16} />

@@ -75,10 +75,10 @@ export default function Dashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['brief', userId] });
-      toast.success("Your intelligence brief is ready!");
+      toast.success("Brief intelijen Anda sudah siap!");
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to generate brief");
+      toast.error(error.message || "Gagal membuat brief");
     },
   });
 
@@ -92,14 +92,14 @@ export default function Dashboard() {
   const handleSaveArticle = (item: { title: string; source: string }) => {
     if (userId) {
       councilApi.sendFeedback(userId, item.title, item.source, "save");
-      toast.success("Article saved!");
+      toast.success("Artikel tersimpan!");
     }
   };
 
   const handleNotRelevant = (item: { title: string; source: string }) => {
     if (userId) {
       councilApi.sendFeedback(userId, item.title, item.source, "not_relevant");
-      toast.info("Feedback recorded - we'll improve future briefs");
+      toast.info("Feedback diterima - brief akan lebih baik kedepannya");
     }
   };
 
@@ -107,12 +107,25 @@ export default function Dashboard() {
     return null;
   }
 
-  const today = new Date().toLocaleDateString('en-US', { 
+  const today = new Date().toLocaleDateString('id-ID', { 
     weekday: 'long', 
     year: 'numeric', 
     month: 'long', 
     day: 'numeric' 
   });
+
+  const getIndonesianGreeting = (name: string): string => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 11) {
+      return `Selamat pagi, ${name}!`;
+    } else if (hour >= 11 && hour < 15) {
+      return `Selamat siang, ${name}!`;
+    } else if (hour >= 15 && hour < 18) {
+      return `Selamat sore, ${name}!`;
+    } else {
+      return `Selamat malam, ${name}!`;
+    }
+  };
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -132,10 +145,10 @@ export default function Dashboard() {
         </div>
 
         <nav className="flex-1 p-3 space-y-2">
-            <NavItem icon={<LayoutDashboard size={20} />} label="Today's Brief" isActive isOpen={sidebarOpen} />
-            <NavItem icon={<Archive size={20} />} label="Archive" isOpen={sidebarOpen} href="/archive" />
-            <NavItem icon={<Bookmark size={20} />} label="Saved Items" isOpen={sidebarOpen} href="/saved" />
-            <NavItem icon={<Settings size={20} />} label="Settings" isOpen={sidebarOpen} />
+            <NavItem icon={<LayoutDashboard size={20} />} label="Brief Hari Ini" isActive isOpen={sidebarOpen} />
+            <NavItem icon={<Archive size={20} />} label="Arsip" isOpen={sidebarOpen} href="/archive" />
+            <NavItem icon={<Bookmark size={20} />} label="Tersimpan" isOpen={sidebarOpen} href="/saved" />
+            <NavItem icon={<Settings size={20} />} label="Pengaturan" isOpen={sidebarOpen} />
         </nav>
 
         <div className="p-3 mt-auto border-t border-sidebar-border">
@@ -168,7 +181,7 @@ export default function Dashboard() {
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <input 
                         type="text" 
-                        placeholder="Search intelligence..." 
+                        placeholder="Cari berita..." 
                         className="w-full h-9 rounded-full bg-secondary/50 border-none pl-9 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                         data-testid="input-search"
                     />
@@ -184,10 +197,10 @@ export default function Dashboard() {
                 
                 <div className="space-y-2">
                     <h1 className="text-3xl md:text-4xl font-serif font-bold" data-testid="text-greeting">
-                      {briefContent?.greeting || `Good Morning, ${user?.fullName?.split(' ')[0] || 'there'}`}
+                      {briefContent?.greeting || getIndonesianGreeting(user?.fullName?.split(' ')[0] || 'Eksekutif')}
                     </h1>
                     <p className="text-lg text-muted-foreground" data-testid="text-summary">
-                      {briefContent?.executiveSummary || (briefLoading ? "Loading your brief..." : "Generate your personalized intelligence brief to get started.")}
+                      {briefContent?.executiveSummary || (briefLoading ? "Memuat brief Anda..." : "Buat brief intelijen personal Anda untuk memulai.")}
                     </p>
                 </div>
 
@@ -204,16 +217,16 @@ export default function Dashboard() {
                           </div>
                           <div>
                             <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-bold">Get your brief delivered to your inbox</h3>
+                              <h3 className="font-bold">Terima brief langsung di email Anda</h3>
                               <Crown className="h-4 w-4 text-amber-500" />
                             </div>
                             <p className="text-sm text-muted-foreground">
-                              Upgrade to Premium for IDR 79k/month and never miss important news
+                              Upgrade ke Premium Rp 79.000/bulan dan jangan lewatkan berita penting
                             </p>
                           </div>
                         </div>
                         <Button size="sm" className="group-hover:scale-105 transition-transform" data-testid="button-upgrade-premium">
-                          Upgrade
+                          Berlangganan
                         </Button>
                       </div>
                     </div>
@@ -225,9 +238,18 @@ export default function Dashboard() {
                     <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-amber-500 flex items-center justify-center mx-auto">
                       <Sparkles className="h-8 w-8 text-white" />
                     </div>
-                    <h3 className="font-serif font-bold text-xl">Generate Your First AI Brief</h3>
+                    <div className="flex justify-center mb-4">
+                      <div className="flex -space-x-2">
+                        <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white text-xs font-bold border-2 border-white">G</div>
+                        <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold border-2 border-white">G</div>
+                        <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold border-2 border-white">D</div>
+                        <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold border-2 border-white">X</div>
+                        <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center text-white text-xs font-bold border-2 border-white">C</div>
+                      </div>
+                    </div>
+                    <h3 className="font-serif font-bold text-xl">5 AI Siap Bekerja untuk Anda</h3>
                     <p className="text-muted-foreground max-w-md mx-auto">
-                      Our AI Council will search for news tailored to your unique profile and curate an intelligence brief just for you.
+                      Klik "Buat Brief" untuk memulai. 5 model AI akan mencari dan menyaring berita yang paling relevan untuk Anda secara bersamaan.
                     </p>
                     <Button 
                       onClick={() => generateBriefMutation.mutate()}
@@ -239,17 +261,17 @@ export default function Dashboard() {
                       {generateBriefMutation.isPending ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          AI Council Working...
+                          AI Sedang Bekerja...
                         </>
                       ) : (
                         <>
                           <Sparkles className="h-4 w-4" />
-                          Generate My Brief
+                          Buat Brief Saya
                         </>
                       )}
                     </Button>
                     {generateBriefMutation.isPending && (
-                      <p className="text-xs text-muted-foreground">This may take 30-60 seconds as multiple AI perspectives analyze news for you.</p>
+                      <p className="text-xs text-muted-foreground">Proses ini memakan waktu 30-60 detik karena 5 AI menganalisis berita untuk Anda.</p>
                     )}
                   </div>
                 )}
@@ -259,7 +281,7 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Clock className="h-4 w-4" />
-                        <span>Generated {new Date(latestBrief!.generatedAt).toLocaleTimeString()}</span>
+                        <span>Dibuat {new Date(latestBrief!.generatedAt).toLocaleTimeString('id-ID')}</span>
                       </div>
                       <Button 
                         variant="outline" 
@@ -283,19 +305,19 @@ export default function Dashboard() {
                         <div className="text-3xl font-bold text-destructive">
                           {briefContent.critical?.length || 0}
                         </div>
-                        <div className="text-sm text-destructive/80">Critical</div>
+                        <div className="text-sm text-destructive/80">Kritis</div>
                       </div>
                       <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4 text-center">
                         <div className="text-3xl font-bold text-amber-600">
                           {briefContent.important?.length || 0}
                         </div>
-                        <div className="text-sm text-amber-600/80">Important</div>
+                        <div className="text-sm text-amber-600/80">Penting</div>
                       </div>
                       <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-4 text-center">
                         <div className="text-3xl font-bold text-emerald-600">
                           {briefContent.background?.length || 0}
                         </div>
-                        <div className="text-sm text-emerald-600/80">Background</div>
+                        <div className="text-sm text-emerald-600/80">Latar</div>
                       </div>
                     </div>
 
@@ -303,7 +325,7 @@ export default function Dashboard() {
                       <section className="mb-8">
                         <h2 className="text-sm font-bold uppercase tracking-widest text-destructive mb-4 flex items-center gap-2">
                           <div className="h-2 w-2 rounded-full bg-destructive animate-pulse" />
-                          Requires Attention
+                          Perlu Perhatian Anda
                         </h2>
                         {briefContent.critical.map((article, idx) => (
                           <BriefCard
@@ -322,7 +344,7 @@ export default function Dashboard() {
                       <section className="mb-8">
                         <h2 className="text-sm font-bold uppercase tracking-widest text-amber-600 mb-4 flex items-center gap-2">
                           <div className="h-2 w-2 rounded-full bg-amber-500" />
-                          Worth Knowing
+                          Perlu Diketahui
                         </h2>
                         {briefContent.important.map((article, idx) => (
                           <BriefCard
@@ -340,7 +362,7 @@ export default function Dashboard() {
                       <section className="mb-8">
                         <h2 className="text-sm font-bold uppercase tracking-widest text-emerald-600 mb-4 flex items-center gap-2">
                           <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                          On Your Radar
+                          Untuk Dipantau
                         </h2>
                         {briefContent.background.map((article, idx) => (
                           <BriefCard
@@ -356,7 +378,7 @@ export default function Dashboard() {
 
                     {briefContent.councilAgreement && (
                       <div className="bg-secondary/20 rounded-lg p-4 text-sm">
-                        <p className="font-medium mb-1">AI Council Insight</p>
+                        <p className="font-medium mb-1">Catatan AI</p>
                         <p className="text-muted-foreground">{briefContent.councilAgreement}</p>
                         {briefContent.confidenceNote && (
                           <p className="text-xs text-muted-foreground mt-2">{briefContent.confidenceNote}</p>
@@ -369,13 +391,13 @@ export default function Dashboard() {
                 {!hasBrief && !briefLoading && articles.length > 0 && (
                   <>
                     <Separator />
-                    <p className="text-sm text-muted-foreground text-center">While you wait, here are some recent articles from our database:</p>
+                    <p className="text-sm text-muted-foreground text-center">Sementara menunggu, berikut beberapa artikel terbaru dari database kami:</p>
                     
                     {criticalArticles.length > 0 && (
                       <section>
                         <div className="flex items-center gap-3 mb-6">
                           <div className="h-3 w-3 rounded-full bg-destructive animate-pulse" />
-                          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Requires Attention</h2>
+                          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Perlu Perhatian Anda</h2>
                         </div>
                         <div className="space-y-6">
                           {criticalArticles.map(article => (
@@ -389,7 +411,7 @@ export default function Dashboard() {
                       <section>
                         <div className="flex items-center gap-3 mb-6">
                           <div className="h-3 w-3 rounded-full bg-amber-400" />
-                          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Worth Knowing</h2>
+                          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Perlu Diketahui</h2>
                         </div>
                         <div className="space-y-6">
                           {importantArticles.map(article => (
@@ -402,16 +424,16 @@ export default function Dashboard() {
                 )}
 
                 <div className="bg-secondary/30 rounded-xl p-8 text-center space-y-4 mt-12">
-                    <h3 className="font-serif font-bold text-lg">How was today's brief?</h3>
+                    <h3 className="font-serif font-bold text-lg">Bagaimana brief hari ini?</h3>
                     <div className="flex justify-center gap-4">
                         <Button variant="outline" className="rounded-full h-12 px-6 hover:bg-green-50 hover:text-green-600 hover:border-green-200" data-testid="button-helpful">
-                            <ThumbsUp className="mr-2 h-4 w-4" /> Helpful
+                            <ThumbsUp className="mr-2 h-4 w-4" /> Membantu
                         </Button>
                         <Button variant="outline" className="rounded-full h-12 px-6 hover:bg-red-50 hover:text-red-600 hover:border-red-200" data-testid="button-irrelevant">
-                            <ThumbsDown className="mr-2 h-4 w-4" /> Irrelevant
+                            <ThumbsDown className="mr-2 h-4 w-4" /> Tidak Relevan
                         </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground">Your feedback trains the curation engine.</p>
+                    <p className="text-xs text-muted-foreground">Feedback Anda membantu menyempurnakan kurasi berita.</p>
                 </div>
 
             </div>
@@ -465,7 +487,7 @@ function LegacyBriefItem({ article }: { article: Article }) {
                   <div className="flex gap-2 items-start">
                       <div className="mt-0.5 min-w-[16px]">✨</div>
                       <div className="space-y-1">
-                          <p className="font-medium text-foreground/80">Why this matters:</p>
+                          <p className="font-medium text-foreground/80">Mengapa ini penting:</p>
                           <p className="text-muted-foreground">{article.relevanceReason}</p>
                       </div>
                   </div>
