@@ -204,6 +204,23 @@ export default function Dashboard() {
                     </p>
                 </div>
 
+                {briefError && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center" data-testid="error-state">
+                    <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <AlertCircle className="w-6 h-6 text-red-500" />
+                    </div>
+                    <h3 className="font-semibold text-red-800 mb-2">Terjadi Kesalahan</h3>
+                    <p className="text-red-600 text-sm mb-4">{(briefError as Error).message || "Gagal memuat brief Anda"}</p>
+                    <Button 
+                      variant="outline"
+                      onClick={() => window.location.reload()}
+                      className="text-red-700 border-red-300 hover:bg-red-100"
+                    >
+                      Coba lagi
+                    </Button>
+                  </div>
+                )}
+
                 {subscription && !subscription.isPremium && (
                   <Link href="/pricing">
                     <div 

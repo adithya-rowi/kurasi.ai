@@ -7,7 +7,9 @@ interface BriefItem {
   title: string;
   summary: string;
   source: string;
+  sourceType?: "local" | "regional" | "global";
   url: string;
+  isPaywalled?: boolean;
   whyItMatters: string;
   foundByPerspectives?: string[];
   verificationScore?: number;
@@ -85,13 +87,22 @@ export function BriefCard({ item, priority, onSave, onNotRelevant, defaultExpand
         </div>
         
         <div className="flex items-center gap-2 mt-3 flex-wrap">
-          <span className="text-xs text-muted-foreground bg-background/60 px-2 py-1 rounded">
-            {item.source}
+          <span className="text-xs text-muted-foreground bg-background/60 px-2 py-1 rounded inline-flex items-center gap-1">
+            📰 {item.source}
+            {(item.sourceType === "local" || !item.sourceType) && (
+              <span className="text-amber-600">🇮🇩</span>
+            )}
           </span>
+          
+          {item.isPaywalled === true && (
+            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded inline-flex items-center gap-1">
+              🔒 Berbayar
+            </span>
+          )}
           
           {item.foundByPerspectives && item.foundByPerspectives.length > 1 && (
             <span className={cn("text-xs px-2 py-1 rounded", styles.badge)}>
-              {item.foundByPerspectives.length} perspektif setuju
+              ✓ {item.foundByPerspectives.length} AI setuju
             </span>
           )}
           
@@ -111,16 +122,25 @@ export function BriefCard({ item, priority, onSave, onNotRelevant, defaultExpand
           
           <div className="mt-4 p-3 bg-primary/5 rounded-lg border border-primary/10">
             <p className="text-sm font-medium text-primary mb-1 flex items-center gap-1">
-              <span>✨</span> Mengapa ini penting untuk Anda:
+              <span>💡</span> Mengapa ini penting untuk Anda:
             </p>
             <p className="text-sm text-foreground/70">
               {item.whyItMatters}
             </p>
           </div>
           
+          {item.isPaywalled === true && (
+            <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
+              <p className="text-xs text-amber-700">
+                🔒 Artikel ini memerlukan langganan {item.source}. 
+                Klik link untuk membaca jika Anda sudah berlangganan.
+              </p>
+            </div>
+          )}
+          
           <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
             <div className="flex items-center gap-3">
-              {item.url && item.url !== "search required" && (
+              {item.url && item.url !== "search required" && item.url !== "perlu verifikasi" && (
                 <a
                   href={item.url}
                   target="_blank"
@@ -129,7 +149,7 @@ export function BriefCard({ item, priority, onSave, onNotRelevant, defaultExpand
                   onClick={(e) => e.stopPropagation()}
                   data-testid="link-read-article"
                 >
-                  Baca artikel lengkap <ExternalLink size={14} />
+                  {item.isPaywalled ? `Buka di ${item.source}` : "Baca selengkapnya"} <ExternalLink size={14} />
                 </a>
               )}
             </div>

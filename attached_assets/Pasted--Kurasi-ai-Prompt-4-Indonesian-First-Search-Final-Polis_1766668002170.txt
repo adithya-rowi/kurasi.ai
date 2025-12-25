@@ -1,0 +1,630 @@
+# Kurasi.ai - Prompt 4: Indonesian-First Search + Final Polish
+
+## 🎯 FINAL PROMPT BEFORE TESTING! Copy to Replit NOW!
+
+-----
+
+## Part A: INDONESIAN-FIRST Search Strategy
+
+Update the LLM search prompts to prioritize sources in this order:
+
+```typescript
+// server/services/llmCouncil.ts
+
+const INDONESIAN_FIRST_SEARCH_PROMPT = `
+SEARCH PRIORITY ORDER (PENTING!):
+
+1. 🇮🇩 INDONESIA FIRST (Prioritas Utama):
+   - Kontan.co.id (bisnis, keuangan)
+   - Bisnis Indonesia / Bisnis.com
+   - Kompas.com (general news)
+   - Detik Finance
+   - CNN Indonesia
+   - CNBC Indonesia
+   - Tempo.co
+   - Katadata.co.id
+   - Investor Daily
+   - Infobank
+   - The Jakarta Post
+   - IDN Times
+   - Liputan6 Bisnis
+
+2. 🌏 ASEAN & REGIONAL (Kedua):
+   - The Straits Times (Singapore)
+   - Nikkei Asia
+   - South China Morning Post
+   - Bangkok Post
+   - The Star (Malaysia)
+   - Channel News Asia
+
+3. 🌍 GLOBAL FINANCIAL (Ketiga):
+   - Bloomberg
+   - Reuters
+   - Financial Times
+   - The Economist
+   - Wall Street Journal
+
+4. 📝 EXPERT VOICES (Bonus - jika relevan):
+   - Substack dari ekonom Indonesia
+   - Blog Bank Indonesia
+   - Blog OJK
+   - McKinsey Indonesia insights
+   - World Bank Indonesia updates
+   - IMF Indonesia reports
+
+RULES:
+- Untuk setiap brief, MINIMAL 60% harus dari sumber Indonesia
+- Sumber internasional hanya jika ada dampak langsung ke Indonesia
+- Jika berita sama ada di lokal dan internasional, PILIH sumber lokal
+- Selalu sertakan konteks Indonesia dalam analisis
+`;
+
+// Create the search prompt for each LLM
+function createSearchPrompt(profile: UserProfile, modelName: string): string {
+  const today = new Date().toISOString().split('T')[0];
+  
+  return `${profile.council_system_prompt}
+
+${INDONESIAN_FIRST_SEARCH_PROMPT}
+
+---
+
+TANGGAL HARI INI: ${today}
+ANDA ADALAH: ${modelName}
+
+TUGAS ANDA:
+Cari 5 berita PALING RELEVAN untuk pengguna ini dari 24-48 jam terakhir.
+
+UNTUK SETIAP ARTIKEL, BERIKAN:
+{
+  "title": "Judul artikel (dalam bahasa asli)",
+  "summary": "Ringkasan 2-3 kalimat dalam Bahasa Indonesia",
+  "source": "Nama sumber (contoh: Kontan, Bloomberg)",
+  "sourceType": "local" | "regional" | "global",
+  "url": "URL lengkap jika tahu, atau 'perlu verifikasi'",
+  "isPaywalled": true | false,
+  "relevanceReason": "Mengapa ini penting untuk pengguna INI",
+  "publishedDate": "YYYY-MM-DD",
+  "confidence": 1-10
+}
+
+PENTING:
+- Prioritaskan sumber Indonesia!
+- Jika sumber berbayar (paywall), tetap sertakan dengan isPaywalled: true
+- Lebih baik 3 artikel berkualitas tinggi dari sumber terpercaya daripada 5 artikel meragukan
+- Jangan membuat berita palsu - jika tidak yakin, jangan sertakan
+
+Respond dalam JSON:
+{
+  "searchQueries": ["query yang Anda gunakan"],
+  "articles": [...]
+}`;
+}
+```
+
+-----
+
+## Part B: Handle Paywalled Content Ethically
+
+Update the brief card to show paywall indicator:
+
+```tsx
+// components/BriefCard.tsx
+
+function BriefCard({ item, priority }: { item: any; priority: string }) {
+  const [expanded, setExpanded] = useState(priority === 'critical');
+  
+  return (
+    <div className={`bg-white rounded-xl border border-slate-200 overflow-hidden ${borderColors[priority]}`}>
+      {/* Header */}
+      <div className="p-4 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <h3 className="font-semibold text-slate-900 pr-4">{item.title}</h3>
+            
+            {/* Source with paywall indicator */}
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded inline-flex items-center gap-1">
+                📰 {item.source}
+                {item.sourceType === 'local' && (
+                  <span className="text-amber-600">🇮🇩</span>
+                )}
+              </span>
+              
+              {/* Paywall Badge */}
+              {item.isPaywalled && (
+                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded inline-flex items-center gap-1">
+                  🔒 Berbayar
+                </span>
+              )}
+              
+              {item.foundByModels?.length > 1 && (
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                  ✓ {item.foundByModels.length} AI setuju
+                </span>
+              )}
+            </div>
+          </div>
+          
+          {expanded ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+        </div>
+      </div>
+      
+      {/* Expanded Content */}
+      {expanded && (
+        <div className="px-4 pb-4 border-t border-slate-100">
+          <p className="text-slate-700 mt-4 leading-relaxed">{item.summary}</p>
+          
+          {/* Why It Matters */}
+          <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
+            <p className="text-sm font-semibold text-blue-800 mb-1">
+              💡 Mengapa ini penting untuk Anda:
+            </p>
+            <p className="text-sm text-blue-700 leading-relaxed">
+              {item.whyItMatters}
+            </p>
+          </div>
+          
+          {/* Paywall Notice */}
+          {item.isPaywalled && (
+            <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
+              <p className="text-xs text-amber-700">
+                🔒 Artikel ini memerlukan langganan {item.source}. 
+                Klik link untuk membaca jika Anda sudah berlangganan.
+              </p>
+            </div>
+          )}
+          
+          {/* Actions */}
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
+            {item.url && item.url !== 'perlu verifikasi' && (
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium inline-flex items-center gap-1"
+              >
+                {item.isPaywalled ? 'Buka di ' + item.source : 'Baca selengkapnya'} 
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            )}
+            
+            <div className="flex items-center gap-2">
+              <button className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg" title="Simpan">
+                <Bookmark className="w-4 h-4" />
+              </button>
+              <button className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Tidak relevan">
+                <ThumbsDown className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+-----
+
+## Part C: Simplified LLM Council (For Testing)
+
+Since you only have DeepSeek + OpenAI keys for now, let’s make it work with 2 models first:
+
+```typescript
+// server/services/llmCouncil.ts
+
+// Configuration - easily enable/disable models
+const ENABLED_MODELS = {
+  openai: true,     // GPT-4o - you have this
+  deepseek: true,   // DeepSeek V3 - you have this
+  anthropic: false, // Claude - enable when you have key
+  gemini: false,    // Gemini - enable when you have key
+  grok: false       // Grok - enable when you have key
+};
+
+export async function runCouncilForUser(userId: string) {
+  console.log('🏛️ Starting Kurasi.ai Council...');
+  
+  const profile = await getUserProfile(userId);
+  if (!profile) {
+    return { success: false, error: 'Profile not found' };
+  }
+  
+  // Build list of active searches
+  const searches: Promise<LLMResponse>[] = [];
+  
+  if (ENABLED_MODELS.openai && process.env.OPENAI_API_KEY) {
+    searches.push(searchWithGPT4(profile));
+  }
+  
+  if (ENABLED_MODELS.deepseek && process.env.DEEPSEEK_API_KEY) {
+    searches.push(searchWithDeepSeek(profile));
+  }
+  
+  if (ENABLED_MODELS.anthropic && process.env.ANTHROPIC_API_KEY) {
+    searches.push(searchWithClaude(profile));
+  }
+  
+  if (ENABLED_MODELS.gemini && process.env.GOOGLE_AI_API_KEY) {
+    searches.push(searchWithGemini(profile));
+  }
+  
+  console.log(`📡 Running ${searches.length} AI models in parallel...`);
+  
+  if (searches.length === 0) {
+    return { success: false, error: 'No API keys configured!' };
+  }
+  
+  const results = await Promise.all(searches);
+  
+  // Log results
+  results.forEach(r => {
+    console.log(`${r.error ? '❌' : '✅'} ${r.model}: ${r.articles.length} articles`);
+  });
+  
+  // Combine all articles
+  const allArticles = results.flatMap(r => 
+    r.articles.map(a => ({ ...a, foundBy: r.model }))
+  );
+  
+  console.log(`📚 Total: ${allArticles.length} articles from ${results.length} models`);
+  
+  // Use DeepSeek as judge (cheaper) if Claude not available
+  const finalBrief = await generateFinalBrief(profile, allArticles, results);
+  
+  // Save to database
+  await db.query(`
+    INSERT INTO daily_briefs (user_id, content, generated_at)
+    VALUES ($1, $2, NOW())
+  `, [userId, JSON.stringify(finalBrief)]);
+  
+  return { success: true, brief: finalBrief };
+}
+
+// Use DeepSeek as judge if Claude not available
+async function generateFinalBrief(profile: UserProfile, articles: any[], councilResults: any[]) {
+  
+  const judgePrompt = `Anda adalah HAKIM AKHIR untuk brief Kurasi.ai.
+
+PROFIL PENGGUNA:
+${profile.council_system_prompt}
+
+KRITERIA SUKSES (dari pengguna):
+"${profile.success_definition}"
+
+---
+
+${councilResults.length} MODEL AI telah mencari berita. Total ${articles.length} artikel ditemukan:
+
+${JSON.stringify(articles, null, 2)}
+
+---
+
+TUGAS ANDA:
+
+1. DEDUPLIKASI: Hapus berita yang sama dari model berbeda
+2. VERIFIKASI: Pastikan berita relevan untuk pengguna ini
+3. KATEGORIKAN:
+   - 🔴 KRITIS (1-3): Perlu tindakan segera, dampak langsung
+   - 🟡 PENTING (3-5): Perlu diketahui minggu ini
+   - 🟢 LATAR (2-4): Konteks, pantau perkembangan
+
+4. PERSONALISASI: Tulis "Mengapa ini penting" yang SPESIFIK untuk peran pengguna
+
+OUTPUT dalam Bahasa Indonesia:
+{
+  "briefDate": "${new Date().toISOString().split('T')[0]}",
+  "greeting": "Selamat pagi, [nama]!",
+  "executiveSummary": "2-3 kalimat ringkasan hari ini untuk orang ini",
+  "critical": [
+    {
+      "title": "...",
+      "summary": "...",
+      "source": "...",
+      "sourceType": "local|regional|global",
+      "url": "...",
+      "isPaywalled": true/false,
+      "whyItMatters": "Spesifik untuk pengguna INI...",
+      "foundByModels": ["GPT-4o", "DeepSeek"],
+      "verificationScore": 9
+    }
+  ],
+  "important": [...],
+  "background": [...],
+  "councilAgreement": "Catatan tentang konsensus antar model"
+}`;
+
+  // Use DeepSeek (cheaper) or Claude if available
+  if (process.env.ANTHROPIC_API_KEY) {
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 8192,
+      messages: [{ role: 'user', content: judgePrompt }]
+    });
+    const content = response.content[0].type === 'text' ? response.content[0].text : '';
+    return JSON.parse(content.replace(/```json\n?|\n?```/g, '').trim());
+  } else {
+    // Fallback to DeepSeek
+    const response = await deepseek.chat.completions.create({
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: 'Anda adalah asisten yang menghasilkan JSON. Selalu respond dengan valid JSON saja.' },
+        { role: 'user', content: judgePrompt }
+      ],
+      temperature: 0.3
+    });
+    const content = response.choices[0].message.content || '{}';
+    return JSON.parse(content.replace(/```json\n?|\n?```/g, '').trim());
+  }
+}
+```
+
+-----
+
+## Part D: Demo Mode (No Login Required)
+
+Make sure demo chat works without login:
+
+```typescript
+// server/routes/demoChat.ts
+
+const DEMO_SYSTEM_PROMPT = `Anda adalah Kurasi.ai, asisten intelijen untuk eksekutif Indonesia.
+
+KEAHLIAN ANDA:
+🏦 Perbankan: BI rate, OJK, NPL, digital banking
+📊 Pasar Modal: IDX, IPO, foreign flow
+🛢️ Komoditas: Nikel, batubara, CPO, harga & ekspor
+🏛️ Kebijakan: Pajak, regulasi, omnibus law
+💳 Fintech: P2P lending, e-wallet, QRIS
+
+SUMBER YANG ANDA PANTAU:
+- Indonesia: Kontan, Bisnis Indonesia, Kompas, CNBC Indonesia
+- Regional: Nikkei Asia, Straits Times, CNA
+- Global: Bloomberg, Reuters, FT
+
+CARA MENJAWAB:
+1. HEADLINE - satu kalimat paling penting
+2. KONTEKS - mengapa ini terjadi
+3. IMPLIKASI - apa artinya untuk bisnis
+4. Jika kritis: 🔴 KRITIS
+
+Setelah 2-3 pertanyaan, sarankan mendaftar untuk brief harian.
+
+Bahasa: Indonesia, profesional, langsung ke inti.`;
+
+router.post('/api/chat/demo', async (req, res) => {
+  try {
+    const { message, history = [] } = req.body;
+    
+    const messages = [
+      { role: 'system' as const, content: DEMO_SYSTEM_PROMPT },
+      ...history.slice(-6).map((m: any) => ({ // Keep last 6 messages only
+        role: m.role as 'user' | 'assistant',
+        content: m.content
+      })),
+      { role: 'user' as const, content: message }
+    ];
+    
+    // Use DeepSeek for demo (cheaper)
+    const response = await deepseek.chat.completions.create({
+      model: 'deepseek-chat',
+      messages,
+      max_tokens: 800,
+      temperature: 0.7
+    });
+    
+    let reply = response.choices[0].message.content || '';
+    
+    // Add signup nudge after 3 messages
+    if (history.length >= 4) {
+      reply += '\n\n---\n💡 *Untuk brief lengkap seperti ini setiap pagi, [daftar gratis di sini](/register)!*';
+    }
+    
+    res.json({ response: reply });
+    
+  } catch (error: any) {
+    console.error('Demo chat error:', error);
+    res.status(500).json({ 
+      response: 'Maaf, terjadi kesalahan. Silakan coba lagi.' 
+    });
+  }
+});
+```
+
+-----
+
+## Part E: Quick Test Endpoint
+
+Add an endpoint to quickly test the council with minimal setup:
+
+```typescript
+// server/routes/test.ts
+
+router.get('/api/test/council', async (req, res) => {
+  try {
+    // Check which API keys are configured
+    const status = {
+      openai: !!process.env.OPENAI_API_KEY,
+      deepseek: !!process.env.DEEPSEEK_API_KEY,
+      anthropic: !!process.env.ANTHROPIC_API_KEY,
+      gemini: !!process.env.GOOGLE_AI_API_KEY,
+      resend: !!process.env.RESEND_API_KEY
+    };
+    
+    const configured = Object.entries(status)
+      .filter(([_, v]) => v)
+      .map(([k]) => k);
+    
+    res.json({
+      message: 'Kurasi.ai Council Status',
+      configuredModels: configured,
+      missingModels: Object.entries(status).filter(([_, v]) => !v).map(([k]) => k),
+      readyToTest: configured.length >= 1,
+      recommendation: configured.length < 2 
+        ? 'Tambahkan minimal 2 API key untuk hasil optimal' 
+        : 'Siap untuk testing! 🚀'
+    });
+    
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Quick test with a sample profile
+router.post('/api/test/quick-brief', async (req, res) => {
+  try {
+    // Create a test profile
+    const testProfile = {
+      council_system_prompt: `Anda mencari berita untuk seorang eksekutif senior di sektor perbankan Indonesia.
+      
+Fokus utama:
+- Kebijakan Bank Indonesia (suku bunga, nilai tukar)
+- Regulasi OJK untuk perbankan dan fintech
+- Perkembangan digital banking di Indonesia
+- Kompetisi antar bank di Indonesia
+
+Prioritaskan sumber Indonesia seperti Kontan, Bisnis Indonesia, CNBC Indonesia.`,
+      success_definition: 'Berita yang mempengaruhi keputusan strategis di sektor perbankan',
+      language_preference: 'id'
+    };
+    
+    // Run quick search with available models
+    const results = [];
+    
+    if (process.env.DEEPSEEK_API_KEY) {
+      const deepseekResult = await searchWithDeepSeek(testProfile as any);
+      results.push(deepseekResult);
+    }
+    
+    if (process.env.OPENAI_API_KEY) {
+      const openaiResult = await searchWithGPT4(testProfile as any);
+      results.push(openaiResult);
+    }
+    
+    res.json({
+      success: true,
+      modelsUsed: results.map(r => r.model),
+      totalArticles: results.reduce((sum, r) => sum + r.articles.length, 0),
+      results
+    });
+    
+  } catch (error: any) {
+    console.error('Quick test error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+```
+
+-----
+
+## Part F: Environment Variables Checklist
+
+Create a helpful .env.example:
+
+```env
+# === KURASI.AI API KEYS ===
+
+# REQUIRED (minimal 1 untuk testing)
+DEEPSEEK_API_KEY=sk-xxx          # https://api.deepseek.com - PALING MURAH!
+OPENAI_API_KEY=sk-xxx            # https://platform.openai.com
+
+# OPTIONAL (tambahkan untuk hasil lebih baik)  
+ANTHROPIC_API_KEY=sk-ant-xxx     # https://console.anthropic.com
+GOOGLE_AI_API_KEY=xxx            # https://makersuite.google.com
+XAI_API_KEY=xxx                  # https://x.ai (Grok)
+
+# EMAIL (untuk fitur premium)
+RESEND_API_KEY=re_xxx            # https://resend.com (GRATIS 3000/bulan)
+
+# DATABASE (Replit handles this)
+DATABASE_URL=xxx
+```
+
+-----
+
+## Part G: Final UI Polish
+
+Add loading states and error handling:
+
+```tsx
+// In Dashboard, add better error state:
+
+{error && (
+  <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+    <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+      <AlertTriangle className="w-6 h-6 text-red-500" />
+    </div>
+    <h3 className="font-semibold text-red-800 mb-2">Terjadi Kesalahan</h3>
+    <p className="text-red-600 text-sm mb-4">{error}</p>
+    <button 
+      onClick={() => window.location.reload()}
+      className="text-red-700 underline text-sm"
+    >
+      Coba lagi
+    </button>
+  </div>
+)}
+
+// Add celebration when brief is generated:
+{justGenerated && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-2xl p-8 text-center max-w-md mx-4 animate-bounce-once">
+      <div className="text-6xl mb-4">🎉</div>
+      <h2 className="text-2xl font-bold text-slate-900 mb-2">Brief Anda Siap!</h2>
+      <p className="text-slate-600 mb-6">
+        {brief.critical?.length || 0} berita kritis, {brief.important?.length || 0} penting
+      </p>
+      <button 
+        onClick={() => setJustGenerated(false)}
+        className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-xl font-semibold"
+      >
+        Lihat Brief
+      </button>
+    </div>
+  </div>
+)}
+```
+
+-----
+
+## TESTING CHECKLIST
+
+After applying this prompt, test these:
+
+```
+1. [ ] Landing page loads with chat
+2. [ ] Demo chat works (type a question)
+3. [ ] Can register new account
+4. [ ] Onboarding conversation works
+5. [ ] Dashboard shows "Buat Brief" button
+6. [ ] Generate brief (may take 30-60 seconds)
+7. [ ] Brief displays with Indonesian labels
+8. [ ] Paywall articles show 🔒 badge
+9. [ ] "Mengapa ini penting" is personalized
+```
+
+-----
+
+## QUICK START FOR TESTING
+
+1. Add DEEPSEEK_API_KEY to Replit Secrets
+1. Add OPENAI_API_KEY to Replit Secrets
+1. Visit `/api/test/council` to verify keys work
+1. Try the demo chat on landing page
+1. Register, complete onboarding, generate brief!
+
+-----
+
+## YOU’RE READY TO SHIP! 🚀
+
+After this prompt:
+
+- Kurasi.ai branding ✅
+- Indonesian-first search ✅
+- Paywall handling ✅
+- Works with just DeepSeek + OpenAI ✅
+- Demo mode for landing ✅
+- Full brief generation ✅
+
+Bismillah, let’s get users testing! 🇮🇩🔥

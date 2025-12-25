@@ -8,11 +8,60 @@ const anthropic = new Anthropic({
   baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
 });
 
+const INDONESIAN_FIRST_SEARCH_PROMPT = `
+PRIORITAS SUMBER (PENTING!):
+
+1. INDONESIA FIRST (Prioritas Utama):
+   - Kontan.co.id (bisnis, keuangan)
+   - Bisnis Indonesia / Bisnis.com
+   - Kompas.com (general news)
+   - Detik Finance
+   - CNN Indonesia
+   - CNBC Indonesia
+   - Tempo.co
+   - Katadata.co.id
+   - Investor Daily
+   - Infobank
+   - The Jakarta Post
+   - IDN Times
+   - Liputan6 Bisnis
+
+2. ASEAN & REGIONAL (Kedua):
+   - The Straits Times (Singapore)
+   - Nikkei Asia
+   - South China Morning Post
+   - Bangkok Post
+   - The Star (Malaysia)
+   - Channel News Asia
+
+3. GLOBAL FINANCIAL (Ketiga):
+   - Bloomberg
+   - Reuters
+   - Financial Times
+   - The Economist
+   - Wall Street Journal
+
+4. EXPERT VOICES (Bonus - jika relevan):
+   - Blog Bank Indonesia
+   - Blog OJK
+   - McKinsey Indonesia insights
+   - World Bank Indonesia updates
+   - IMF Indonesia reports
+
+ATURAN:
+- MINIMAL 60% harus dari sumber Indonesia
+- Sumber internasional hanya jika ada dampak langsung ke Indonesia
+- Jika berita sama ada di lokal dan internasional, PILIH sumber lokal
+- Selalu sertakan konteks Indonesia dalam analisis
+`;
+
 interface FoundArticle {
   title: string;
   summary: string;
   source: string;
+  sourceType: "local" | "regional" | "global";
   url: string;
+  isPaywalled: boolean;
   relevanceReason: string;
   publishedDate: string;
   confidence: number;
@@ -59,7 +108,9 @@ interface BriefArticle {
   title: string;
   summary: string;
   source: string;
+  sourceType: "local" | "regional" | "global";
   url: string;
+  isPaywalled: boolean;
   whyItMatters: string;
   foundByPerspectives: string[];
   verificationScore: number;
@@ -75,57 +126,65 @@ async function getUserProfile(userId: string): Promise<UserProfile | null> {
 
 function createSearchPrompt(profile: UserProfile, perspective: string): string {
   const today = new Date().toISOString().split("T")[0];
-  const language = profile.languagePreference === "id" ? "Indonesian" : "English";
 
   const perspectiveInstructions: Record<string, string> = {
-    "Market Analyst": "Focus on market trends, financial news, and economic indicators that affect business decisions.",
-    "Regulatory Expert": "Focus on policy changes, regulatory updates, and compliance-related news from government bodies.",
-    "Industry Insider": "Focus on industry-specific news, competitor moves, and sector trends.",
-    "Global Correspondent": "Focus on international news with regional impact, especially from major financial centers.",
-    "Tech & Innovation": "Focus on technology developments, digital transformation, and innovation news.",
+    "Market Analyst": "Fokus pada tren pasar, berita keuangan, dan indikator ekonomi yang mempengaruhi keputusan bisnis.",
+    "Regulatory Expert": "Fokus pada perubahan kebijakan, update regulasi, dan berita compliance dari badan pemerintah.",
+    "Industry Insider": "Fokus pada berita industri spesifik, pergerakan kompetitor, dan tren sektor.",
+    "Global Correspondent": "Fokus pada berita internasional dengan dampak regional, terutama dari pusat keuangan utama.",
+    "Tech & Innovation": "Fokus pada perkembangan teknologi, transformasi digital, dan berita inovasi.",
   };
 
-  return `${profile.councilSystemPrompt || `You are researching news for ${profile.personaSummary || "an executive"}`}
+  return `${profile.councilSystemPrompt || `Anda mencari berita untuk ${profile.personaSummary || "seorang eksekutif Indonesia"}`}
+
+${INDONESIAN_FIRST_SEARCH_PROMPT}
 
 ---
 
-TODAY'S DATE: ${today}
-YOUR PERSPECTIVE: ${perspective}
+TANGGAL HARI INI: ${today}
+PERSPEKTIF ANDA: ${perspective}
 ${perspectiveInstructions[perspective] || ""}
 
-YOUR TASK:
-Find 3-5 HIGHLY RELEVANT news items from the past 24-48 hours that match this user's intelligence needs.
+TUGAS ANDA:
+Cari 3-5 berita PALING RELEVAN untuk pengguna ini dari 24-48 jam terakhir.
 
-Consider their priorities:
-${profile.primaryTopics ? JSON.stringify(profile.primaryTopics, null, 2) : "- General business and industry news"}
+Prioritas mereka:
+${profile.primaryTopics ? JSON.stringify(profile.primaryTopics, null, 2) : "- Berita bisnis dan industri umum"}
 
-Track these entities:
-${profile.entitiesToTrack?.join(", ") || "Key industry players and regulators"}
+Entitas yang dipantau:
+${profile.entitiesToTrack?.join(", ") || "Pemain industri utama dan regulator"}
 
-QUALITY RULES:
-- Only include news you're confident is REAL and recent
-- Prioritize actionable intelligence
-- Better to return 2-3 high-quality items than 5 questionable ones
-- Consider: Would this help them make a decision?
+ATURAN KUALITAS:
+- Hanya sertakan berita yang Anda yakin NYATA dan terbaru
+- Prioritaskan intelijen yang actionable
+- Lebih baik 2-3 item berkualitas tinggi daripada 5 yang meragukan
+- Tanyakan: Apakah ini membantu mereka membuat keputusan?
 
-AVOID:
-${profile.avoidTopics?.length ? profile.avoidTopics.map((t) => `- ${t}`).join("\n") : "- Sensational or unverified content"}
+HINDARI:
+${profile.avoidTopics?.length ? profile.avoidTopics.map((t) => `- ${t}`).join("\n") : "- Konten sensasional atau tidak terverifikasi"}
 
-Respond in JSON format:
+UNTUK SETIAP ARTIKEL, respond dalam JSON:
 {
-  "searchQueries": ["what you conceptually searched for"],
+  "searchQueries": ["query yang Anda gunakan"],
   "articles": [
     {
-      "title": "Article title",
-      "summary": "2-3 sentence summary in ${language}",
-      "source": "Source name (e.g., Bloomberg, Reuters, Kontan)",
-      "url": "https://example.com/article or 'search required'",
-      "relevanceReason": "Why this matters to this user specifically...",
+      "title": "Judul artikel (dalam bahasa asli)",
+      "summary": "Ringkasan 2-3 kalimat dalam Bahasa Indonesia",
+      "source": "Nama sumber (contoh: Kontan, Bloomberg)",
+      "sourceType": "local" | "regional" | "global",
+      "url": "URL lengkap jika tahu, atau 'perlu verifikasi'",
+      "isPaywalled": true | false,
+      "relevanceReason": "Mengapa ini penting untuk pengguna INI",
       "publishedDate": "${today}",
       "confidence": 8
     }
   ]
-}`;
+}
+
+PENTING:
+- Prioritaskan sumber Indonesia!
+- Jika sumber berbayar (paywall), tetap sertakan dengan isPaywalled: true
+- sourceType: "local" untuk Indonesia, "regional" untuk ASEAN, "global" untuk internasional`;
 }
 
 async function searchWithPerspective(
@@ -148,9 +207,15 @@ async function searchWithPerspective(
     const cleanJson = content.replace(/```json\n?|\n?```/g, "").trim();
     const parsed = JSON.parse(cleanJson);
 
+    const normalizedArticles = (parsed.articles || []).map((a: any) => ({
+      ...a,
+      sourceType: a.sourceType || "local",
+      isPaywalled: a.isPaywalled ?? false,
+    }));
+
     return {
       perspective,
-      articles: parsed.articles || [],
+      articles: normalizedArticles,
       searchQueries: parsed.searchQueries || [],
     };
   } catch (error: any) {
@@ -169,80 +234,74 @@ async function claudeJudge(
   allArticles: Array<FoundArticle & { foundBy: string }>,
   councilResults: CouncilMemberResponse[]
 ): Promise<DailyBriefContent> {
-  const language = profile.languagePreference === "id" ? "Indonesian" : "English";
   const today = new Date().toISOString().split("T")[0];
 
-  const judgePrompt = `You are the FINAL JUDGE in an AI Council for news curation.
+  const judgePrompt = `Anda adalah HAKIM AKHIR dalam AI Council Kurasi.ai untuk kurasi berita.
 
-USER PROFILE:
-${profile.councilSystemPrompt || profile.personaSummary || "Executive user"}
+PROFIL PENGGUNA:
+${profile.councilSystemPrompt || profile.personaSummary || "Eksekutif Indonesia"}
 
-SUCCESS CRITERIA (from user):
-"${profile.successDefinition || "Receive actionable intelligence that helps make better decisions"}"
+KRITERIA SUKSES (dari pengguna):
+"${profile.successDefinition || "Menerima intelijen yang actionable untuk membuat keputusan lebih baik"}"
 
-DECISION CONTEXT:
-${profile.decisionContext || "Strategic business decisions"}
-
----
-
-COUNCIL RESULTS:
-Multiple AI perspectives searched for news. Here are their combined ${allArticles.length} findings:
-
-${JSON.stringify(
-  allArticles.map((a) => ({
-    ...a,
-    foundBy: a.foundBy,
-  })),
-  null,
-  2
-)}
+KONTEKS KEPUTUSAN:
+${profile.decisionContext || "Keputusan bisnis strategis"}
 
 ---
 
-YOUR JUDGE TASKS:
+HASIL COUNCIL:
+${councilResults.length} perspektif AI telah mencari berita. Total ${allArticles.length} artikel ditemukan:
 
-1. **DEDUPLICATE**: Same story from different perspectives = keep one, note agreement
+${JSON.stringify(allArticles, null, 2)}
 
-2. **VERIFY AGAINST USER NEEDS**: For each article, ask:
-   - Does this match what this user needs?
-   - Would this help them achieve their success criteria?
-   - Is this from a credible source?
+---
 
-3. **CROSS-VALIDATE**: 
-   - Found by 2+ perspectives = Higher confidence
-   - Found by 1 perspective with low score = More skeptical
+TUGAS HAKIM ANDA:
 
-4. **CATEGORIZE**:
-   - CRITICAL: Directly affects their work, needs attention today
-   - IMPORTANT: Should know, might affect decisions this week
-   - BACKGROUND: Good context, monitor for later
+1. DEDUPLIKASI: Hapus berita yang sama dari perspektif berbeda, catat kesepakatan
 
-5. **PERSONALIZE**: Write "Why This Matters" that references THEIR specific role
+2. VERIFIKASI TERHADAP KEBUTUHAN PENGGUNA: Untuk setiap artikel, tanyakan:
+   - Apakah ini sesuai dengan kebutuhan pengguna ini?
+   - Apakah ini membantu mereka mencapai kriteria sukses?
+   - Apakah ini dari sumber kredibel?
 
-OUTPUT (in ${language}):
+3. VALIDASI SILANG:
+   - Ditemukan oleh 2+ perspektif = Kepercayaan lebih tinggi
+   - Ditemukan oleh 1 perspektif dengan skor rendah = Lebih skeptis
+
+4. KATEGORIKAN:
+   - KRITIS (1-3): Perlu tindakan segera, dampak langsung pada pekerjaan hari ini
+   - PENTING (3-5): Perlu diketahui, mungkin mempengaruhi keputusan minggu ini
+   - LATAR (2-4): Konteks baik, pantau perkembangan
+
+5. PERSONALISASI: Tulis "Mengapa ini penting" yang SPESIFIK untuk peran pengguna INI
+
+OUTPUT dalam Bahasa Indonesia:
 {
   "briefDate": "${today}",
-  "recipientName": "${profile.personaSummary?.split(".")[0] || "Executive"}",
-  "greeting": "Personalized ${language} greeting for the morning",
-  "executiveSummary": "2-3 sentences summarizing what matters TODAY for this person",
+  "recipientName": "${profile.personaSummary?.split(".")[0] || "Eksekutif"}",
+  "greeting": "Selamat pagi yang personal untuk pengguna ini",
+  "executiveSummary": "2-3 kalimat ringkasan apa yang penting HARI INI untuk orang ini",
   "critical": [
     {
       "title": "...",
       "summary": "...",
       "source": "...",
+      "sourceType": "local|regional|global",
       "url": "...",
-      "whyItMatters": "Specifically for THIS user...",
-      "foundByPerspectives": ["list", "of", "perspectives"],
+      "isPaywalled": true/false,
+      "whyItMatters": "Spesifik untuk pengguna INI...",
+      "foundByPerspectives": ["daftar", "perspektif"],
       "verificationScore": 9
     }
   ],
   "important": [...],
   "background": [...],
-  "councilAgreement": "How much did the perspectives agree? Any notable insights?",
-  "confidenceNote": "Overall confidence in today's brief"
+  "councilAgreement": "Seberapa banyak perspektif setuju? Ada insight notable?",
+  "confidenceNote": "Kepercayaan keseluruhan pada brief hari ini"
 }
 
-Respond ONLY with valid JSON.`;
+Respond HANYA dengan valid JSON.`;
 
   try {
     const response = await anthropic.messages.create({

@@ -523,5 +523,26 @@ export async function registerRoutes(
     }
   });
 
+  // Test Endpoint - Check API key status (Development only - does not expose actual keys)
+  app.get("/api/test/council", async (req, res) => {
+    try {
+      const hasAnthropic = !!process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
+      const hasResend = !!process.env.RESEND_API_KEY;
+      
+      res.json({
+        message: "Status Kurasi.ai Council",
+        readyToTest: hasAnthropic,
+        aiConfigured: hasAnthropic,
+        emailConfigured: hasResend,
+        recommendation: hasAnthropic
+          ? "Siap untuk testing! 🚀"
+          : "Konfigurasi AI diperlukan"
+      });
+      
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   return httpServer;
 }
