@@ -108,6 +108,54 @@ export async function registerRoutes(
     }
   });
 
+  // Form-based profile generation (fast onboarding)
+  app.post("/api/onboarding/generate-profile", async (req, res) => {
+    try {
+      const { role, topics, entities, sources } = req.body;
+
+      if (!role || !topics) {
+        return res.status(400).json({ error: "Role and topics are required" });
+      }
+
+      const Anthropic = (await import("@anthropic-ai/sdk")).default;
+      const anthropic = new Anthropic();
+
+      const prompt = `Generate a personalized news brief system prompt for this Indonesian executive:
+
+ROLE: ${role}
+TOPICS TO MONITOR: ${topics}
+PEOPLE/COMPANIES TO TRACK: ${entities || 'Not specified'}
+TRUSTED SOURCES: ${sources || 'Not specified'}
+
+Create a JSON response with:
+{
+  "role": "extracted role in Indonesian",
+  "organization": "organization if mentioned",
+  "industry": "detected industry",
+  "primaryTopics": ["array", "of", "topics"],
+  "specificEntities": ["array", "of", "entities to track"],
+  "readingSources": ["array", "of", "trusted sources"],
+  "councilSystemPrompt": "Write a 300-400 word system prompt IN BAHASA INDONESIA for 6 AI models searching news for this specific user. Include: who they are, what topics to prioritize, what entities to track, what sources to prefer, and what makes news RELEVANT for them. Be specific and actionable. Start with 'Cari berita untuk...' and make it feel like briefing a research team."
+}
+
+Respond with valid JSON only, no markdown.`;
+
+      const result = await anthropic.messages.create({
+        model: "claude-opus-4-5-20251101",
+        max_tokens: 1500,
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      const content = result.content[0].type === "text" ? result.content[0].text : "{}";
+      const profile = JSON.parse(content.replace(/```json\n?|\n?```/g, "").trim());
+
+      res.json({ profile });
+    } catch (error: any) {
+      console.error("Profile generation error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Authentication Routes
   app.post("/api/auth/register", async (req, res) => {
     try {
