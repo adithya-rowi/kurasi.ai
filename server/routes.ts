@@ -32,6 +32,7 @@ import {
   updateEmailSettings,
   sendDailyBriefEmail,
 } from "./services/emailDeliveryService";
+import { handleDemoChat } from "./services/demoChatService";
 import { z } from "zod";
 import { db } from "./db";
 import { userProfiles, dailyBriefs, briefFeedback } from "@shared/schema";
@@ -502,6 +503,22 @@ export async function registerRoutes(
       );
       res.json(result);
     } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Demo Chat Route (no authentication required)
+  app.post("/api/chat/demo", async (req, res) => {
+    try {
+      const { message, history = [] } = req.body;
+      if (!message) {
+        return res.status(400).json({ error: "Message is required" });
+      }
+      
+      const response = await handleDemoChat(message, history);
+      res.json({ response });
+    } catch (error: any) {
+      console.error("Demo chat error:", error);
       res.status(500).json({ error: error.message });
     }
   });

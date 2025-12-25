@@ -1,0 +1,416 @@
+# CurateAI - Prompt 1: ChatGPT-Style Landing Page
+
+## 🎯 Copy this to Replit NOW
+
+-----
+
+## The New Approach
+
+**OLD**: Landing page → Sign up → Onboard → Then see value
+**NEW**: Landing page IS the chatbot → User tries immediately → Wow! → Then sign up
+
+Like ChatGPT - you land, you chat, you’re hooked!
+
+-----
+
+## Replace Your Landing Page
+
+Replace the entire landing/home page with this chat-first experience:
+
+```tsx
+// client/src/pages/Home.tsx or Landing.tsx
+
+import { useState, useRef, useEffect } from 'react';
+import { Send, Sparkles, ArrowRight, Zap } from 'lucide-react';
+
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export function HomePage() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+  
+  const sendMessage = async () => {
+    if (!input.trim() || isLoading) return;
+    
+    setHasStarted(true);
+    const userMsg = input;
+    setInput('');
+    
+    setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+    setIsLoading(true);
+    
+    try {
+      // Call your API to get AI response
+      const res = await fetch('/api/chat/demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          message: userMsg,
+          history: messages 
+        })
+      });
+      
+      const data = await res.json();
+      
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: data.response 
+      }]);
+    } catch (err) {
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: 'Maaf, terjadi kesalahan. Silakan coba lagi.' 
+      }]);
+    }
+    
+    setIsLoading(false);
+  };
+  
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+  
+  // Quick start prompts for Indonesian executives
+  const quickPrompts = [
+    "Apa berita penting hari ini untuk sektor perbankan Indonesia?",
+    "Update terbaru tentang kebijakan Bank Indonesia",
+    "Perkembangan fintech dan P2P lending di Indonesia",
+    "Berita komoditas: nikel, batubara, kelapa sawit"
+  ];
+  
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      
+      {/* Minimal Header */}
+      <header className="bg-white border-b border-slate-200 px-6 py-4">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">C</span>
+            </div>
+            <span className="font-semibold text-slate-900">CurateAI</span>
+          </div>
+          
+          <a 
+            href="/login" 
+            className="text-sm text-slate-600 hover:text-slate-900"
+          >
+            Masuk
+          </a>
+        </div>
+      </header>
+      
+      {/* Main Chat Area */}
+      <main className="flex-1 max-w-4xl w-full mx-auto flex flex-col">
+        
+        {/* Welcome State - Before chat starts */}
+        {!hasStarted && (
+          <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+            
+            {/* Hero */}
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium mb-4">
+                <Zap className="w-4 h-4" />
+                5 AI bekerja untuk Anda
+              </div>
+              
+              <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
+                Brief Intelijen
+                <br />
+                <span className="text-slate-400">Khusus untuk Anda</span>
+              </h1>
+              
+              <p className="text-lg text-slate-600 max-w-xl mx-auto">
+                Tanyakan apa saja tentang berita bisnis, ekonomi, atau kebijakan Indonesia. 
+                AI kami akan merangkum yang paling relevan untuk Anda.
+              </p>
+            </div>
+            
+            {/* Quick Prompts */}
+            <div className="w-full max-w-2xl">
+              <p className="text-sm text-slate-500 mb-3 text-center">Coba tanyakan:</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {quickPrompts.map((prompt, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setInput(prompt);
+                      // Auto-send after setting
+                      setTimeout(() => {
+                        const fakeEvent = { key: 'Enter', shiftKey: false, preventDefault: () => {} };
+                        // Or just call sendMessage directly with the prompt
+                      }, 100);
+                    }}
+                    className="text-left p-4 bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:shadow-sm transition-all group"
+                  >
+                    <p className="text-slate-700 text-sm">{prompt}</p>
+                    <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 mt-2" />
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Trust indicators */}
+            <div className="mt-12 text-center">
+              <p className="text-xs text-slate-400 mb-2">DIBUAT UNTUK EKSEKUTIF INDONESIA</p>
+              <div className="flex items-center justify-center gap-4 text-slate-400 text-sm">
+                <span>Perbankan</span>
+                <span>•</span>
+                <span>Komoditas</span>
+                <span>•</span>
+                <span>Kebijakan</span>
+                <span>•</span>
+                <span>Fintech</span>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Chat Messages - After chat starts */}
+        {hasStarted && (
+          <div className="flex-1 overflow-y-auto px-6 py-6">
+            <div className="space-y-6">
+              {messages.map((msg, idx) => (
+                <div 
+                  key={idx} 
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div className={`max-w-[85%] ${
+                    msg.role === 'user' 
+                      ? 'bg-slate-900 text-white rounded-2xl rounded-br-md px-4 py-3' 
+                      : 'bg-white border border-slate-200 rounded-2xl rounded-bl-md px-4 py-3'
+                  }`}>
+                    {msg.role === 'assistant' && (
+                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
+                        <div className="w-5 h-5 bg-gradient-to-br from-amber-400 to-amber-600 rounded flex items-center justify-center">
+                          <Sparkles className="w-3 h-3 text-white" />
+                        </div>
+                        <span className="text-xs font-medium text-slate-500">CurateAI</span>
+                      </div>
+                    )}
+                    <p className={`whitespace-pre-wrap text-sm leading-relaxed ${
+                      msg.role === 'user' ? 'text-white' : 'text-slate-700'
+                    }`}>
+                      {msg.content}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              
+              {/* Loading */}
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-white border border-slate-200 rounded-2xl rounded-bl-md px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 bg-gradient-to-br from-amber-400 to-amber-600 rounded flex items-center justify-center">
+                        <Sparkles className="w-3 h-3 text-white animate-pulse" />
+                      </div>
+                      <span className="text-sm text-slate-500">Sedang menganalisis...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <div ref={messagesEndRef} />
+            </div>
+          </div>
+        )}
+        
+        {/* Input Area - Always visible */}
+        <div className="border-t border-slate-200 bg-white px-6 py-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex gap-3">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Tanyakan tentang berita bisnis Indonesia..."
+                className="flex-1 px-4 py-3 bg-slate-100 border-0 rounded-xl focus:ring-2 focus:ring-slate-900 focus:bg-white outline-none transition-all text-slate-900 placeholder-slate-400"
+                disabled={isLoading}
+              />
+              <button
+                onClick={sendMessage}
+                disabled={!input.trim() || isLoading}
+                className="bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white px-5 py-3 rounded-xl transition-colors flex items-center gap-2"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+            
+            {/* CTA after some messages */}
+            {messages.length >= 2 && (
+              <div className="mt-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-amber-900">Suka dengan hasilnya?</p>
+                    <p className="text-sm text-amber-700">Daftar untuk brief personal setiap pagi</p>
+                  </div>
+                  <a 
+                    href="/register"
+                    className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
+                  >
+                    Daftar Gratis
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        
+      </main>
+    </div>
+  );
+}
+```
+
+-----
+
+## Backend: Create Demo Chat API
+
+Create this API endpoint that doesn’t require login:
+
+```typescript
+// server/routes/demoChat.ts
+
+import { Router } from 'express';
+import OpenAI from 'openai';
+
+const router = Router();
+
+const openai = new OpenAI({ 
+  apiKey: process.env.OPENAI_API_KEY 
+});
+
+// Or use DeepSeek (cheaper!)
+const deepseek = new OpenAI({
+  apiKey: process.env.DEEPSEEK_API_KEY,
+  baseURL: 'https://api.deepseek.com/v1'
+});
+
+const DEMO_SYSTEM_PROMPT = `Anda adalah CurateAI, asisten intelijen berita untuk eksekutif senior Indonesia.
+
+PERAN ANDA:
+- Merangkum berita bisnis, ekonomi, dan kebijakan yang relevan untuk Indonesia
+- Fokus pada: perbankan, fintech, komoditas, kebijakan pemerintah, ASEAN
+- Memberikan insight yang actionable, bukan hanya informasi
+
+GAYA KOMUNIKASI:
+- Bahasa Indonesia yang profesional dan sopan
+- Langsung ke inti (eksekutif sibuk)
+- Struktur yang jelas: poin utama dulu, detail kemudian
+- Jika ada berita kritis, tandai dengan 🔴
+
+FORMAT JAWABAN:
+- Mulai dengan ringkasan 1-2 kalimat
+- Lalu detail yang relevan
+- Akhiri dengan "Mengapa ini penting" jika relevan
+
+BATASAN:
+- Ini adalah demo, jadi jelaskan bahwa untuk brief lengkap harian, pengguna perlu mendaftar
+- Jangan membuat berita palsu - jika tidak tahu, katakan dengan jujur
+- Fokus pada informasi yang berguna untuk pengambilan keputusan
+
+Anda adalah versi demo. Setelah 2-3 pertanyaan, sarankan pengguna untuk mendaftar agar mendapat brief personal setiap pagi.`;
+
+router.post('/api/chat/demo', async (req, res) => {
+  try {
+    const { message, history = [] } = req.body;
+    
+    // Rate limiting for demo (optional)
+    // Add your rate limiting logic here
+    
+    // Format messages for API
+    const messages = [
+      { role: 'system' as const, content: DEMO_SYSTEM_PROMPT },
+      ...history.map((m: any) => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content
+      })),
+      { role: 'user' as const, content: message }
+    ];
+    
+    // Use DeepSeek (cheaper) for demo
+    const response = await deepseek.chat.completions.create({
+      model: 'deepseek-chat',
+      messages,
+      max_tokens: 1000,
+      temperature: 0.7
+    });
+    
+    const assistantMessage = response.choices[0].message.content || '';
+    
+    // Add signup nudge after a few messages
+    let finalResponse = assistantMessage;
+    if (history.length >= 3) {
+      finalResponse += '\n\n---\n💡 *Tip: Daftar gratis untuk mendapatkan brief personal seperti ini setiap pagi di inbox Anda!*';
+    }
+    
+    res.json({ response: finalResponse });
+    
+  } catch (error: any) {
+    console.error('Demo chat error:', error);
+    res.status(500).json({ 
+      response: 'Maaf, terjadi kesalahan. Silakan coba lagi dalam beberapa saat.' 
+    });
+  }
+});
+
+export default router;
+```
+
+-----
+
+## Don’t forget to register the route!
+
+In your main server file (server/index.ts or similar):
+
+```typescript
+import demoChatRoutes from './routes/demoChat';
+
+// Add this with your other routes
+app.use(demoChatRoutes);
+```
+
+-----
+
+## Environment Variables Needed
+
+Add these to your Replit Secrets:
+
+```
+DEEPSEEK_API_KEY=sk-...
+OPENAI_API_KEY=sk-...  (backup)
+```
+
+-----
+
+## What This Does
+
+1. **User lands** → Sees clean chat interface with quick prompts
+1. **User asks question** → Gets immediate AI response about Indonesian business news
+1. **After 2-3 messages** → Sees “Daftar Gratis” CTA
+1. **User is hooked** → Signs up for daily briefs
+
+This is the **TRY BEFORE BUY** approach that works!
+
+-----
+
+## Copy this prompt to Replit now!
+
+Once done, tell me and I’ll give you **Prompt 2** (improving the actual onboarding flow).
+
+Let’s ship! 🚀
