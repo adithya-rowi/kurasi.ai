@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, ExternalLink, Bookmark, ThumbsDown, BookmarkCheck } from "lucide-react";
+import { ChevronDown, ChevronUp, ExternalLink, Bookmark, ThumbsDown, BookmarkCheck, Shield, Bot, AlertCircle, CheckCircle2, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,7 @@ interface BriefItem {
   whyItMatters: string;
   foundByPerspectives?: string[];
   verificationScore?: number;
+  publishedDate?: string;
 }
 
 interface BriefCardProps {
@@ -44,16 +45,25 @@ const priorityConfig = {
   },
 };
 
+function getTrustLevel(score: number, modelCount: number) {
+  if (score >= 8 && modelCount >= 2) return { level: "high", label: "Sangat Terpercaya", color: "green" };
+  if (score >= 6 && modelCount >= 1) return { level: "medium", label: "Terpercaya", color: "amber" };
+  return { level: "low", label: "Perlu Verifikasi", color: "red" };
+}
+
 export function BriefCard({ item, priority, onSave, onNotRelevant, defaultExpanded }: BriefCardProps) {
   const [expanded, setExpanded] = useState(defaultExpanded ?? priority === "critical");
   const [saved, setSaved] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   
   const styles = priorityConfig[priority];
+  const trust = getTrustLevel(item.verificationScore || 7, item.foundByPerspectives?.length || 1);
 
   if (dismissed) {
     return null;
   }
+
+  const hasValidUrl = item.url && item.url !== "search required" && item.url !== "perlu verifikasi";
   
   return (
     <div 
@@ -87,28 +97,52 @@ export function BriefCard({ item, priority, onSave, onNotRelevant, defaultExpand
         </div>
         
         <div className="flex items-center gap-2 mt-3 flex-wrap">
-          <span className="text-xs text-muted-foreground bg-background/60 px-2 py-1 rounded inline-flex items-center gap-1">
-            📰 {item.source}
-            {(item.sourceType === "local" || !item.sourceType) && (
-              <span className="text-amber-600">🇮🇩</span>
-            )}
-          </span>
+          {hasValidUrl ? (
+            <a 
+              href={item.url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1.5 text-xs bg-background/80 hover:bg-background text-foreground/80 px-2.5 py-1.5 rounded-lg transition-colors"
+              data-testid="link-source-badge"
+            >
+              {(item.sourceType === "local" || !item.sourceType) && <span>🇮🇩</span>}
+              {item.sourceType === "regional" && <span>🌏</span>}
+              {item.sourceType === "global" && <span>🌍</span>}
+              <span className="font-medium">{item.source}</span>
+              <ExternalLink className="w-3 h-3 opacity-50" />
+            </a>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-xs bg-background/60 text-foreground/70 px-2.5 py-1.5 rounded-lg">
+              {(item.sourceType === "local" || !item.sourceType) && <span>🇮🇩</span>}
+              {item.sourceType === "regional" && <span>🌏</span>}
+              {item.sourceType === "global" && <span>🌍</span>}
+              <span className="font-medium">{item.source}</span>
+            </span>
+          )}
           
           {item.isPaywalled === true && (
-            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded inline-flex items-center gap-1">
+            <span className="inline-flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-1.5 rounded-lg">
               🔒 Berbayar
             </span>
           )}
           
-          {item.foundByPerspectives && item.foundByPerspectives.length > 1 && (
-            <span className={cn("text-xs px-2 py-1 rounded", styles.badge)}>
-              ✓ {item.foundByPerspectives.length} AI setuju
-            </span>
-          )}
+          <span className={cn(
+            "inline-flex items-center gap-1 text-xs px-2 py-1.5 rounded-lg",
+            trust.color === "green" && "bg-emerald-100 text-emerald-700",
+            trust.color === "amber" && "bg-amber-100 text-amber-700",
+            trust.color === "red" && "bg-red-100 text-red-700"
+          )}>
+            {trust.color === "green" && <CheckCircle2 className="w-3 h-3" />}
+            {trust.color === "amber" && <Shield className="w-3 h-3" />}
+            {trust.color === "red" && <AlertCircle className="w-3 h-3" />}
+            {trust.label}
+          </span>
           
-          {item.verificationScore && item.verificationScore >= 8 && (
-            <span className="text-xs text-emerald-700 bg-emerald-100 px-2 py-1 rounded">
-              Keyakinan tinggi
+          {item.foundByPerspectives && item.foundByPerspectives.length > 1 && (
+            <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-1.5 rounded-lg">
+              <Bot className="w-3 h-3" />
+              {item.foundByPerspectives.length} AI setuju
             </span>
           )}
         </div>
@@ -129,18 +163,92 @@ export function BriefCard({ item, priority, onSave, onNotRelevant, defaultExpand
             </p>
           </div>
           
+          <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+              🔍 Transparansi & Verifikasi
+            </p>
+            
+            <div className="space-y-3">
+              <div className="flex items-start gap-2">
+                <LinkIcon className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-slate-500">Sumber Asli:</p>
+                  {hasValidUrl ? (
+                    <a 
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:text-blue-800 hover:underline break-all"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {item.url}
+                    </a>
+                  ) : (
+                    <p className="text-sm text-slate-400 italic">URL perlu verifikasi manual</p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-2">
+                <Bot className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs text-slate-500">Ditemukan oleh:</p>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {(item.foundByPerspectives || ["AI"]).map((model, idx) => (
+                      <span 
+                        key={idx}
+                        className="inline-flex items-center text-xs bg-white border border-slate-200 text-slate-600 px-2 py-1 rounded"
+                      >
+                        {model}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-2">
+                <Shield className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs text-slate-500">Skor Verifikasi:</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="flex-1 h-2 bg-slate-200 rounded-full max-w-[100px]">
+                      <div 
+                        className={cn(
+                          "h-2 rounded-full",
+                          (item.verificationScore || 7) >= 8 && "bg-emerald-500",
+                          (item.verificationScore || 7) >= 6 && (item.verificationScore || 7) < 8 && "bg-amber-500",
+                          (item.verificationScore || 7) < 6 && "bg-red-500"
+                        )}
+                        style={{ width: `${(item.verificationScore || 7) * 10}%` }}
+                      />
+                    </div>
+                    <span className="text-sm font-medium text-slate-700">
+                      {item.verificationScore || 7}/10
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              {item.publishedDate && (
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <span>📅 Dipublikasikan: {item.publishedDate}</span>
+                </div>
+              )}
+            </div>
+          </div>
+          
           {item.isPaywalled === true && (
             <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
               <p className="text-xs text-amber-700">
-                🔒 Artikel ini memerlukan langganan {item.source}. 
-                Klik link untuk membaca jika Anda sudah berlangganan.
+                🔒 Artikel lengkap memerlukan langganan {item.source}. 
+                Kami hanya menampilkan ringkasan dari metadata publik.
               </p>
             </div>
           )}
           
           <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
             <div className="flex items-center gap-3">
-              {item.url && item.url !== "search required" && item.url !== "perlu verifikasi" && (
+              {hasValidUrl && (
                 <a
                   href={item.url}
                   target="_blank"
@@ -149,7 +257,7 @@ export function BriefCard({ item, priority, onSave, onNotRelevant, defaultExpand
                   onClick={(e) => e.stopPropagation()}
                   data-testid="link-read-article"
                 >
-                  {item.isPaywalled ? `Buka di ${item.source}` : "Baca selengkapnya"} <ExternalLink size={14} />
+                  Buka Sumber Asli <ExternalLink size={14} />
                 </a>
               )}
             </div>
@@ -189,19 +297,6 @@ export function BriefCard({ item, priority, onSave, onNotRelevant, defaultExpand
               </Button>
             </div>
           </div>
-          
-          {item.foundByPerspectives && item.foundByPerspectives.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {item.foundByPerspectives.map((p) => (
-                <span 
-                  key={p} 
-                  className="text-xs text-muted-foreground bg-secondary/50 px-2 py-0.5 rounded-full"
-                >
-                  {p}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
       )}
     </div>

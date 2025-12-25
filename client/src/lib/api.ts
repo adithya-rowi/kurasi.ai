@@ -154,10 +154,13 @@ export interface BriefArticle {
   title: string;
   summary: string;
   source: string;
+  sourceType?: "local" | "regional" | "global";
   url: string;
+  isPaywalled?: boolean;
   whyItMatters: string;
   foundByPerspectives: string[];
   verificationScore: number;
+  publishedDate?: string;
 }
 
 export interface DailyBriefContent {

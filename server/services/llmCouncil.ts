@@ -8,6 +8,39 @@ const anthropic = new Anthropic({
   baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
 });
 
+const TRUST_REQUIREMENTS = `
+ATURAN VERIFIKASI (WAJIB!):
+
+1. HANYA sertakan berita yang Anda YAKIN benar
+   - Jika ragu, JANGAN sertakan
+   - Lebih baik 3 berita valid daripada 5 berita meragukan
+
+2. SETIAP artikel HARUS punya:
+   - URL yang valid (bukan karangan)
+   - Sumber yang bisa diverifikasi
+   - Tanggal publikasi
+
+3. SKOR VERIFIKASI (1-10):
+   - 9-10: Dari sumber resmi (BI, OJK, pemerintah, perusahaan langsung)
+   - 7-8: Dari media terpercaya (Kontan, Bisnis Indonesia, Reuters, Bloomberg)
+   - 5-6: Dari media umum (Kompas, Detik)
+   - 1-4: Dari sumber tidak terverifikasi (JANGAN GUNAKAN)
+
+4. ANTI MISINFORMASI:
+   - Jangan sertakan berita dari sumber yang dikenal menyebar hoax
+   - Jangan sertakan opini sebagai fakta
+   - Jangan sertakan rumor tanpa konfirmasi
+   - Jika berita kontroversial, sertakan multiple sources
+
+5. PAYWALL:
+   - Jika sumber berbayar, set isPaywalled: true
+   - Tetap sertakan jika relevan - user mungkin punya akses
+   - Jangan coba bypass paywall
+
+INGAT: User kita adalah pemimpin yang keputusannya berdampak besar.
+SATU informasi salah bisa berakibat fatal. BE RESPONSIBLE.
+`;
+
 const INDONESIAN_FIRST_SEARCH_PROMPT = `
 PRIORITAS SUMBER (PENTING!):
 
@@ -138,6 +171,8 @@ function createSearchPrompt(profile: UserProfile, perspective: string): string {
   return `${profile.councilSystemPrompt || `Anda mencari berita untuk ${profile.personaSummary || "seorang eksekutif Indonesia"}`}
 
 ${INDONESIAN_FIRST_SEARCH_PROMPT}
+
+${TRUST_REQUIREMENTS}
 
 ---
 

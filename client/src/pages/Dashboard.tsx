@@ -9,6 +9,7 @@ import { session } from "@/lib/session";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { BriefCard } from "@/components/Dashboard/BriefCard";
+import { CouncilFooter } from "@/components/Dashboard/CouncilFooter";
 import { 
   LayoutDashboard, 
   Archive, 
@@ -317,6 +318,27 @@ export default function Dashboard() {
                       </Button>
                     </div>
 
+                    <div className="grid grid-cols-3 gap-3 mb-6" data-testid="trust-metrics">
+                      <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
+                        <p className="text-2xl font-bold text-emerald-600">
+                          {[...(briefContent.critical || []), ...(briefContent.important || [])].filter(i => (i.verificationScore || 7) >= 8).length}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">Sangat Terpercaya</p>
+                      </div>
+                      <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
+                        <p className="text-2xl font-bold text-blue-600">
+                          {[...(briefContent.critical || []), ...(briefContent.important || []), ...(briefContent.background || [])].filter(i => (i.sourceType === "local" || !i.sourceType)).length}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">Sumber Indonesia 🇮🇩</p>
+                      </div>
+                      <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
+                        <p className="text-2xl font-bold text-slate-600">
+                          {new Set([...(briefContent.critical || []), ...(briefContent.important || []), ...(briefContent.background || [])].flatMap(i => i.foundByPerspectives || [])).size}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">Perspektif AI</p>
+                      </div>
+                    </div>
+                    
                     <div className="grid grid-cols-3 gap-4 mb-8">
                       <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-4 text-center">
                         <div className="text-3xl font-bold text-destructive">
@@ -402,6 +424,8 @@ export default function Dashboard() {
                         )}
                       </div>
                     )}
+                    
+                    <CouncilFooter />
                   </>
                 )}
 
