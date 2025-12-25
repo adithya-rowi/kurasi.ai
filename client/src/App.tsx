@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 import Onboarding from "@/pages/Onboarding";
+import OnboardingChat from "@/pages/OnboardingChat";
 import Dashboard from "@/pages/Dashboard";
 import Archive from "@/pages/Archive";
 import Saved from "@/pages/Saved";
@@ -14,7 +15,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
-      <Route path="/onboarding" component={Onboarding} />
+      <Route path="/onboarding" component={OnboardingChat} />
+      <Route path="/onboarding-legacy" component={Onboarding} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/archive" component={Archive} />
       <Route path="/saved" component={Saved} />

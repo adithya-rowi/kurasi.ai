@@ -119,3 +119,32 @@ export const interactionsApi = {
       body: JSON.stringify({ userId, articleId, interactionType: type, timeSpentSeconds }),
     }),
 };
+
+// Onboarding Chat API
+export const onboardingApi = {
+  start: (userId: string) =>
+    fetchApi<{ message: string }>(`/api/onboarding/${userId}/start`),
+  
+  getConversation: (userId: string) =>
+    fetchApi<{ messages: Array<{ role: string; content: string }>; isComplete: boolean }>(
+      `/api/onboarding/${userId}/conversation`
+    ),
+  
+  sendMessage: (userId: string, message: string) =>
+    fetchApi<{ message: string; isComplete: boolean }>(
+      `/api/onboarding/${userId}/message`,
+      {
+        method: "POST",
+        body: JSON.stringify({ message }),
+      }
+    ),
+  
+  complete: (userId: string) =>
+    fetchApi<{ success: boolean; message: string }>(
+      `/api/onboarding/${userId}/complete`,
+      { method: "POST" }
+    ),
+  
+  getProfile: (userId: string) =>
+    fetchApi<any>(`/api/users/${userId}/profile`),
+};

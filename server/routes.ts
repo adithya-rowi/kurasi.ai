@@ -9,6 +9,16 @@ import {
   insertSavedArticleSchema,
   insertArticleSchema
 } from "@shared/schema";
+import {
+  startOnboardingConversation,
+  processOnboardingMessage,
+  streamOnboardingMessage,
+  generateUserProfile,
+  getOrCreateOnboardingConversation,
+} from "./onboarding-chat";
+import { db } from "./db";
+import { userProfiles } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -206,6 +216,98 @@ export async function registerRoutes(
     try {
       const isSaved = await storage.isSaved(req.params.userId, req.params.articleId);
       res.json({ isSaved });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Onboarding Chat Routes
+  app.get("/api/onboarding/:userId/start", async (req, res) => {
+    try {
+      const welcomeMessage = await startOnboardingConversation(req.params.userId);
+      res.json({ message: welcomeMessage });
+    } catch (error: any) {
+      console.error("Error starting onboarding:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/onboarding/:userId/conversation", async (req, res) => {
+    try {
+      const conversation = await getOrCreateOnboardingConversation(req.params.userId);
+      res.json(conversation);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/onboarding/:userId/message", async (req, res) => {
+    try {
+      const { message } = req.body;
+      if (!message) {
+        return res.status(400).json({ error: "Message is required" });
+      }
+      const result = await processOnboardingMessage(req.params.userId, message);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error processing message:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/onboarding/:userId/stream", async (req, res) => {
+    const { message } = req.query;
+    if (!message || typeof message !== "string") {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    try {
+      await streamOnboardingMessage(
+        req.params.userId,
+        message,
+        (chunk) => {
+          res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+        },
+        (result) => {
+          res.write(`data: ${JSON.stringify({ done: true, isComplete: result.isComplete })}\n\n`);
+          res.end();
+        }
+      );
+    } catch (error: any) {
+      console.error("Error streaming message:", error);
+      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+      res.end();
+    }
+  });
+
+  app.post("/api/onboarding/:userId/complete", async (req, res) => {
+    try {
+      const success = await generateUserProfile(req.params.userId);
+      if (success) {
+        res.json({ success: true, message: "Profile generated successfully" });
+      } else {
+        res.status(500).json({ error: "Failed to generate profile" });
+      }
+    } catch (error: any) {
+      console.error("Error completing onboarding:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/users/:userId/profile", async (req, res) => {
+    try {
+      const [profile] = await db
+        .select()
+        .from(userProfiles)
+        .where(eq(userProfiles.userId, req.params.userId));
+      if (!profile) {
+        return res.status(404).json({ error: "Profile not found" });
+      }
+      res.json(profile);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }

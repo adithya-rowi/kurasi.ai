@@ -1,8 +1,9 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, integer, timestamp, boolean, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, boolean, varchar, serial, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Core users table - defined first since others reference it
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: text("email").notNull().unique(),
@@ -12,6 +13,53 @@ export const users = pgTable("users", {
   languagePreference: text("language_preference").notNull().default("en"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   onboardingCompleted: boolean("onboarding_completed").default(false).notNull(),
+});
+
+// Chat integration tables
+export const conversations = pgTable("conversations", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").notNull().references(() => conversations.id, { onDelete: "cascade" }),
+  role: text("role").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+// Onboarding conversations
+export const onboardingConversations = pgTable("onboarding_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
+  messages: jsonb("messages").default([]).notNull(),
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+  isComplete: boolean("is_complete").default(false).notNull(),
+});
+
+// User profiles generated from onboarding
+export const userProfiles = pgTable("user_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
+  personaSummary: text("persona_summary"),
+  roleDescription: text("role_description"),
+  organizationContext: text("organization_context"),
+  primaryTopics: jsonb("primary_topics"),
+  secondaryTopics: jsonb("secondary_topics"),
+  keywordsToTrack: text("keywords_to_track").array(),
+  entitiesToTrack: text("entities_to_track").array(),
+  preferredSources: jsonb("preferred_sources"),
+  avoidTopics: text("avoid_topics").array(),
+  languagePreference: text("language_preference").default("id"),
+  councilSystemPrompt: text("council_system_prompt"),
+  successDefinition: text("success_definition"),
+  decisionContext: text("decision_context"),
+  generatedAt: timestamp("generated_at").defaultNow().notNull(),
+  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+  version: integer("version").default(1).notNull(),
 });
 
 export const userTopics = pgTable("user_topics", {
@@ -93,6 +141,17 @@ export const insertSavedArticleSchema = createInsertSchema(savedArticles).omit({
   createdAt: true,
 });
 
+export const insertOnboardingConversationSchema = createInsertSchema(onboardingConversations).omit({
+  id: true,
+  startedAt: true,
+});
+
+export const insertUserProfileSchema = createInsertSchema(userProfiles).omit({
+  id: true,
+  generatedAt: true,
+  lastUpdated: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -111,3 +170,6 @@ export type UserInteraction = typeof userInteractions.$inferSelect;
 
 export type InsertSavedArticle = z.infer<typeof insertSavedArticleSchema>;
 export type SavedArticle = typeof savedArticles.$inferSelect;
+
+export type OnboardingConversation = typeof onboardingConversations.$inferSelect;
+export type UserProfile = typeof userProfiles.$inferSelect;
