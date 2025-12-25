@@ -22,7 +22,7 @@ import {
   getBriefHistory,
 } from "./services/llmCouncil";
 import { db } from "./db";
-import { userProfiles, dailyBriefs } from "@shared/schema";
+import { userProfiles, dailyBriefs, briefFeedback } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
 export async function registerRoutes(
@@ -363,6 +363,27 @@ export async function registerRoutes(
       const limit = parseInt(req.query.limit as string) || 7;
       const briefs = await getBriefHistory(req.params.userId, limit);
       res.json(briefs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/brief/feedback", async (req, res) => {
+    try {
+      const { userId, articleTitle, source, type } = req.body;
+      if (!userId || !type) {
+        return res.status(400).json({ error: "userId and type are required" });
+      }
+      
+      await db.insert(briefFeedback).values({
+        userId,
+        articleTitle: articleTitle || "Unknown",
+        articleSource: source,
+        feedbackType: type,
+      });
+      
+      console.log(`Brief feedback saved: ${type} for "${articleTitle}" by user ${userId}`);
+      res.json({ success: true, type, articleTitle });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

@@ -197,4 +197,10 @@ export const councilApi = {
 
   getBriefHistory: (userId: string, limit = 7) =>
     fetchApi<DailyBrief[]>(`/api/brief/${userId}/history?limit=${limit}`),
+
+  sendFeedback: (userId: string, articleTitle: string, source: string, type: "save" | "not_relevant") =>
+    fetchApi<{ success: boolean }>("/api/brief/feedback", {
+      method: "POST",
+      body: JSON.stringify({ userId, articleTitle, source, type }),
+    }),
 };

@@ -1,0 +1,710 @@
+# CurateAI - Phase 3: Brief Display in App
+
+## 🎯 Copy this prompt into Replit AFTER Phase 2 is complete
+
+-----
+
+## Overview
+
+Now that we can generate personalized briefs, we need a beautiful UI to display them. The brief should feel like a premium executive dashboard - clean, scannable, and actionable.
+
+-----
+
+## The Dashboard Design
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        DASHBOARD LAYOUT                          │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ ┌─────────────┐                                    [Settings]   │
+│ │   LOGO      │  Good morning, Pak Halim!          [Generate]   │
+│ │  CurateAI   │  Thursday, December 26, 2024                    │
+│ └─────────────┘                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │ 📋 EXECUTIVE SUMMARY                                        ││
+│  │                                                              ││
+│  │ Hari ini ada 2 perkembangan kritis yang perlu Anda         ││
+│  │ perhatikan: OJK mengeluarkan regulasi baru untuk P2P       ││
+│  │ lending, dan BI mengumumkan roadmap digital rupiah.        ││
+│  │                                                              ││
+│  │ ┌────────────┐ ┌────────────┐ ┌────────────┐              ││
+│  │ │ 🔴 2       │ │ 🟡 4       │ │ 🟢 3       │              ││
+│  │ │ Critical   │ │ Important  │ │ Background │              ││
+│  │ └────────────┘ └────────────┘ └────────────┘              ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │ 🔴 REQUIRES YOUR ATTENTION                                  ││
+│  ├─────────────────────────────────────────────────────────────┤│
+│  │                                                              ││
+│  │  ┌─────────────────────────────────────────────────────┐   ││
+│  │  │ OJK Keluarkan POJK Baru untuk P2P Lending           │   ││
+│  │  │                                                      │   ││
+│  │  │ OJK resmi mengumumkan pembatasan plafon pinjaman    │   ││
+│  │  │ P2P lending maksimal Rp 2 miliar per peminjam...    │   ││
+│  │  │                                                      │   ││
+│  │  │ 💡 Why this matters to you:                         │   ││
+│  │  │ Sebagai advisor di beberapa platform P2P, regulasi  │   ││
+│  │  │ ini akan langsung mempengaruhi model bisnis klien   │   ││
+│  │  │ Anda. Perlu review segera dengan tim legal.         │   ││
+│  │  │                                                      │   ││
+│  │  │ 📰 Kontan  •  Found by: GPT-4, Gemini, Claude      │   ││
+│  │  │ [Read Full Article →]                               │   ││
+│  │  └─────────────────────────────────────────────────────┘   ││
+│  │                                                              ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │ 🟡 WORTH KNOWING                                            ││
+│  │ ... (expandable cards)                                       ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │ 🟢 ON YOUR RADAR                                            ││
+│  │ ... (compact list)                                           ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │ 🤖 Council Notes: High agreement today (4/5 models found   ││
+│  │    the OJK news). Confidence: Very High.                    ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+-----
+
+## Implementation
+
+### 1. Create Dashboard Components
+
+Create file: `client/src/components/Dashboard/BriefCard.tsx`
+
+```tsx
+import { useState } from 'react';
+import { ChevronDown, ChevronUp, ExternalLink, Bookmark, ThumbsDown } from 'lucide-react';
+
+interface BriefItem {
+  title: string;
+  summary: string;
+  source: string;
+  url: string;
+  whyItMatters: string;
+  foundByModels?: string[];
+  verificationScore?: number;
+}
+
+interface BriefCardProps {
+  item: BriefItem;
+  priority: 'critical' | 'important' | 'background';
+  onSave?: (item: BriefItem) => void;
+  onNotRelevant?: (item: BriefItem) => void;
+}
+
+export function BriefCard({ item, priority, onSave, onNotRelevant }: BriefCardProps) {
+  const [expanded, setExpanded] = useState(priority === 'critical');
+  
+  const priorityStyles = {
+    critical: {
+      border: 'border-l-4 border-l-red-500',
+      bg: 'bg-red-50',
+      badge: 'bg-red-100 text-red-700'
+    },
+    important: {
+      border: 'border-l-4 border-l-yellow-500',
+      bg: 'bg-yellow-50',
+      badge: 'bg-yellow-100 text-yellow-700'
+    },
+    background: {
+      border: 'border-l-4 border-l-green-500',
+      bg: 'bg-green-50',
+      badge: 'bg-green-100 text-green-700'
+    }
+  };
+  
+  const styles = priorityStyles[priority];
+  
+  return (
+    <div className={`${styles.border} ${styles.bg} rounded-lg mb-4 overflow-hidden transition-all duration-200`}>
+      {/* Header - Always visible */}
+      <div 
+        className="p-4 cursor-pointer hover:bg-opacity-80"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <h3 className="font-semibold text-gray-900 text-lg leading-tight">
+              {item.title}
+            </h3>
+            
+            {!expanded && (
+              <p className="text-gray-600 text-sm mt-1 line-clamp-2">
+                {item.summary}
+              </p>
+            )}
+          </div>
+          
+          <button className="ml-4 text-gray-400 hover:text-gray-600">
+            {expanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </button>
+        </div>
+        
+        {/* Source badges - Always visible */}
+        <div className="flex items-center gap-2 mt-2">
+          <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded">
+            📰 {item.source}
+          </span>
+          
+          {item.foundByModels && item.foundByModels.length > 1 && (
+            <span className={`text-xs px-2 py-1 rounded ${styles.badge}`}>
+              ✓ {item.foundByModels.length} models agree
+            </span>
+          )}
+          
+          {item.verificationScore && item.verificationScore >= 8 && (
+            <span className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded">
+              High confidence
+            </span>
+          )}
+        </div>
+      </div>
+      
+      {/* Expanded content */}
+      {expanded && (
+        <div className="px-4 pb-4 border-t border-gray-200 bg-white">
+          {/* Full summary */}
+          <p className="text-gray-700 mt-4 leading-relaxed">
+            {item.summary}
+          </p>
+          
+          {/* Why it matters - THE KEY PERSONALIZATION */}
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+            <p className="text-sm font-medium text-blue-800 mb-1">
+              💡 Why this matters to you:
+            </p>
+            <p className="text-sm text-blue-700">
+              {item.whyItMatters}
+            </p>
+          </div>
+          
+          {/* Actions */}
+          <div className="flex items-center justify-between mt-4 pt-4 border-t">
+            <div className="flex items-center gap-3">
+              {item.url && item.url !== 'search required' && (
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Read full article <ExternalLink size={14} />
+                </a>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSave?.(item);
+                }}
+                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                title="Save for later"
+              >
+                <Bookmark size={18} />
+              </button>
+              
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNotRelevant?.(item);
+                }}
+                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="Not relevant"
+              >
+                <ThumbsDown size={18} />
+              </button>
+            </div>
+          </div>
+          
+          {/* Model attribution */}
+          {item.foundByModels && (
+            <div className="mt-3 text-xs text-gray-400">
+              Found by: {item.foundByModels.join(', ')}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+-----
+
+### 2. Create Main Dashboard Page
+
+Create file: `client/src/pages/Dashboard.tsx`
+
+```tsx
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  RefreshCw, 
+  Settings, 
+  Calendar, 
+  AlertCircle,
+  Clock,
+  Sparkles
+} from 'lucide-react';
+import { BriefCard } from '../components/Dashboard/BriefCard';
+
+interface Brief {
+  briefDate: string;
+  recipientName: string;
+  greeting: string;
+  executiveSummary: string;
+  critical: any[];
+  important: any[];
+  background: any[];
+  councilAgreement?: string;
+  confidenceNote?: string;
+}
+
+export function DashboardPage() {
+  const navigate = useNavigate();
+  const [brief, setBrief] = useState<Brief | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    loadTodaysBrief();
+  }, []);
+  
+  const loadTodaysBrief = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/brief/today');
+      
+      if (res.status === 404) {
+        // No brief yet
+        setBrief(null);
+        setError(null);
+      } else if (res.ok) {
+        const data = await res.json();
+        setBrief(data.content);
+        setError(null);
+      } else {
+        throw new Error('Failed to load brief');
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const generateBrief = async () => {
+    try {
+      setGenerating(true);
+      const res = await fetch('/api/council/run', { method: 'POST' });
+      
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to generate brief');
+      }
+      
+      const data = await res.json();
+      setBrief(data.brief);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setGenerating(false);
+    }
+  };
+  
+  const handleSave = async (item: any) => {
+    // Track save interaction
+    await fetch('/api/interactions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        type: 'save', 
+        articleTitle: item.title 
+      })
+    });
+    // TODO: Add to saved items
+  };
+  
+  const handleNotRelevant = async (item: any) => {
+    // Track negative feedback - THIS TRAINS THE ALGORITHM
+    await fetch('/api/interactions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        type: 'not_relevant', 
+        articleTitle: item.title,
+        source: item.source
+      })
+    });
+    // TODO: Remove from view, update model
+  };
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
+          <p className="mt-4 text-gray-600">Loading your brief...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-gradient-to-r from-blue-900 to-blue-700 text-white">
+        <div className="max-w-5xl mx-auto px-6 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="text-2xl font-bold">📊 CurateAI</div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <button
+                onClick={generateBrief}
+                disabled={generating}
+                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {generating ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    Generate Now
+                  </>
+                )}
+              </button>
+              
+              <button
+                onClick={() => navigate('/settings')}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+          
+          {/* Greeting */}
+          <div className="mt-6">
+            <h1 className="text-2xl font-light">
+              {brief?.greeting || 'Welcome back!'}
+            </h1>
+            <p className="text-blue-200 mt-1 flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              {brief?.briefDate || new Date().toLocaleDateString('id-ID', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </p>
+          </div>
+        </div>
+      </header>
+      
+      {/* Main Content */}
+      <main className="max-w-5xl mx-auto px-6 py-8">
+        {/* No brief state */}
+        {!brief && !error && (
+          <div className="bg-white rounded-xl p-8 text-center shadow-sm">
+            <Clock className="w-12 h-12 text-gray-300 mx-auto" />
+            <h2 className="text-xl font-semibold text-gray-800 mt-4">
+              No brief yet today
+            </h2>
+            <p className="text-gray-600 mt-2">
+              Your daily brief will be generated automatically at 6 AM, or you can generate it now.
+            </p>
+            <button
+              onClick={generateBrief}
+              disabled={generating}
+              className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50"
+            >
+              {generating ? 'Generating...' : 'Generate My Brief'}
+            </button>
+          </div>
+        )}
+        
+        {/* Error state */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-red-800 font-medium">Something went wrong</p>
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          </div>
+        )}
+        
+        {/* Brief content */}
+        {brief && (
+          <>
+            {/* Executive Summary */}
+            <section className="bg-white rounded-xl p-6 shadow-sm mb-6">
+              <h2 className="text-sm font-semibold text-blue-600 uppercase tracking-wide mb-3">
+                📋 Executive Summary
+              </h2>
+              <p className="text-gray-800 text-lg leading-relaxed">
+                {brief.executiveSummary}
+              </p>
+              
+              {/* Stats */}
+              <div className="flex gap-4 mt-6">
+                <div className="flex-1 bg-red-50 rounded-lg p-4 text-center">
+                  <div className="text-3xl font-bold text-red-600">
+                    {brief.critical?.length || 0}
+                  </div>
+                  <div className="text-sm text-red-700">Critical</div>
+                </div>
+                <div className="flex-1 bg-yellow-50 rounded-lg p-4 text-center">
+                  <div className="text-3xl font-bold text-yellow-600">
+                    {brief.important?.length || 0}
+                  </div>
+                  <div className="text-sm text-yellow-700">Important</div>
+                </div>
+                <div className="flex-1 bg-green-50 rounded-lg p-4 text-center">
+                  <div className="text-3xl font-bold text-green-600">
+                    {brief.background?.length || 0}
+                  </div>
+                  <div className="text-sm text-green-700">Background</div>
+                </div>
+              </div>
+            </section>
+            
+            {/* Critical Section */}
+            {brief.critical && brief.critical.length > 0 && (
+              <section className="mb-8">
+                <h2 className="text-lg font-semibold text-red-700 mb-4 flex items-center gap-2">
+                  🔴 REQUIRES YOUR ATTENTION
+                </h2>
+                {brief.critical.map((item, idx) => (
+                  <BriefCard
+                    key={idx}
+                    item={item}
+                    priority="critical"
+                    onSave={handleSave}
+                    onNotRelevant={handleNotRelevant}
+                  />
+                ))}
+              </section>
+            )}
+            
+            {/* Important Section */}
+            {brief.important && brief.important.length > 0 && (
+              <section className="mb-8">
+                <h2 className="text-lg font-semibold text-yellow-700 mb-4 flex items-center gap-2">
+                  🟡 WORTH KNOWING
+                </h2>
+                {brief.important.map((item, idx) => (
+                  <BriefCard
+                    key={idx}
+                    item={item}
+                    priority="important"
+                    onSave={handleSave}
+                    onNotRelevant={handleNotRelevant}
+                  />
+                ))}
+              </section>
+            )}
+            
+            {/* Background Section */}
+            {brief.background && brief.background.length > 0 && (
+              <section className="mb-8">
+                <h2 className="text-lg font-semibold text-green-700 mb-4 flex items-center gap-2">
+                  🟢 ON YOUR RADAR
+                </h2>
+                {brief.background.map((item, idx) => (
+                  <BriefCard
+                    key={idx}
+                    item={item}
+                    priority="background"
+                    onSave={handleSave}
+                    onNotRelevant={handleNotRelevant}
+                  />
+                ))}
+              </section>
+            )}
+            
+            {/* Council Notes */}
+            {(brief.councilAgreement || brief.confidenceNote) && (
+              <section className="bg-gray-100 rounded-xl p-4 text-sm text-gray-600">
+                <div className="flex items-start gap-2">
+                  <span>🤖</span>
+                  <div>
+                    <p className="font-medium text-gray-700">Council Notes</p>
+                    {brief.councilAgreement && (
+                      <p className="mt-1">{brief.councilAgreement}</p>
+                    )}
+                    {brief.confidenceNote && (
+                      <p className="mt-1">Confidence: {brief.confidenceNote}</p>
+                    )}
+                  </div>
+                </div>
+              </section>
+            )}
+          </>
+        )}
+      </main>
+    </div>
+  );
+}
+```
+
+-----
+
+### 3. Track User Interactions (TikTok Algorithm)
+
+Create file: `server/routes/interactions.ts`
+
+```typescript
+import { Router } from 'express';
+import { db } from '../db';
+
+const router = Router();
+
+// Track any user interaction
+router.post('/api/interactions', async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { type, articleTitle, articleId, source, timeSpent, scrollDepth } = req.body;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    
+    // Log interaction
+    await db.query(`
+      INSERT INTO user_interactions (
+        user_id, 
+        interaction_type, 
+        article_title,
+        article_id,
+        source,
+        time_spent_seconds,
+        scroll_depth,
+        created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+    `, [userId, type, articleTitle, articleId, source, timeSpent, scrollDepth]);
+    
+    // If negative feedback, update user profile
+    if (type === 'not_relevant') {
+      // This will be used to improve future curation
+      console.log(`📊 User ${userId} marked "${articleTitle}" as not relevant`);
+      // TODO: Update user profile or model based on this feedback
+    }
+    
+    res.json({ success: true });
+    
+  } catch (error: any) {
+    console.error('Interaction tracking error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get user's interaction history (for analytics)
+router.get('/api/interactions/stats', async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    
+    const stats = await db.query(`
+      SELECT 
+        interaction_type,
+        COUNT(*) as count,
+        AVG(time_spent_seconds) as avg_time
+      FROM user_interactions
+      WHERE user_id = $1
+      AND created_at > NOW() - INTERVAL '30 days'
+      GROUP BY interaction_type
+    `, [userId]);
+    
+    res.json(stats.rows);
+    
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+export default router;
+```
+
+-----
+
+### 4. Add Database Table for Interactions
+
+```sql
+CREATE TABLE user_interactions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id),
+  interaction_type VARCHAR(50), -- 'view', 'click', 'save', 'not_relevant', 'share'
+  article_id UUID,
+  article_title TEXT,
+  source VARCHAR(100),
+  time_spent_seconds INTEGER,
+  scroll_depth DECIMAL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_interactions_user ON user_interactions(user_id);
+CREATE INDEX idx_interactions_type ON user_interactions(interaction_type);
+CREATE INDEX idx_interactions_date ON user_interactions(created_at);
+```
+
+-----
+
+## Testing Checklist
+
+1. [ ] Create the BriefCard component
+1. [ ] Create the Dashboard page
+1. [ ] Add interaction tracking
+1. [ ] Test the full flow:
+- User logs in → sees dashboard
+- If no brief, can click “Generate Now”
+- Brief displays with critical/important/background sections
+- Clicking items expands them
+- “Not Relevant” button tracks feedback
+- “Save” button tracks positive signal
+
+-----
+
+## Design Notes
+
+- **Critical items are auto-expanded** - most important, user sees them first
+- **“Why it matters”** is prominent - this is the personalization magic
+- **Model agreement shown** - builds trust (“3 AI models found this”)
+- **Negative feedback tracked** - improves future curation (TikTok algorithm)
+- **Clean, scannable** - executives have 5 minutes max
+
+-----
+
+## Next Phase
+
+After Phase 3, we’ll implement:
+
+- **Phase 4**: Email delivery with paywall (IDR 79k/month)
+
+Ready for Phase 3? Copy to Replit!

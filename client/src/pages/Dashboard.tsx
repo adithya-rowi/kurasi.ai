@@ -8,16 +8,15 @@ import { articlesApi, userApi, councilApi, DailyBriefContent, BriefArticle } fro
 import { session } from "@/lib/session";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { BriefCard } from "@/components/Dashboard/BriefCard";
 import { 
   LayoutDashboard, 
   Archive, 
   Bookmark, 
   Settings, 
-  LogOut, 
   Search, 
   Bell, 
   Menu,
-  ChevronRight,
   ExternalLink,
   ThumbsUp,
   ThumbsDown,
@@ -26,7 +25,8 @@ import {
   Sparkles,
   Loader2,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  FileText
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -80,6 +80,20 @@ export default function Dashboard() {
   const criticalArticles = articles.filter(a => a.category === "Critical");
   const importantArticles = articles.filter(a => a.category === "Important");
   const backgroundArticles = articles.filter(a => a.category === "Background");
+
+  const handleSaveArticle = (item: { title: string; source: string }) => {
+    if (userId) {
+      councilApi.sendFeedback(userId, item.title, item.source, "save");
+      toast.success("Article saved!");
+    }
+  };
+
+  const handleNotRelevant = (item: { title: string; source: string }) => {
+    if (userId) {
+      councilApi.sendFeedback(userId, item.title, item.source, "not_relevant");
+      toast.info("Feedback recorded - we'll improve future briefs");
+    }
+  };
 
   if (!userId) {
     return null;
@@ -227,49 +241,79 @@ export default function Dashboard() {
                       </Button>
                     </div>
 
+                    <div className="grid grid-cols-3 gap-4 mb-8">
+                      <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-4 text-center">
+                        <div className="text-3xl font-bold text-destructive">
+                          {briefContent.critical?.length || 0}
+                        </div>
+                        <div className="text-sm text-destructive/80">Critical</div>
+                      </div>
+                      <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4 text-center">
+                        <div className="text-3xl font-bold text-amber-600">
+                          {briefContent.important?.length || 0}
+                        </div>
+                        <div className="text-sm text-amber-600/80">Important</div>
+                      </div>
+                      <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-4 text-center">
+                        <div className="text-3xl font-bold text-emerald-600">
+                          {briefContent.background?.length || 0}
+                        </div>
+                        <div className="text-sm text-emerald-600/80">Background</div>
+                      </div>
+                    </div>
+
                     {briefContent.critical && briefContent.critical.length > 0 && (
-                      <section>
-                        <div className="flex items-center gap-3 mb-6">
-                          <div className="h-3 w-3 rounded-full bg-destructive animate-pulse" />
-                          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Requires Attention</h2>
-                        </div>
-                        <div className="space-y-6">
-                          {briefContent.critical.map((article, idx) => (
-                            <AIBriefItem key={idx} article={article} />
-                          ))}
-                        </div>
+                      <section className="mb-8">
+                        <h2 className="text-sm font-bold uppercase tracking-widest text-destructive mb-4 flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-destructive animate-pulse" />
+                          Requires Attention
+                        </h2>
+                        {briefContent.critical.map((article, idx) => (
+                          <BriefCard
+                            key={idx}
+                            item={article}
+                            priority="critical"
+                            onSave={handleSaveArticle}
+                            onNotRelevant={handleNotRelevant}
+                            defaultExpanded={true}
+                          />
+                        ))}
                       </section>
                     )}
-
-                    {briefContent.critical?.length > 0 && briefContent.important?.length > 0 && <Separator />}
 
                     {briefContent.important && briefContent.important.length > 0 && (
-                      <section>
-                        <div className="flex items-center gap-3 mb-6">
-                          <div className="h-3 w-3 rounded-full bg-amber-400" />
-                          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Worth Knowing</h2>
-                        </div>
-                        <div className="space-y-6">
-                          {briefContent.important.map((article, idx) => (
-                            <AIBriefItem key={idx} article={article} />
-                          ))}
-                        </div>
+                      <section className="mb-8">
+                        <h2 className="text-sm font-bold uppercase tracking-widest text-amber-600 mb-4 flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-amber-500" />
+                          Worth Knowing
+                        </h2>
+                        {briefContent.important.map((article, idx) => (
+                          <BriefCard
+                            key={idx}
+                            item={article}
+                            priority="important"
+                            onSave={handleSaveArticle}
+                            onNotRelevant={handleNotRelevant}
+                          />
+                        ))}
                       </section>
                     )}
 
-                    {briefContent.important?.length > 0 && briefContent.background?.length > 0 && <Separator />}
-
                     {briefContent.background && briefContent.background.length > 0 && (
-                      <section>
-                        <div className="flex items-center gap-3 mb-6">
-                          <div className="h-3 w-3 rounded-full bg-emerald-500" />
-                          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">On Your Radar</h2>
-                        </div>
-                        <div className="grid md:grid-cols-2 gap-4">
-                          {briefContent.background.map((article, idx) => (
-                            <AIBackgroundItem key={idx} article={article} />
-                          ))}
-                        </div>
+                      <section className="mb-8">
+                        <h2 className="text-sm font-bold uppercase tracking-widest text-emerald-600 mb-4 flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                          On Your Radar
+                        </h2>
+                        {briefContent.background.map((article, idx) => (
+                          <BriefCard
+                            key={idx}
+                            item={article}
+                            priority="background"
+                            onSave={handleSaveArticle}
+                            onNotRelevant={handleNotRelevant}
+                          />
+                        ))}
                       </section>
                     )}
 
@@ -356,84 +400,6 @@ function NavItem({ icon, label, isActive, isOpen, href }: { icon: React.ReactNod
         return <Link href={href}>{content}</Link>;
     }
     return content;
-}
-
-function AIBriefItem({ article }: { article: BriefArticle }) {
-    const [expanded, setExpanded] = useState(false);
-
-    return (
-        <div className="group relative pl-6 border-l-2 border-border hover:border-primary transition-colors" data-testid={`brief-item-${article.title.slice(0, 20)}`}>
-            <div className="absolute -left-[5px] top-1 h-2.5 w-2.5 rounded-full bg-background border-2 border-border group-hover:border-primary transition-colors" />
-            
-            <div className="space-y-2 mb-3">
-                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                    <span className="text-primary/80 bg-primary/5 px-2 py-0.5 rounded uppercase tracking-wider text-[10px]">{article.source}</span>
-                    {article.verificationScore && (
-                      <>
-                        <span>•</span>
-                        <span className="text-emerald-600">Confidence: {article.verificationScore}/10</span>
-                      </>
-                    )}
-                    <span className="ml-auto flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                         <Button variant="ghost" size="icon" className="h-6 w-6"><Bookmark className="h-3.5 w-3.5" /></Button>
-                         <Button variant="ghost" size="icon" className="h-6 w-6"><Share2 className="h-3.5 w-3.5" /></Button>
-                    </span>
-                </div>
-                
-                <h3 className="text-xl font-serif font-bold leading-tight group-hover:text-primary transition-colors cursor-pointer" onClick={() => setExpanded(!expanded)}>
-                    {article.title}
-                </h3>
-                
-                <p className="text-muted-foreground leading-relaxed">
-                    {article.summary}
-                </p>
-            </div>
-
-            <div className="bg-secondary/30 rounded-lg p-3 text-sm border border-secondary relative overflow-hidden">
-                <div className="flex gap-2 items-start">
-                    <div className="mt-0.5 min-w-[16px]">✨</div>
-                    <div className="space-y-1">
-                        <p className="font-medium text-foreground/80">Why this matters to you:</p>
-                        <p className="text-muted-foreground">{article.whyItMatters}</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div className="mt-3 flex gap-2 flex-wrap items-center">
-                {article.foundByPerspectives?.map(p => (
-                    <span key={p} className="text-xs text-muted-foreground bg-secondary/50 px-2 py-1 rounded-full">{p}</span>
-                ))}
-                {article.url && article.url !== "search required" && (
-                  <Button variant="link" className="ml-auto h-auto p-0 text-xs text-primary" asChild>
-                    <a href={article.url} target="_blank" rel="noopener noreferrer">
-                      Read Original <ExternalLink className="ml-1 h-3 w-3" />
-                    </a>
-                  </Button>
-                )}
-            </div>
-        </div>
-    );
-}
-
-function AIBackgroundItem({ article }: { article: BriefArticle }) {
-    return (
-        <div className="p-4 rounded-xl border border-border hover:bg-secondary/20 transition-colors group cursor-pointer" data-testid={`bg-item-${article.title.slice(0, 20)}`}>
-             <div className="flex items-center gap-2 text-[10px] font-medium text-muted-foreground mb-2">
-                <span className="uppercase tracking-wider">{article.source}</span>
-                {article.verificationScore && (
-                  <>
-                    <span>•</span>
-                    <span>{article.verificationScore}/10</span>
-                  </>
-                )}
-            </div>
-            <h4 className="font-serif font-bold text-base mb-2 group-hover:text-primary transition-colors line-clamp-2">{article.title}</h4>
-            <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{article.summary}</p>
-            <div className="flex items-center text-xs text-primary font-medium">
-                <span className="line-clamp-1">{article.whyItMatters?.substring(0, 60)}...</span>
-            </div>
-        </div>
-    )
 }
 
 function LegacyBriefItem({ article }: { article: Article }) {

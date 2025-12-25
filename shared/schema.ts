@@ -119,6 +119,15 @@ export const dailyBriefs = pgTable("daily_briefs", {
   generatedAt: timestamp("generated_at").defaultNow().notNull(),
 });
 
+export const briefFeedback = pgTable("brief_feedback", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  articleTitle: text("article_title").notNull(),
+  articleSource: text("article_source"),
+  feedbackType: text("feedback_type").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -154,6 +163,11 @@ export const insertOnboardingConversationSchema = createInsertSchema(onboardingC
   startedAt: true,
 });
 
+export const insertBriefFeedbackSchema = createInsertSchema(briefFeedback).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertUserProfileSchema = createInsertSchema(userProfiles).omit({
   id: true,
   generatedAt: true,
@@ -182,3 +196,6 @@ export type SavedArticle = typeof savedArticles.$inferSelect;
 export type OnboardingConversation = typeof onboardingConversations.$inferSelect;
 export type UserProfile = typeof userProfiles.$inferSelect;
 export type DailyBrief = typeof dailyBriefs.$inferSelect;
+
+export type InsertBriefFeedback = z.infer<typeof insertBriefFeedbackSchema>;
+export type BriefFeedback = typeof briefFeedback.$inferSelect;
