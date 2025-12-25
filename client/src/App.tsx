@@ -13,6 +13,7 @@ import Saved from "@/pages/Saved";
 import Pricing from "@/pages/Pricing";
 import Register from "@/pages/Register";
 import Login from "@/pages/Login";
+import HowItWorks from "@/pages/HowItWorks";
 
 function Router() {
   return (
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/" component={Landing} />
       <Route path="/register" component={Register} />
       <Route path="/login" component={Login} />
+      <Route path="/how-it-works" component={HowItWorks} />
       <Route path="/onboarding" component={OnboardingChat} />
       <Route path="/onboarding-legacy" component={Onboarding} />
       <Route path="/dashboard" component={Dashboard} />

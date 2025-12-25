@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, BookOpen, Settings, LogIn } from 'lucide-react';
+import { Send, Sparkles, BookOpen, Settings, LogIn, Workflow } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 
 interface Message {
@@ -9,11 +9,9 @@ interface Message {
 
 const OPENING_MESSAGE = `Halo! Saya **Kurasi**.
 
-Saya akan menyiapkan brief harian yang benar-benar personal untuk Anda - bukan berita generik, tapi informasi yang spesifik untuk kebutuhan dan keputusan Anda.
+Saya akan menyiapkan brief harian yang personal untuk Anda.
 
-Tapi pertama, saya perlu mengenal Anda sedikit.
-
-**Ceritakan tentang diri Anda** - apa peran Anda saat ini, dan apa yang sedang menjadi fokus utama Anda?`;
+**Ceritakan tentang diri Anda** - peran Anda saat ini dan apa yang sedang jadi fokus utama?`;
 
 export default function Landing() {
   const [messages, setMessages] = useState<Message[]>([
@@ -94,6 +92,10 @@ export default function Landing() {
             <Link href="/" className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-200/70 text-slate-900 font-medium text-sm" data-testid="nav-home">
               <Sparkles className="w-4 h-4" />
               Mulai
+            </Link>
+            <Link href="/how-it-works" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 hover:bg-slate-100 text-sm" data-testid="nav-how-it-works">
+              <Workflow className="w-4 h-4" />
+              Cara Kerja
             </Link>
             <Link href="/dashboard" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 hover:bg-slate-100 text-sm" data-testid="nav-dashboard">
               <BookOpen className="w-4 h-4" />
