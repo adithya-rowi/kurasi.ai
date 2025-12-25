@@ -5,13 +5,11 @@ export function LandingNavbar() {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/10 bg-background/80 backdrop-blur-md">
       <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-        <Link href="/">
-          <a className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-serif font-bold text-xl">C</span>
-            </div>
-            <span className="font-serif font-bold text-xl tracking-tight">CurateAI</span>
-          </a>
+        <Link href="/" className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+            <span className="text-primary-foreground font-serif font-bold text-xl">C</span>
+          </div>
+          <span className="font-serif font-bold text-xl tracking-tight">CurateAI</span>
         </Link>
         
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
