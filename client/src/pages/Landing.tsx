@@ -51,8 +51,12 @@ export default function Landing() {
             <span className="text-white font-bold text-xl">K</span>
           </div>
           <h1 
-            className="text-4xl font-bold text-slate-900 mb-3" 
-            style={{ letterSpacing: '-0.025em' }}
+            className="text-4xl font-extrabold mb-3" 
+            style={{ 
+              fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              letterSpacing: '-0.03em',
+              color: '#0a0a0a'
+            }}
             data-testid="page-title"
           >
             Brief Personal Anda
@@ -73,7 +77,7 @@ export default function Landing() {
               value={form.role}
               onChange={(e) => setForm({...form, role: e.target.value})}
               placeholder="CFO di Bank Mandiri, fokus transformasi digital"
-              className="w-full px-5 py-4 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-base transition-all duration-200 focus:outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+              className="w-full px-5 py-5 bg-white border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 text-base transition-all duration-200 focus:outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
               required
               data-testid="input-role"
             />
@@ -88,7 +92,7 @@ export default function Landing() {
               value={form.topics}
               onChange={(e) => setForm({...form, topics: e.target.value})}
               placeholder="AI, fintech, regulasi OJK, cybersecurity"
-              className="w-full px-5 py-4 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-base transition-all duration-200 focus:outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+              className="w-full px-5 py-5 bg-white border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 text-base transition-all duration-200 focus:outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
               required
               data-testid="input-topics"
             />
@@ -103,7 +107,7 @@ export default function Landing() {
               value={form.entities}
               onChange={(e) => setForm({...form, entities: e.target.value})}
               placeholder="Paul Graham, OpenAI, Gojek, Bank Jago"
-              className="w-full px-5 py-4 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-base transition-all duration-200 focus:outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+              className="w-full px-5 py-5 bg-white border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 text-base transition-all duration-200 focus:outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
               data-testid="input-entities"
             />
           </div>
@@ -117,7 +121,7 @@ export default function Landing() {
               value={form.sources}
               onChange={(e) => setForm({...form, sources: e.target.value})}
               placeholder="Twitter/X, TechCrunch, Kontan, Bloomberg"
-              className="w-full px-5 py-4 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-base transition-all duration-200 focus:outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+              className="w-full px-5 py-5 bg-white border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 text-base transition-all duration-200 focus:outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
               data-testid="input-sources"
             />
           </div>
@@ -126,7 +130,8 @@ export default function Landing() {
             <button
               type="submit"
               disabled={loading || !form.role || !form.topics}
-              className="w-full bg-black text-white py-4 rounded-full font-semibold text-base hover:bg-slate-800 disabled:bg-slate-300 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 transition-colors duration-200"
+              className="w-full py-5 rounded-2xl font-bold text-base disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 transition-colors duration-200"
+              style={{ backgroundColor: '#000000', color: '#FFFFFF' }}
               data-testid="button-submit"
             >
               {loading ? (
