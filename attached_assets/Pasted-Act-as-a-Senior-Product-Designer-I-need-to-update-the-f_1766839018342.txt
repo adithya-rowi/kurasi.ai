@@ -1,0 +1,38 @@
+Act as a Senior Product Designer. I need to update the front page to be visually sleek (like Linear/ChatGPT) and textually aligned with a specific "Personal Intelligence Analyst" vision.
+
+**1. The Vision (Context for you):**
+We are building the "Flip.id for News." Users pay 1 subscription to us. In the background, our AI reads global/local sources, synthesizes the information, and rewrites it into a new, tailored briefing. This avoids copyright issues (transformative work) while saving the user from managing 50 different subscriptions.
+
+**2. Visual Styling Instructions (The "Sleek" Upgrade):**
+* **Typography:** Change ALL fonts to **Inter** or a premium **Sans-Serif**. No Serif fonts allowed.
+* **Headline:** Bold, Tight tracking, Dark color (almost black).
+* **Inputs:** Increase height, add subtle borders, remove the "admin dashboard" sidebar. Center the content (Max width 650px).
+* **Button:** Solid Black Background, White Text, Rounded corners. "High Contrast" look.
+
+**3. Content Refactor (Indonesian):**
+Replace the text with this safe, benefit-driven copy:
+
+* **Headline:** "Satu Langganan. Wawasan Tanpa Batas."
+    *(One Subscription. Limitless Insights.)*
+
+* **Subhead:** "Tak perlu pusing dengan puluhan langganan media. AI kami membaca ribuan sumber global & lokal, lalu menuliskan **ringkasan intelijen** yang relevan untuk Anda."
+    *(No need to worry about dozens of media subs. Our AI reads thousands of global/local sources, then writes an **intelligence summary** relevant to you.)*
+
+* **Input 1 Label:** "Profil & Konteks Profesional"
+    * *Placeholder:* "Cth: Komisaris Bank, Fokus Emerging Market..."
+    * *(Rationale: Helps the AI filter relevance).*
+
+* **Input 2 Label:** "Topik & Wilayah Prioritas"
+    * *Placeholder:* "Cth: Ekonomi Indonesia, Hilirisasi, The Fed..."
+    * *(Rationale: Addresses Halim's need for regional focus).*
+
+* **Input 3 Label:** "Kedalaman & Format"
+    * *Placeholder:* "Cth: Ringkasan 5 poin (Bullet points) atau Analisis Mendalam..."
+    * *(Rationale: Allows user to choose 'Full' or 'Summarized' as requested).*
+
+* **Button Text:** "Mulai Analisis Personal Saya →"
+
+**4. Footer Note:**
+Add small text below the button: *"Privasi dijaga. Ringkasan hasil sintesis AI orisinal."*
+
+Refactor the code now.

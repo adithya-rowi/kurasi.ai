@@ -13,8 +13,7 @@ export default function Landing() {
   const [form, setForm] = useState({
     role: '',
     topics: '',
-    entities: '',
-    sources: ''
+    format: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,7 +24,12 @@ export default function Landing() {
       const res = await fetch('/api/onboarding/generate-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
+        body: JSON.stringify({
+          role: form.role,
+          topics: form.topics,
+          entities: '',
+          sources: form.format
+        })
       });
 
       const data = await res.json();
@@ -42,41 +46,45 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-6 py-12" style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
+    <div 
+      className="min-h-screen bg-white flex items-center justify-center px-6 py-12" 
+      style={{ fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}
+    >
       
-      <div className="w-full max-w-[560px]">
+      <div className="w-full max-w-[650px]">
         
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-black rounded-2xl mb-6">
-            <span className="text-white font-bold text-xl">K</span>
+        <div className="text-center mb-14">
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-black rounded-2xl mb-8">
+            <span className="text-white font-bold text-2xl">K</span>
           </div>
           <h1 
-            className="text-4xl font-extrabold mb-3" 
+            className="text-4xl md:text-5xl font-extrabold mb-5" 
             style={{ 
               fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-              letterSpacing: '-0.03em',
-              color: '#0a0a0a'
+              letterSpacing: '-0.035em',
+              color: '#0a0a0a',
+              lineHeight: 1.1
             }}
             data-testid="page-title"
           >
-            Brief Personal Anda
+            Satu Langganan.<br />Wawasan Tanpa Batas.
           </h1>
-          <p className="text-base text-slate-400">
-            6 AI bekerja untuk Anda. Setiap pagi.
+          <p className="text-lg text-slate-500 max-w-lg mx-auto leading-relaxed">
+            Tak perlu pusing dengan puluhan langganan media. AI kami membaca ribuan sumber global & lokal, lalu menuliskan <strong className="text-slate-700">ringkasan intelijen</strong> yang relevan untuk Anda.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           
           <div>
-            <label className="block text-sm font-semibold text-slate-800 mb-2">
-              Siapa Anda?
+            <label className="block text-sm font-semibold text-slate-800 mb-2.5">
+              Profil & Konteks Profesional
             </label>
             <input
               type="text"
               value={form.role}
               onChange={(e) => setForm({...form, role: e.target.value})}
-              placeholder="CFO di Bank Mandiri, fokus transformasi digital"
+              placeholder="Cth: Komisaris Bank, Fokus Emerging Market..."
               className="w-full px-5 py-5 bg-white border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 text-base transition-all duration-200 focus:outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
               required
               data-testid="input-role"
@@ -84,14 +92,14 @@ export default function Landing() {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-800 mb-2">
-              Topik yang harus dipantau
+            <label className="block text-sm font-semibold text-slate-800 mb-2.5">
+              Topik & Wilayah Prioritas
             </label>
             <input
               type="text"
               value={form.topics}
               onChange={(e) => setForm({...form, topics: e.target.value})}
-              placeholder="AI, fintech, regulasi OJK, cybersecurity"
+              placeholder="Cth: Ekonomi Indonesia, Hilirisasi, The Fed..."
               className="w-full px-5 py-5 bg-white border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 text-base transition-all duration-200 focus:outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
               required
               data-testid="input-topics"
@@ -99,49 +107,35 @@ export default function Landing() {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-800 mb-2">
-              Orang/perusahaan yang diikuti
+            <label className="block text-sm font-semibold text-slate-800 mb-2.5">
+              Kedalaman & Format
             </label>
             <input
               type="text"
-              value={form.entities}
-              onChange={(e) => setForm({...form, entities: e.target.value})}
-              placeholder="Paul Graham, OpenAI, Gojek, Bank Jago"
+              value={form.format}
+              onChange={(e) => setForm({...form, format: e.target.value})}
+              placeholder="Cth: Ringkasan 5 poin (Bullet points) atau Analisis Mendalam..."
               className="w-full px-5 py-5 bg-white border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 text-base transition-all duration-200 focus:outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-              data-testid="input-entities"
+              data-testid="input-format"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-slate-800 mb-2">
-              Sumber berita yang dipercaya
-            </label>
-            <input
-              type="text"
-              value={form.sources}
-              onChange={(e) => setForm({...form, sources: e.target.value})}
-              placeholder="Twitter/X, TechCrunch, Kontan, Bloomberg"
-              className="w-full px-5 py-5 bg-white border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 text-base transition-all duration-200 focus:outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-              data-testid="input-sources"
-            />
-          </div>
-
-          <div className="pt-2">
+          <div className="pt-4">
             <button
               type="submit"
               disabled={loading || !form.role || !form.topics}
-              className="w-full py-5 rounded-2xl font-bold text-base disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 transition-colors duration-200"
+              className="w-full py-5 rounded-2xl font-bold text-base disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 transition-all duration-200 hover:opacity-90"
               style={{ backgroundColor: '#000000', color: '#FFFFFF' }}
               data-testid="button-submit"
             >
               {loading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Menyiapkan...
+                  Menyiapkan Analisis...
                 </>
               ) : (
                 <>
-                  Buat Brief Saya
+                  Mulai Analisis Personal Saya
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}
@@ -150,9 +144,9 @@ export default function Landing() {
 
         </form>
 
-        <div className="mt-10 text-center space-y-3">
+        <div className="mt-8 text-center space-y-4">
           <p className="text-sm text-slate-400">
-            Brief pertama akan dikirim ke email Anda besok pagi.
+            Privasi dijaga. Ringkasan hasil sintesis AI orisinal.
           </p>
           <p className="text-sm text-slate-400">
             Sudah punya akun?{' '}
