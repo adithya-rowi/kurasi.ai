@@ -1,0 +1,35 @@
+Act as a Senior UI/UX Engineer. I need you to completely refactor the current page design.
+
+Analyze the current file to detect the framework and styling method being used. Apply the following design changes using the existing tech stack.
+
+**The Goal:**
+Transform this page from a "dashboard" look into a premium "Focused Wizard" onboarding experience (similar to the initial setup screens of Linear, Vercel, or ChatGPT).
+
+**Specific Design Instructions:**
+
+1.  **Layout Overhaul:**
+    * **Remove the Sidebar:** For this specific "Welcome/Setup" view, hide or remove the left navigation sidebar entirely.
+    * **Center Focus:** Move all content to the center of the screen in a single column container with a maximum width (approx 600px).
+    * **Vertical Alignment:** Center the container vertically in the viewport so it floats in the middle of the white space.
+
+2.  **Typography (Make it Classy):**
+    * **Font Family:** Switch ALL text to a clean Sans-Serif font (Inter, system-ui, or similar). Remove any Serif fonts immediately.
+    * **Headings:** Make "Brief Personal Anda" large, bold, and tracking-tight (letter-spacing slightly negative).
+    * **Subtext:** Make the description ("6 AI bekerja...") smaller and a lighter shade of gray to create visual hierarchy.
+
+3.  **Input Fields (The "Premium" Feel):**
+    * **Height & Space:** Increase the height of input fields significantly (make them look "chunky" and touch-friendly).
+    * **Borders:** Use very subtle, light gray borders. Add a slight border-radius (rounded corners).
+    * **Active State:** When clicking an input, add a soft glow or ring effect so it feels responsive.
+    * **Labels:** Place labels distinctly above the inputs with a bold, legible font weight.
+
+4.  **The Main Button:**
+    * Make the "Buat Brief Saya" button the star of the page.
+    * **Style:** Solid Black background (or very dark gray) with White text.
+    * **Shape:** Rounded corners (pill or rounded-lg).
+    * **Width:** Make it full-width to match the input fields.
+
+5.  **Content:**
+    * Keep all existing input fields and placeholders exactly as they are. just change the styling and layout.
+
+Execute this refactor now.

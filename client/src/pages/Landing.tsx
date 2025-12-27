@@ -1,11 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { 
-  Sparkles, 
-  BookOpen, 
-  Settings, 
-  Workflow,
-  LogIn,
   ArrowRight,
   Loader2
 } from 'lucide-react';
@@ -47,144 +42,122 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex">
+    <div className="min-h-screen bg-white flex items-center justify-center px-6 py-12" style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
       
-      <aside className="hidden lg:flex w-60 bg-slate-50 border-r border-slate-200 flex-col">
-        <div className="p-5 flex-1">
-          <div className="flex items-center gap-3 mb-10">
-            <div className="w-9 h-9 bg-slate-900 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold">K</span>
-            </div>
-            <span className="text-xl font-semibold text-slate-900">Kurasi</span>
+      <div className="w-full max-w-[560px]">
+        
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-black rounded-2xl mb-6">
+            <span className="text-white font-bold text-xl">K</span>
           </div>
-
-          <nav className="space-y-1">
-            <Link href="/" className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-200/70 text-slate-900 font-medium text-sm" data-testid="nav-home">
-              <Sparkles className="w-4 h-4" />
-              Mulai
-            </Link>
-            <Link href="/how-it-works" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 hover:bg-slate-100 text-sm" data-testid="nav-how-it-works">
-              <Workflow className="w-4 h-4" />
-              Cara Kerja
-            </Link>
-            <Link href="/dashboard" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 hover:bg-slate-100 text-sm" data-testid="nav-dashboard">
-              <BookOpen className="w-4 h-4" />
-              Brief Saya
-            </Link>
-            <Link href="/pricing" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 hover:bg-slate-100 text-sm" data-testid="nav-settings">
-              <Settings className="w-4 h-4" />
-              Pengaturan
-            </Link>
-          </nav>
+          <h1 
+            className="text-4xl font-bold text-slate-900 mb-3" 
+            style={{ letterSpacing: '-0.025em' }}
+            data-testid="page-title"
+          >
+            Brief Personal Anda
+          </h1>
+          <p className="text-base text-slate-400">
+            6 AI bekerja untuk Anda. Setiap pagi.
+          </p>
         </div>
 
-        <div className="p-5 border-t border-slate-200">
-          <Link href="/login" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 hover:bg-slate-100 text-sm" data-testid="nav-login">
-            <LogIn className="w-4 h-4" />
-            Masuk
-          </Link>
-        </div>
-      </aside>
-
-      <main className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-lg">
+        <form onSubmit={handleSubmit} className="space-y-6">
           
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-semibold text-slate-900 mb-2" data-testid="page-title">
-              Brief Personal Anda
-            </h1>
-            <p className="text-slate-500">
-              6 AI bekerja untuk Anda. Setiap pagi.
-            </p>
+          <div>
+            <label className="block text-sm font-semibold text-slate-800 mb-2">
+              Siapa Anda?
+            </label>
+            <input
+              type="text"
+              value={form.role}
+              onChange={(e) => setForm({...form, role: e.target.value})}
+              placeholder="CFO di Bank Mandiri, fokus transformasi digital"
+              className="w-full px-5 py-4 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-base transition-all duration-200 focus:outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+              required
+              data-testid="input-role"
+            />
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Siapa Anda?
-              </label>
-              <input
-                type="text"
-                value={form.role}
-                onChange={(e) => setForm({...form, role: e.target.value})}
-                placeholder="CFO di Bank Mandiri, fokus transformasi digital"
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white text-slate-900 placeholder-slate-400"
-                required
-                data-testid="input-role"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-800 mb-2">
+              Topik yang harus dipantau
+            </label>
+            <input
+              type="text"
+              value={form.topics}
+              onChange={(e) => setForm({...form, topics: e.target.value})}
+              placeholder="AI, fintech, regulasi OJK, cybersecurity"
+              className="w-full px-5 py-4 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-base transition-all duration-200 focus:outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+              required
+              data-testid="input-topics"
+            />
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Topik yang harus dipantau
-              </label>
-              <input
-                type="text"
-                value={form.topics}
-                onChange={(e) => setForm({...form, topics: e.target.value})}
-                placeholder="AI, fintech, regulasi OJK, cybersecurity"
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white text-slate-900 placeholder-slate-400"
-                required
-                data-testid="input-topics"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-800 mb-2">
+              Orang/perusahaan yang diikuti
+            </label>
+            <input
+              type="text"
+              value={form.entities}
+              onChange={(e) => setForm({...form, entities: e.target.value})}
+              placeholder="Paul Graham, OpenAI, Gojek, Bank Jago"
+              className="w-full px-5 py-4 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-base transition-all duration-200 focus:outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+              data-testid="input-entities"
+            />
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Orang/perusahaan yang diikuti
-              </label>
-              <input
-                type="text"
-                value={form.entities}
-                onChange={(e) => setForm({...form, entities: e.target.value})}
-                placeholder="Paul Graham, OpenAI, Gojek, Bank Jago"
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white text-slate-900 placeholder-slate-400"
-                data-testid="input-entities"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-800 mb-2">
+              Sumber berita yang dipercaya
+            </label>
+            <input
+              type="text"
+              value={form.sources}
+              onChange={(e) => setForm({...form, sources: e.target.value})}
+              placeholder="Twitter/X, TechCrunch, Kontan, Bloomberg"
+              className="w-full px-5 py-4 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-base transition-all duration-200 focus:outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+              data-testid="input-sources"
+            />
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Sumber berita yang dipercaya
-              </label>
-              <input
-                type="text"
-                value={form.sources}
-                onChange={(e) => setForm({...form, sources: e.target.value})}
-                placeholder="Twitter/X, TechCrunch, Kontan, Bloomberg"
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white text-slate-900 placeholder-slate-400"
-                data-testid="input-sources"
-              />
-            </div>
-
+          <div className="pt-2">
             <button
               type="submit"
               disabled={loading || !form.role || !form.topics}
-              className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-medium hover:bg-slate-800 disabled:bg-slate-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full bg-black text-white py-4 rounded-full font-semibold text-base hover:bg-slate-800 disabled:bg-slate-300 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 transition-colors duration-200"
               data-testid="button-submit"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-5 h-5 animate-spin" />
                   Menyiapkan...
                 </>
               ) : (
                 <>
                   Buat Brief Saya
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-5 h-5" />
                 </>
               )}
             </button>
+          </div>
 
-          </form>
+        </form>
 
-          <p className="text-center text-xs text-slate-400 mt-6">
+        <div className="mt-10 text-center space-y-3">
+          <p className="text-sm text-slate-400">
             Brief pertama akan dikirim ke email Anda besok pagi.
           </p>
-
+          <p className="text-sm text-slate-400">
+            Sudah punya akun?{' '}
+            <Link href="/login" className="text-slate-600 font-medium hover:text-slate-900 underline underline-offset-2" data-testid="link-login">
+              Masuk
+            </Link>
+          </p>
         </div>
-      </main>
+
+      </div>
     </div>
   );
 }
