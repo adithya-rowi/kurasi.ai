@@ -280,7 +280,7 @@ export default function Landing() {
               lineHeight: 1.7,
               animationDelay: '0.2s'
             }}>
-              Jawab 3 pertanyaan, dan brief eksekutif pertama Anda akan tiba besok pagi.
+              Jawab 3 pertanyaan. Brief eksekutif pertama Anda siap dalam hitungan menit.
             </p>
           </div>
         </div>
