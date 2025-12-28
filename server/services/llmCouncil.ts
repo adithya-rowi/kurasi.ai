@@ -7,7 +7,7 @@ import { eq, desc } from "drizzle-orm";
 const AI_COUNCIL = {
   anthropic: {
     name: "Claude Opus 4.5",
-    model: "claude-opus-4-5-20251101",
+    model: "claude-sonnet-4-20250514",
     provider: "Anthropic",
     icon: "🟤",
     color: "#d4a574",
@@ -16,7 +16,7 @@ const AI_COUNCIL = {
   },
   openai: {
     name: "GPT-5.2",
-    model: "gpt-5.2",
+    model: "gpt-4o",
     provider: "OpenAI",
     icon: "🟢",
     color: "#10a37f",
@@ -268,7 +268,7 @@ async function searchWithAnthropic(prompt: string): Promise<SearchResult> {
   try {
     console.log("🟤 Claude Opus 4.5 searching...");
     const response = await anthropic.messages.create({
-      model: "claude-opus-4-5-20251101",
+      model: "claude-sonnet-4-20250514",
       max_tokens: 2048,
       messages: [{ role: "user", content: prompt }],
     });
@@ -292,7 +292,7 @@ async function searchWithOpenAI(prompt: string): Promise<SearchResult> {
   try {
     console.log("🟢 GPT-5.2 searching...");
     const response = await openai.chat.completions.create({
-      model: "gpt-5.2",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: "You are a news research assistant for Indonesian executives. Respond with valid JSON only." },
         { role: "user", content: prompt },
@@ -524,7 +524,7 @@ Respond ONLY with valid JSON.`;
 
   try {
     const response = await anthropic.messages.create({
-      model: "claude-opus-4-5-20251101",
+      model: "claude-sonnet-4-20250514",
       max_tokens: 4096,
       messages: [{ role: "user", content: judgePrompt }],
     });

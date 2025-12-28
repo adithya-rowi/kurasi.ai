@@ -85,7 +85,7 @@ export async function handleOnboardingChat(
     let response: string;
 
     const result = await anthropic.messages.create({
-      model: "claude-opus-4-5-20251101",
+      model: "claude-sonnet-4-20250514",
       max_tokens: 800,
       system: ONBOARDING_PROMPT,
       messages,
@@ -165,7 +165,7 @@ Respond dengan valid JSON saja.`;
 
   try {
     const result = await anthropic.messages.create({
-      model: "claude-opus-4-5-20251101",
+      model: "claude-sonnet-4-20250514",
       max_tokens: 2000,
       messages: [{ role: "user", content: extractPrompt }],
     });

@@ -66,7 +66,7 @@ const AI_COUNCIL_V2 = {
   },
   openai: {
     name: "GPT-5 mini",
-    model: "gpt-5-mini",
+    model: "gpt-4o-mini",
     provider: "OpenAI",
     layer: "analysis",
     icon: "🟢",
@@ -76,7 +76,7 @@ const AI_COUNCIL_V2 = {
   // Judge Layer
   claude: {
     name: "Claude Opus 4.5",
-    model: "claude-opus-4-5-20251101",
+    model: "claude-sonnet-4-20250514",
     provider: "Anthropic",
     layer: "judge",
     icon: "🟤",
@@ -812,7 +812,7 @@ You MUST return valid JSON with this exact structure:
   try {
     console.log("🟢 GPT-5 mini fast analysis...");
     const response = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
@@ -948,7 +948,7 @@ OUTPUT JSON (Bahasa Indonesia yang elegan):
   try {
     console.log("🟤 Claude Opus 4.5 - HAKIM AKHIR deliberating...");
     const response = await anthropic.messages.create({
-      model: "claude-opus-4-5-20251101",
+      model: "claude-sonnet-4-20250514",
       max_tokens: 4096,
       messages: [{ role: "user", content: judgePrompt }],
     });

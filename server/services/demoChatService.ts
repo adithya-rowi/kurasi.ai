@@ -1,8 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = new Anthropic({
-  apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
+  apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 const DEMO_SYSTEM_PROMPT = `Anda adalah Kurasi.ai, asisten intelijen eksekutif untuk pemimpin bisnis Indonesia.
@@ -59,7 +58,7 @@ export async function handleDemoChat(
     ];
 
     const response = await anthropic.messages.create({
-      model: "claude-opus-4-5-20251101",
+      model: "claude-sonnet-4-20250514",
       max_tokens: 1024,
       system: DEMO_SYSTEM_PROMPT,
       messages,
