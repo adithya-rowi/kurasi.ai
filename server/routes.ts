@@ -23,6 +23,7 @@ import {
   getLatestBrief,
   getBriefHistory,
 } from "./services/llmCouncil";
+import { runCouncilV2 } from "./services/llmCouncilV2";
 import {
   getSubscriptionStatus,
   activateSubscription,
@@ -152,6 +153,82 @@ Respond with valid JSON only, no markdown.`;
       res.json({ profile });
     } catch (error: any) {
       console.error("Profile generation error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Public Brief Generation (no auth required - for onboarding)
+  const generateBriefSchema = z.object({
+    sources: z.array(z.string()).default([]),
+    customSources: z.string().default(""),
+    topics: z.array(z.string()).default([]),
+    institutions: z.string().default(""),
+    voices: z.string().default(""),
+    email: z.string().email(),
+  });
+
+  app.post("/api/generate-brief", async (req, res) => {
+    try {
+      const validated = generateBriefSchema.safeParse(req.body);
+      if (!validated.success) {
+        return res.status(400).json({ error: validated.error.issues[0]?.message || "Invalid request" });
+      }
+
+      const { sources, customSources, topics, institutions, voices, email } = validated.data;
+
+      // Validate: at least ONE preference field has content
+      const hasAnySources = sources.length > 0 || customSources.trim().length > 0;
+      const hasAnyFocus = topics.length > 0 || institutions.trim().length > 0 || voices.trim().length > 0;
+      const hasAnyPreference = hasAnySources || hasAnyFocus;
+
+      if (!hasAnyPreference) {
+        return res.status(400).json({
+          error: "Pilih minimal satu preferensi (sumber, topik, institusi, atau tokoh)"
+        });
+      }
+
+      // Parse customSources by comma
+      const parsedCustomSources = customSources
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      // Combine institutions + voices for entities
+      const entitiesList: string[] = [];
+      if (institutions.trim()) {
+        entitiesList.push(...institutions.split(",").map((s) => s.trim()).filter(Boolean));
+      }
+      if (voices.trim()) {
+        entitiesList.push(...voices.split(",").map((s) => s.trim()).filter(Boolean));
+      }
+
+      // Create user profile object for the council
+      const profile = {
+        preferredSources: [...sources, ...parsedCustomSources],
+        primaryTopics: topics,
+        entitiesToTrack: entitiesList,
+        languagePreference: "id",
+      };
+
+      console.log(`📧 Generate brief for: ${email}`);
+      console.log(`   Sources: ${profile.preferredSources.join(", ") || "(none)"}`);
+      console.log(`   Topics: ${profile.primaryTopics.join(", ") || "(none)"}`);
+      console.log(`   Entities: ${profile.entitiesToTrack.join(", ") || "(none)"}`);
+
+      // Run council with the profile (no DB user required)
+      const result = await runCouncilV2(`guest-${email}`, profile);
+
+      if (!result.success) {
+        return res.status(500).json({ error: result.error || "Failed to generate brief" });
+      }
+
+      res.json({
+        success: true,
+        brief: result.brief,
+        timing: result.timing,
+      });
+    } catch (error: any) {
+      console.error("Generate brief error:", error);
       res.status(500).json({ error: error.message });
     }
   });
