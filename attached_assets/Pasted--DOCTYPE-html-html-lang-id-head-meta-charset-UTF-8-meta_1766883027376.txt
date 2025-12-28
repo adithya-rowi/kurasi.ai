@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kurasi — Intelijen Eksekutif yang Dipersonalisasi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --midnight: #0a1628;
+            --navy: #152238;
+            --slate: #2a3f5f;
+            --silver: #94a3b8;
+            --pearl: #e2e8f0;
+            --cream: #f8fafc;
+            --red: #cc2936;
+            --red-light: #e63946;
+            --white: #ffffff;
+        }
+
+```
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        font-family: 'DM Sans', sans-serif;
+        background: var(--white);
+        color: var(--midnight);
+        line-height: 1.6;
+        overflow-x: hidden;
+    }
+
+    .serif {
+        font-family: 'Cormorant Garamond', serif;
+    }
+
+    /* Navigation */
+    nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        padding: 1rem 4%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--white);
+        border-bottom: 1px solid #e5e5e5;
+    }
+
+    .logo {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--midnight);
+        letter-spacing: 0.02em;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .logo-icon {
+        width: 32px;
+        height: 32px;
+        background: var(--red);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.875rem;
+        font-weight: 700;
+    }
+
+    .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+    }
+
+    .nav-link {
+        font-size: 0.875rem;
+        color: var(--slate);
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .nav-link:hover {
+        color: var(--midnight);
+    }
+
+    /* Hero Section */
+    .hero {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        padding-top: 60px;
+    }
+
+    .hero-top {
+        background: var(--midnight);
+        padding: 4rem 4% 6rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero-top::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: 
+            radial-gradient(ellipse 80% 60% at 20% 20%, rgba(204, 41, 54, 0.15) 0%, transparent 50%),
+            radial-gradient(ellipse 60% 40% at 80% 80%, rgba(204, 41, 54, 0.1) 0%, transparent 50%);
+        pointer-events: none;
+    }
+
+    .hero-content {
+        max-width: 800px;
+        position: relative;
+        z-index: 2;
+    }
+
+    .hero-eyebrow {
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--red);
+        margin-bottom: 1.5rem;
+        opacity: 0;
+        animation: fadeUp 0.6s ease forwards;
+    }
+
+    .hero-title {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: clamp(2.5rem, 6vw, 4rem);
+        font-weight: 400;
+        line-height: 1.1;
+        color: var(--white);
+        margin-bottom: 1.5rem;
+        opacity: 0;
+        animation: fadeUp 0.6s ease forwards;
+        animation-delay: 0.1s;
+    }
+
+    .hero-subtitle {
+        font-size: 1.125rem;
+        color: var(--silver);
+        max-width: 600px;
+        line-height: 1.7;
+        opacity: 0;
+        animation: fadeUp 0.6s ease forwards;
+        animation-delay: 0.2s;
+    }
+
+    /* Onboarding Section */
+    .onboarding {
+        flex: 1;
+        padding: 3rem 4%;
+        background: var(--white);
+    }
+
+    .onboarding-container {
+        max-width: 800px;
+    }
+
+    .onboarding-intro {
+        margin-bottom: 2.5rem;
+    }
+
+    .onboarding-headline {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: clamp(1.75rem, 4vw, 2.5rem);
+        font-weight: 400;
+        color: var(--midnight);
+        line-height: 1.2;
+        margin-bottom: 0.75rem;
+    }
+
+    .onboarding-subtext {
+        font-size: 1rem;
+        color: var(--slate);
+    }
+
+    /* Question Steps */
+    .question-step {
+        display: none;
+    }
+
+    .question-step.active {
+        display: block;
+        animation: fadeIn 0.4s ease;
+    }
+
+    .question-header {
+        display: flex;
+        align-items: baseline;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .question-number {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--midnight);
+    }
+
+    .question-progress {
+        font-size: 0.875rem;
+        color: var(--silver);
+    }
+
+    .question-title {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 1.5rem;
+        font-weight: 500;
+        color: var(--midnight);
+        margin-bottom: 1.5rem;
+    }
+
+    /* Chips / Tags */
+    .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 2rem;
+    }
+
+    .chip {
+        padding: 0.625rem 1.25rem;
+        border: 1px solid #d1d5db;
+        border-radius: 100px;
+        font-size: 0.9375rem;
+        color: var(--red);
+        background: var(--white);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-weight: 500;
+    }
+
+    .chip:hover {
+        border-color: var(--red);
+        background: rgba(204, 41, 54, 0.04);
+    }
+
+    .chip.selected {
+        background: var(--red);
+        color: var(--white);
+        border-color: var(--red);
+    }
+
+    /* Text Input for entities */
+    .text-input-group {
+        margin-bottom: 2rem;
+    }
+
+    .text-input-label {
+        font-size: 0.875rem;
+        color: var(--slate);
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .text-input {
+        width: 100%;
+        padding: 1rem 1.25rem;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        font-size: 1rem;
+        font-family: 'DM Sans', sans-serif;
+        color: var(--midnight);
+        transition: border-color 0.2s ease;
+    }
+
+    .text-input:focus {
+        outline: none;
+        border-color: var(--red);
+    }
+
+    .text-input::placeholder {
+        color: var(--silver);
+    }
+
+    .input-hint {
+        font-size: 0.8125rem;
+        color: var(--silver);
+        margin-top: 0.5rem;
+    }
+
+    /* Email Step */
+    .email-step {
+        display: none;
+    }
+
+    .email-step.active {
+        display: block;
+        animation: fadeIn 0.4s ease;
+    }
+
+    .email-form {
+        max-width: 400px;
+    }
+
+    .email-input-group {
+        margin-bottom: 1rem;
+    }
+
+    .email-input-group label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--midnight);
+        margin-bottom: 0.5rem;
+    }
+
+    .email-input {
+        width: 100%;
+        padding: 1rem 1.25rem;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        font-size: 1rem;
+        font-family: 'DM Sans', sans-serif;
+        color: var(--midnight);
+    }
+
+    .email-input:focus {
+        outline: none;
+        border-color: var(--red);
+    }
+
+    /* Time Selection */
+    .time-options {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .time-option {
+        flex: 1;
+        padding: 1rem;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .time-option:hover {
+        border-color: var(--red);
+    }
+
+    .time-option.selected {
+        border-color: var(--red);
+        background: rgba(204, 41, 54, 0.04);
+    }
+
+    .time-option .time {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--midnight);
+    }
+
+    .time-option .label {
+        font-size: 0.8125rem;
+        color: var(--slate);
+    }
+
+    /* Buttons */
+    .btn-primary {
+        background: var(--red);
+        color: var(--white);
+        padding: 1rem 2rem;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-family: 'DM Sans', sans-serif;
+    }
+
+    .btn-primary:hover {
+        background: var(--red-light);
+    }
+
+    .btn-primary:disabled {
+        background: #d1d5db;
+        cursor: not-allowed;
+    }
+
+    .btn-text {
+        background: none;
+        border: none;
+        color: var(--slate);
+        font-size: 0.875rem;
+        cursor: pointer;
+        padding: 0.5rem 0;
+        font-family: 'DM Sans', sans-serif;
+    }
+
+    .btn-text:hover {
+        color: var(--midnight);
+    }
+
+    .nav-buttons {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        margin-top: 2rem;
+    }
+
+    /* Progress Bar */
+    .progress-bar {
+        height: 3px;
+        background: #e5e5e5;
+        margin-bottom: 2rem;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: var(--red);
+        transition: width 0.3s ease;
+    }
+
+    /* Summary Panel */
+    .summary-panel {
+        background: #f9fafb;
+        border-left: 3px solid var(--red);
+        padding: 1.5rem;
+        margin-top: 2rem;
+    }
+
+    .summary-title {
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--slate);
+        margin-bottom: 1rem;
+    }
+
+    .summary-item {
+        margin-bottom: 0.75rem;
+    }
+
+    .summary-label {
+        font-size: 0.8125rem;
+        color: var(--silver);
+    }
+
+    .summary-value {
+        font-size: 0.9375rem;
+        color: var(--midnight);
+        font-weight: 500;
+    }
+
+    /* Success State */
+    .success-state {
+        display: none;
+        text-align: center;
+        padding: 4rem 2rem;
+    }
+
+    .success-state.active {
+        display: block;
+        animation: fadeIn 0.4s ease;
+    }
+
+    .success-icon {
+        width: 80px;
+        height: 80px;
+        background: rgba(204, 41, 54, 0.1);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 2rem;
+        font-size: 2.5rem;
+    }
+
+    .success-title {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 2rem;
+        color: var(--midnight);
+        margin-bottom: 1rem;
+    }
+
+    .success-text {
+        font-size: 1.0625rem;
+        color: var(--slate);
+        max-width: 400px;
+        margin: 0 auto;
+    }
+
+    /* Animations */
+    @keyframes fadeUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .hero-top {
+            padding: 3rem 4% 4rem;
+        }
+
+        .time-options {
+            flex-direction: column;
+        }
+
+        .nav-links {
+            display: none;
+        }
+    }
+</style>
+```
+
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="logo">
+            <div class="logo-icon">K</div>
+            KURASI
+        </div>
+        <div class="nav-links">
+            <a href="#" class="nav-link">Tentang</a>
+            <a href="#" class="nav-link">Kontak</a>
+        </div>
+    </nav>
+
+```
+<!-- Hero Section -->
+<section class="hero">
+    <div class="hero-top">
+        <div class="hero-content">
+            <div class="hero-eyebrow">Executive Intelligence</div>
+            <h1 class="hero-title">
+                Puluhan sumber berita.<br>Satu email terkurasi.
+            </h1>
+            <p class="hero-subtitle">
+                Jawab 3 pertanyaan, dan brief eksekutif pertama Anda akan tiba besok pagi.
+            </p>
+        </div>
+    </div>
+
+    <div class="onboarding">
+        <div class="onboarding-container">
+            <!-- Progress Bar -->
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 33%"></div>
+            </div>
+
+            <!-- Step 1: Sources -->
+            <div class="question-step active" id="step1">
+                <div class="question-header">
+                    <span class="question-number">1. Sumber apa yang ingin kami baca untuk Anda?</span>
+                    <span class="question-progress">Pertanyaan 1 dari 3</span>
+                </div>
+                
+                <p class="question-title">Indonesia</p>
+                <div class="chips" data-group="indonesia">
+                    <div class="chip" data-value="Kontan">Kontan</div>
+                    <div class="chip" data-value="Bisnis Indonesia">Bisnis Indonesia</div>
+                    <div class="chip" data-value="Kompas">Kompas</div>
+                    <div class="chip" data-value="Tempo">Tempo</div>
+                    <div class="chip" data-value="CNBC Indonesia">CNBC Indonesia</div>
+                    <div class="chip" data-value="Katadata">Katadata</div>
+                </div>
+
+                <p class="question-title">ASEAN & Asia</p>
+                <div class="chips" data-group="asia">
+                    <div class="chip" data-value="Straits Times">Straits Times</div>
+                    <div class="chip" data-value="Nikkei Asia">Nikkei Asia</div>
+                    <div class="chip" data-value="Channel News Asia">Channel News Asia</div>
+                    <div class="chip" data-value="South China Morning Post">SCMP</div>
+                </div>
+
+                <p class="question-title">Global</p>
+                <div class="chips" data-group="global">
+                    <div class="chip" data-value="Bloomberg">Bloomberg</div>
+                    <div class="chip" data-value="Reuters">Reuters</div>
+                    <div class="chip" data-value="Financial Times">Financial Times</div>
+                    <div class="chip" data-value="The Economist">The Economist</div>
+                    <div class="chip" data-value="Wall Street Journal">WSJ</div>
+                </div>
+
+                <div class="text-input-group">
+                    <label class="text-input-label">Sumber lain? Newsletter, Substack, podcast, atau akun X yang Anda ikuti</label>
+                    <input type="text" class="text-input" id="customSourcesInput" placeholder="Contoh: Morning Brew, Stratechery, Lex Fridman Podcast">
+                </div>
+
+                <div class="nav-buttons">
+                    <button class="btn-primary" id="next1" disabled>Lanjut →</button>
+                </div>
+            </div>
+
+            <!-- Step 2: Focus -->
+            <div class="question-step" id="step2">
+                <div class="question-header">
+                    <span class="question-number">2. Apa fokus Anda?</span>
+                    <span class="question-progress">Pertanyaan 2 dari 3</span>
+                </div>
+                
+                <p class="question-title">Topik</p>
+                <div class="chips" data-group="topics">
+                    <div class="chip" data-value="Ekonomi Makro">Ekonomi Makro</div>
+                    <div class="chip" data-value="Perbankan & Keuangan">Perbankan & Keuangan</div>
+                    <div class="chip" data-value="Kebijakan Pemerintah">Kebijakan Pemerintah</div>
+                    <div class="chip" data-value="Teknologi & AI">Teknologi & AI</div>
+                    <div class="chip" data-value="Startup & Venture">Startup & Venture</div>
+                    <div class="chip" data-value="Energi & Resources">Energi & Resources</div>
+                    <div class="chip" data-value="Properti">Properti</div>
+                    <div class="chip" data-value="Pasar Modal">Pasar Modal</div>
+                </div>
+
+                <div class="text-input-group">
+                    <label class="text-input-label">Institusi yang ingin dipantau</label>
+                    <input type="text" class="text-input" id="institutionsInput" placeholder="Contoh: Bank Indonesia, OJK, Kementerian Keuangan, The Fed">
+                </div>
+
+                <div class="text-input-group">
+                    <label class="text-input-label">Tokoh atau pemikir yang Anda ikuti</label>
+                    <input type="text" class="text-input" id="voicesInput" placeholder="Contoh: Paul Krugman, Martin Wolf, Sri Mulyani, Chatib Basri">
+                    <div class="input-hint">Bisa dari Substack, X, podcast, atau kolumnis yang Anda nilai</div>
+                </div>
+
+                <div class="nav-buttons">
+                    <button class="btn-text" id="back2">← Kembali</button>
+                    <button class="btn-primary" id="next2" disabled>Lanjut →</button>
+                </div>
+            </div>
+
+            <!-- Step 3: Delivery -->
+            <div class="question-step" id="step3">
+                <div class="question-header">
+                    <span class="question-number">3. Kapan brief Anda dikirim?</span>
+                    <span class="question-progress">Pertanyaan 3 dari 3</span>
+                </div>
+
+                <div class="time-options">
+                    <div class="time-option selected" data-time="06:00">
+                        <div class="time">06:00</div>
+                        <div class="label">Pagi</div>
+                    </div>
+                    <div class="time-option" data-time="12:00">
+                        <div class="time">12:00</div>
+                        <div class="label">Siang</div>
+                    </div>
+                    <div class="time-option" data-time="18:00">
+                        <div class="time">18:00</div>
+                        <div class="label">Sore</div>
+                    </div>
+                </div>
+
+                <div class="email-input-group">
+                    <label>Email Anda</label>
+                    <input type="email" class="email-input" id="emailInput" placeholder="nama@email.com">
+                </div>
+
+                <!-- Summary -->
+                <div class="summary-panel" id="summaryPanel">
+                    <div class="summary-title">Ringkasan Preferensi Anda</div>
+                    <div class="summary-item">
+                        <div class="summary-label">Sumber</div>
+                        <div class="summary-value" id="summarySources">-</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Fokus</div>
+                        <div class="summary-value" id="summaryTopics">-</div>
+                    </div>
+                    <div class="summary-item" id="summaryVoicesRow" style="display: none;">
+                        <div class="summary-label">Tokoh</div>
+                        <div class="summary-value" id="summaryVoices">-</div>
+                    </div>
+                </div>
+
+                <div class="nav-buttons">
+                    <button class="btn-text" id="back3">← Kembali</button>
+                    <button class="btn-primary" id="submitBtn">Kirim Brief Pertama Saya →</button>
+                </div>
+            </div>
+
+            <!-- Success State -->
+            <div class="success-state" id="successState">
+                <div class="success-icon">✓</div>
+                <h2 class="success-title">Brief Anda Sedang Disiapkan</h2>
+                <p class="success-text">
+                    Besok pukul <strong id="successTime">06:00</strong>, brief eksekutif pertama Anda akan tiba di <strong id="successEmail">email</strong>.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    // State
+    const state = {
+        sources: [],
+        customSources: '',
+        topics: [],
+        institutions: '',
+        voices: '',
+        time: '06:00',
+        email: ''
+    };
+
+    // DOM Elements
+    const steps = {
+        step1: document.getElementById('step1'),
+        step2: document.getElementById('step2'),
+        step3: document.getElementById('step3'),
+        success: document.getElementById('successState')
+    };
+
+    const progressFill = document.getElementById('progressFill');
+
+    // Chip selection
+    document.querySelectorAll('.chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            chip.classList.toggle('selected');
+            updateState();
+            updateButtons();
+        });
+    });
+
+    // Time selection
+    document.querySelectorAll('.time-option').forEach(option => {
+        option.addEventListener('click', () => {
+            document.querySelectorAll('.time-option').forEach(o => o.classList.remove('selected'));
+            option.classList.add('selected');
+            state.time = option.dataset.time;
+        });
+    });
+
+    // Update state from chips
+    function updateState() {
+        state.sources = [];
+        state.topics = [];
+
+        document.querySelectorAll('[data-group="indonesia"] .chip.selected, [data-group="asia"] .chip.selected, [data-group="global"] .chip.selected').forEach(chip => {
+            state.sources.push(chip.dataset.value);
+        });
+
+        document.querySelectorAll('[data-group="topics"] .chip.selected').forEach(chip => {
+            state.topics.push(chip.dataset.value);
+        });
+    }
+
+    // Update button states
+    function updateButtons() {
+        document.getElementById('next1').disabled = state.sources.length === 0;
+        document.getElementById('next2').disabled = state.topics.length === 0;
+    }
+
+    // Navigation
+    document.getElementById('next1').addEventListener('click', () => {
+        state.customSources = document.getElementById('customSourcesInput').value;
+        goToStep(2);
+    });
+
+    document.getElementById('back2').addEventListener('click', () => {
+        goToStep(1);
+    });
+
+    document.getElementById('next2').addEventListener('click', () => {
+        state.institutions = document.getElementById('institutionsInput').value;
+        state.voices = document.getElementById('voicesInput').value;
+        updateSummary();
+        goToStep(3);
+    });
+
+    document.getElementById('back3').addEventListener('click', () => {
+        goToStep(2);
+    });
+
+    document.getElementById('submitBtn').addEventListener('click', () => {
+        const email = document.getElementById('emailInput').value;
+        if (!email || !email.includes('@')) {
+            alert('Mohon masukkan email yang valid');
+            return;
+        }
+        state.email = email;
+        
+        // Show success
+        document.getElementById('successTime').textContent = state.time;
+        document.getElementById('successEmail').textContent = state.email;
+        
+        steps.step3.classList.remove('active');
+        steps.success.classList.add('active');
+        progressFill.style.width = '100%';
+
+        // Here you would send data to backend
+        console.log('Submitted:', state);
+    });
+
+    function goToStep(stepNum) {
+        Object.values(steps).forEach(s => s.classList.remove('active'));
+        steps[`step${stepNum}`].classList.add('active');
+        progressFill.style.width = `${(stepNum / 3) * 100}%`;
+    }
+
+    function updateSummary() {
+        // Sources summary (including custom)
+        let allSources = [...state.sources];
+        if (state.customSources.trim()) {
+            allSources.push(state.customSources.trim());
+        }
+        document.getElementById('summarySources').textContent = 
+            allSources.length > 3 
+                ? allSources.slice(0, 3).join(', ') + ` +${allSources.length - 3} lainnya`
+                : allSources.join(', ');
+        
+        // Topics summary
+        document.getElementById('summaryTopics').textContent = 
+            state.topics.length > 3 
+                ? state.topics.slice(0, 3).join(', ') + ` +${state.topics.length - 3} lainnya`
+                : state.topics.join(', ');
+
+        // Voices summary (only show if filled)
+        const voicesRow = document.getElementById('summaryVoicesRow');
+        if (state.voices.trim() || state.institutions.trim()) {
+            voicesRow.style.display = 'block';
+            const combined = [state.institutions, state.voices].filter(v => v.trim()).join(', ');
+            document.getElementById('summaryVoices').textContent = combined;
+        } else {
+            voicesRow.style.display = 'none';
+        }
+    }
+</script>
+```
+
+</body>
+</html>
