@@ -1114,31 +1114,33 @@ export async function runCouncilV2(
   console.log(`   🎯 Confidence: ${brief.confidenceScore}/10`);
 
   // ==========================================================================
-  // SAVE TO DATABASE
+  // SAVE TO DATABASE (skip for guest users)
   // ==========================================================================
   const totalMs = Date.now() - totalStart;
 
-  await db.insert(dailyBriefs).values({
-    userId,
-    content: brief,
-    councilMetadata: {
-      version: "v2",
-      architecture: "3-layer",
-      searchResults: searchResults.map((r) => ({
-        model: r.model,
-        articles: r.articles.length,
-        error: r.error,
-        latencyMs: r.latencyMs,
-      })),
-      analysisResults: analysisResults.map((r) => ({
-        model: r.model,
-        themes: r.themes.length,
-        error: r.error,
-        latencyMs: r.latencyMs,
-      })),
-      timing: { searchLayerMs, analysisLayerMs, judgeLayerMs, totalMs },
-    },
-  });
+  if (!userId.startsWith("guest-")) {
+    await db.insert(dailyBriefs).values({
+      userId,
+      content: brief,
+      councilMetadata: {
+        version: "v2",
+        architecture: "3-layer",
+        searchResults: searchResults.map((r) => ({
+          model: r.model,
+          articles: r.articles.length,
+          error: r.error,
+          latencyMs: r.latencyMs,
+        })),
+        analysisResults: analysisResults.map((r) => ({
+          model: r.model,
+          themes: r.themes.length,
+          error: r.error,
+          latencyMs: r.latencyMs,
+        })),
+        timing: { searchLayerMs, analysisLayerMs, judgeLayerMs, totalMs },
+      },
+    });
+  }
 
   console.log("\n" + "═".repeat(60));
   console.log("🏛️  COUNCIL V2 COMPLETE");
