@@ -235,10 +235,6 @@ export default function Landing() {
           }}>K</div>
           KURASI
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-          <Link href="/how-it-works" style={{ fontSize: '0.875rem', color: '#2a3f5f', textDecoration: 'none', fontWeight: 500 }}>Tentang</Link>
-          <Link href="/login" style={{ fontSize: '0.875rem', color: '#2a3f5f', textDecoration: 'none', fontWeight: 500 }}>Masuk</Link>
-        </div>
       </nav>
 
       {/* Hero Section */}
