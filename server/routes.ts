@@ -24,6 +24,7 @@ import {
   getBriefHistory,
 } from "./services/llmCouncil";
 import { runCouncilV2 } from "./services/llmCouncilV2";
+import { sendBriefEmail } from "./services/emailService";
 import {
   getSubscriptionStatus,
   activateSubscription,
@@ -220,6 +221,20 @@ Respond with valid JSON only, no markdown.`;
 
       if (!result.success) {
         return res.status(500).json({ error: result.error || "Failed to generate brief" });
+      }
+
+      // Send email (don't block response if it fails)
+      if (result.brief) {
+        try {
+          const emailResult = await sendBriefEmail(email, result.brief);
+          if (emailResult.success) {
+            console.log(`✅ Email sent to ${email}`);
+          } else {
+            console.error(`❌ Email failed for ${email}:`, emailResult.error);
+          }
+        } catch (emailError: any) {
+          console.error(`❌ Email error for ${email}:`, emailError.message);
+        }
       }
 
       res.json({
