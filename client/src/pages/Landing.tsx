@@ -250,7 +250,7 @@ export default function Landing() {
               marginBottom: '1.5rem',
               animationDelay: '0.1s'
             }}>
-              Loper membaca dan merangkum informasi setiap hari.
+              Loper membaca, merangkum, dan mengantar informasi setiap hari.
             </h1>
             <p className="animate-fade-up" style={{
               fontSize: '1.125rem',
