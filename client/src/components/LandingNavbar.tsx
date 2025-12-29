@@ -7,9 +7,9 @@ export function LandingNavbar() {
       <div className="container mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
           <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
-            <span className="text-white font-bold">K</span>
+            <span className="text-white font-bold">L</span>
           </div>
-          <span className="font-bold text-xl">Kurasi<span className="text-amber-600">.ai</span></span>
+          <span className="font-bold text-xl">Loper</span>
         </Link>
         
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">

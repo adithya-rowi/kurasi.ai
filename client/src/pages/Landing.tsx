@@ -130,9 +130,9 @@ export default function Landing() {
 
       if (data.success && data.brief) {
         setBrief(data.brief);
-        sessionStorage.setItem('kurasiBrief', JSON.stringify(data.brief));
-        sessionStorage.setItem('kurasiEmail', state.email);
-        sessionStorage.setItem('kurasiTime', state.time);
+        sessionStorage.setItem('loperBrief', JSON.stringify(data.brief));
+        sessionStorage.setItem('loperEmail', state.email);
+        sessionStorage.setItem('loperTime', state.time);
         setCurrentStep(3); // Go to Step 3: Show brief
       } else {
         setError('Gagal membuat brief. Silakan coba lagi.');
@@ -148,7 +148,7 @@ export default function Landing() {
     if (!feedback) return;
 
     // Store feedback locally for now (could send to API)
-    sessionStorage.setItem('kurasiFeedback', JSON.stringify({
+    sessionStorage.setItem('loperFeedback', JSON.stringify({
       rating: feedback,
       comment: feedbackText,
       email: state.email,
@@ -211,8 +211,8 @@ export default function Landing() {
             color: 'white',
             fontSize: '0.875rem',
             fontWeight: 700
-          }}>K</div>
-          KURASI
+          }}>L</div>
+          LOPER
         </div>
       </nav>
 

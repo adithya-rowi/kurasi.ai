@@ -1,6 +1,8 @@
-# Kurasi.ai
+# Loper
 
-AI-powered personalized news curation for executives. Select your sources, topics, and people to follow — receive curated daily briefs.
+AI-powered personalized news curation for executives. Select your topics and people to follow — receive curated daily briefs.
+
+Website: https://loper.id
 
 ## Architecture
 

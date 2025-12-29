@@ -48,9 +48,9 @@ export default function Pricing() {
           </Link>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold">K</span>
+              <span className="text-white font-bold">L</span>
             </div>
-            <span className="font-bold text-lg text-white">Kurasi<span className="text-amber-400">.ai</span></span>
+            <span className="font-bold text-lg text-white">Loper</span>
           </div>
         </div>
       </header>
@@ -172,7 +172,7 @@ export default function Pricing() {
 
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-8 text-center">
           <h3 className="font-serif font-bold text-xl mb-3 text-white">
-            Mengapa eksekutif memilih Kurasi.ai Premium
+            Mengapa eksekutif memilih Loper Premium
           </h3>
           <p className="text-white/70 max-w-2xl mx-auto">
             Bayangkan bangun pagi dan langsung menerima brief intelijen personal di inbox Anda, 

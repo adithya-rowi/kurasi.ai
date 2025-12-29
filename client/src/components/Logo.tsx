@@ -14,10 +14,10 @@ export function Logo({ size = 'default' }: { size?: 'small' | 'default' | 'large
   return (
     <div className="flex items-center gap-2">
       <div className={`${iconSizes[size]} bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center`}>
-        <span className="text-white font-bold">K</span>
+        <span className="text-white font-bold">L</span>
       </div>
       <span className={`font-bold text-slate-900 ${sizes[size]}`}>
-        Kurasi<span className="text-amber-600">.ai</span>
+        Loper
       </span>
     </div>
   );

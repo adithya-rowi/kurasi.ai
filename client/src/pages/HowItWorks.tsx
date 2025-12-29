@@ -16,9 +16,9 @@ export default function HowItWorks() {
         <div className="p-5 flex-1">
           <div className="flex items-center gap-3 mb-10">
             <div className="w-9 h-9 bg-slate-900 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold">K</span>
+              <span className="text-white font-bold">L</span>
             </div>
-            <span className="text-xl font-semibold text-slate-900">Kurasi</span>
+            <span className="text-xl font-semibold text-slate-900">Loper</span>
           </div>
 
           <nav className="space-y-1">

@@ -1,4 +1,4 @@
-const SESSION_KEY = "kurasi_user_id";
+const SESSION_KEY = "loper_user_id";
 
 export const session = {
   setUserId: (userId: string) => {

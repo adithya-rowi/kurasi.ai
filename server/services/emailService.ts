@@ -146,7 +146,7 @@ function generateBriefEmailHTML(brief: EspressoBrief, userName?: string): string
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>Kurasi Brief - ${brief.briefDate}</title>
+  <title>Loper Brief - ${brief.briefDate}</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <!--[if mso]>
   <style type="text/css">
@@ -169,10 +169,10 @@ function generateBriefEmailHTML(brief: EspressoBrief, userName?: string): string
                     <table cellpadding="0" cellspacing="0" border="0">
                       <tr>
                         <td style="width: 32px; height: 32px; background: ${colors.red}; border-radius: 50%; text-align: center; vertical-align: middle;">
-                          <span style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 14px; font-weight: 700; color: ${colors.white};">K</span>
+                          <span style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 14px; font-weight: 700; color: ${colors.white};">L</span>
                         </td>
                         <td style="padding-left: 10px; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 24px; font-weight: 700; color: ${colors.midnight}; letter-spacing: 0.02em;">
-                          KURASI
+                          LOPER
                         </td>
                       </tr>
                     </table>
@@ -265,7 +265,7 @@ function generateBriefEmailHTML(brief: EspressoBrief, userName?: string): string
                     <table cellpadding="0" cellspacing="0" border="0" align="center">
                       <tr>
                         <td style="background: ${colors.red}; border-radius: 8px;">
-                          <a href="https://kurasi.ai/register" target="_blank" style="display: inline-block; padding: 16px 32px; font-family: 'DM Sans', Arial, sans-serif; font-size: 15px; font-weight: 600; color: ${colors.white}; text-decoration: none;">
+                          <a href="https://loper.id/register" target="_blank" style="display: inline-block; padding: 16px 32px; font-family: 'DM Sans', Arial, sans-serif; font-size: 15px; font-weight: 600; color: ${colors.white}; text-decoration: none;">
                             Mulai Trial 7 Hari →
                           </a>
                         </td>
@@ -289,10 +289,10 @@ function generateBriefEmailHTML(brief: EspressoBrief, userName?: string): string
                     <table cellpadding="0" cellspacing="0" border="0">
                       <tr>
                         <td style="width: 24px; height: 24px; background: ${colors.red}; border-radius: 50%; text-align: center; vertical-align: middle;">
-                          <span style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 11px; font-weight: 700; color: ${colors.white};">K</span>
+                          <span style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 11px; font-weight: 700; color: ${colors.white};">L</span>
                         </td>
                         <td style="padding-left: 8px; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 18px; font-weight: 700; color: ${colors.white}; letter-spacing: 0.02em;">
-                          KURASI
+                          LOPER
                         </td>
                       </tr>
                     </table>
@@ -308,7 +308,7 @@ function generateBriefEmailHTML(brief: EspressoBrief, userName?: string): string
                 <tr>
                   <td align="center" style="padding-top: 24px;">
                     <p style="font-family: 'DM Sans', Arial, sans-serif; font-size: 11px; color: #64748b; margin: 0;">
-                      © ${new Date().getFullYear()} Kurasi.ai · <a href="https://kurasi.ai" style="color: ${colors.silver}; text-decoration: none;">kurasi.ai</a>
+                      © ${new Date().getFullYear()} Loper · <a href="https://loper.id" style="color: ${colors.silver}; text-decoration: none;">loper.id</a>
                     </p>
                   </td>
                 </tr>
@@ -340,12 +340,12 @@ export async function sendBriefEmail(
     const displayName = userName || brief.recipientName || "Eksekutif";
 
     const { data, error } = await resend.emails.send({
-      from: "Kurasi <onboarding@resend.dev>",
+      from: "Loper <onboarding@resend.dev>",
       to: [to],
       subject: `Brief Harian Anda - ${brief.briefDate}`,
       html,
       headers: {
-        "X-Entity-Ref-ID": `kurasi-brief-${Date.now()}`,
+        "X-Entity-Ref-ID": `loper-brief-${Date.now()}`,
       },
     });
 

@@ -808,7 +808,7 @@ Respond with valid JSON only, no markdown.`;
       const hasResend = !!process.env.RESEND_API_KEY;
       
       res.json({
-        title: "🏛️ Kurasi.ai - Dewan AI Status",
+        title: "🏛️ Loper - Dewan AI Status",
         configuredAI: `${aiCount}/6`,
         emailReady: hasResend,
         models: status,

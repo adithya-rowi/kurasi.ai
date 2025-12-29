@@ -24,7 +24,7 @@ export default function Register() {
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    const saved = sessionStorage.getItem('kurasiProfile');
+    const saved = sessionStorage.getItem('loperProfile');
     if (saved) {
       try {
         const p = JSON.parse(saved);
@@ -51,12 +51,12 @@ export default function Register() {
       const data = await res.json();
       
       if (data.success) {
-        sessionStorage.removeItem('kurasiProfile');
+        sessionStorage.removeItem('loperProfile');
         if (data.userId) {
-          localStorage.setItem('kurasi_user_id', data.userId);
+          localStorage.setItem('loper_user_id', data.userId);
         }
         if (data.token) {
-          localStorage.setItem('kurasi_session_token', data.token);
+          localStorage.setItem('loper_session_token', data.token);
         }
         setLocation('/dashboard');
       } else {

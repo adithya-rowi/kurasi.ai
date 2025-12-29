@@ -25,7 +25,7 @@ export function CouncilFooter({ modelsUsed }: CouncilFooterProps) {
           <Shield className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h3 className="font-semibold mb-1">Komitmen Transparansi Kurasi.ai</h3>
+          <h3 className="font-semibold mb-1">Komitmen Transparansi Loper</h3>
           <p className="text-slate-300 text-sm leading-relaxed">
             Brief ini dikurasi oleh Dewan AI yang bekerja independen. 
             Setiap berita dapat diverifikasi ke sumber aslinya. 

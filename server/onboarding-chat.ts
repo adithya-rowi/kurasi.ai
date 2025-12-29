@@ -13,7 +13,7 @@ interface ConversationMessage {
   content: string;
 }
 
-const ONBOARDING_SYSTEM_PROMPT = `Anda adalah analis intelijen senior yang melakukan onboarding untuk Kurasi.ai.
+const ONBOARDING_SYSTEM_PROMPT = `Anda adalah analis intelijen senior yang melakukan onboarding untuk Loper.
 
 TUJUAN: Dalam 5-7 pertanyaan, pahami pengguna dengan sangat baik sehingga Anda bisa membuat brief yang sempurna untuk mereka setiap hari.
 

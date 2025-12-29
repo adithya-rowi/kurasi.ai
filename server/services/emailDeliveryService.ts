@@ -108,7 +108,7 @@ function generateBriefEmailHTML(brief: any, userName: string): string {
   <div style="max-width: 600px; margin: 0 auto; background: white;">
     
     <div style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); padding: 32px; text-align: center;">
-      <h1 style="color: white; margin: 0; font-size: 28px;">Kurasi.ai</h1>
+      <h1 style="color: white; margin: 0; font-size: 28px;">Loper</h1>
       <p style="color: #bfdbfe; margin: 8px 0 0 0; font-size: 14px;">Your Personal Intelligence Brief</p>
     </div>
     
@@ -200,7 +200,7 @@ function generateBriefEmailHTML(brief: any, userName: string): string {
         Powered by AI Council - Multiple Perspectives for Better Intelligence
       </p>
       <p style="color: #64748b; font-size: 11px; margin: 12px 0 0 0;">
-        Kurasi.ai - Intelijen Bisnis untuk Eksekutif Indonesia
+        Loper - Intelijen Bisnis untuk Eksekutif Indonesia
       </p>
     </div>
     
@@ -245,7 +245,7 @@ export async function sendDailyBriefEmail(
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     const { data, error } = await resend.emails.send({
-      from: "Kurasi.ai <brief@kurasi.ai>",
+      from: "Loper <brief@loper.id>",
       to: settings.emailAddress,
       subject: `Your Daily Brief - ${brief.briefDate} | ${brief.critical?.length || 0} critical, ${brief.important?.length || 0} important`,
       html: emailHtml,

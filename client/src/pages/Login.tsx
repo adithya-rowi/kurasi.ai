@@ -25,10 +25,10 @@ export default function Login() {
       
       if (data.success) {
         if (data.userId) {
-          localStorage.setItem('kurasi_user_id', data.userId);
+          localStorage.setItem('loper_user_id', data.userId);
         }
         if (data.token) {
-          localStorage.setItem('kurasi_session_token', data.token);
+          localStorage.setItem('loper_session_token', data.token);
         }
         setLocation('/dashboard');
       } else {
@@ -47,9 +47,9 @@ export default function Login() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-xl">K</span>
+            <span className="text-white font-bold text-xl">L</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900" data-testid="heading-login">Masuk ke Kurasi</h1>
+          <h1 className="text-2xl font-bold text-slate-900" data-testid="heading-login">Masuk ke Loper</h1>
           <p className="text-slate-500 mt-2">Brief personal Anda menunggu</p>
         </div>
 

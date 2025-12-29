@@ -154,7 +154,7 @@ export default function OnboardingChat() {
                 <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
               </svg>
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Kurasi<span className="text-amber-400">.ai</span></h1>
+            <h1 className="text-3xl font-bold text-white mb-2">Loper</h1>
             <p className="text-amber-400 font-medium">Intelijen Berita Personal</p>
           </div>
           
@@ -355,7 +355,7 @@ export default function OnboardingChat() {
               </svg>
             </div>
             <div>
-              <h1 className="font-bold text-white" data-testid="text-chat-title">Kurasi<span className="text-amber-400">.ai</span></h1>
+              <h1 className="font-bold text-white" data-testid="text-chat-title">Loper</h1>
               <p className="text-xs text-white/60">Membangun profil berita personal Anda</p>
             </div>
           </div>

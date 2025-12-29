@@ -4,7 +4,7 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const DEMO_SYSTEM_PROMPT = `Anda adalah Kurasi.ai, asisten intelijen eksekutif untuk pemimpin bisnis Indonesia.
+const DEMO_SYSTEM_PROMPT = `Anda adalah Loper, asisten intelijen eksekutif untuk pemimpin bisnis Indonesia.
 
 IDENTITAS:
 - Anda seperti analis senior dari McKinsey atau BCG yang khusus melayani eksekutif Indonesia

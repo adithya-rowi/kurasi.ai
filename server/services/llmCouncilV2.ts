@@ -351,7 +351,7 @@ ${ctx.persona ? `USER CONTEXT: ${ctx.persona}` : ""}
 OUTPUT: Structured analysis in ${ctx.languageName}`;
 }
 
-const ECONOMIST_ESPRESSO_PROMPT = `Anda adalah HAKIM AKHIR Dewan AI Kurasi.ai.
+const ECONOMIST_ESPRESSO_PROMPT = `Anda adalah HAKIM AKHIR Dewan AI Loper.
 
 GAYA PENULISAN: The Economist Espresso
 - Tajam, witty, informatif

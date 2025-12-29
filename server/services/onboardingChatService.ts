@@ -10,7 +10,7 @@ const deepseek = process.env.DEEPSEEK_API_KEY
     })
   : null;
 
-const ONBOARDING_PROMPT = `Anda adalah Kurasi, asisten yang membangun profil pengguna untuk brief berita personal.
+const ONBOARDING_PROMPT = `Anda adalah Loper, asisten yang membangun profil pengguna untuk brief berita personal.
 
 TUJUAN: Buat pengguna NYAMAN BERCERITA tentang diri mereka. Semakin banyak mereka cerita, semakin bagus brief-nya.
 
@@ -65,7 +65,7 @@ JANGAN:
 
 CONTOH REACT YANG BAIK:
 User: "Saya di fintech, ngurusin compliance"
-Kurasi: "Oh compliance di fintech - pasti regulasi OJK dan BI jadi makanan sehari-hari ya! Nah, **sumber berita apa** yang biasa Anda andalkan untuk update regulasi?"`;
+Loper: "Oh compliance di fintech - pasti regulasi OJK dan BI jadi makanan sehari-hari ya! Nah, **sumber berita apa** yang biasa Anda andalkan untuk update regulasi?"`;
 
 interface Message {
   role: "user" | "assistant";

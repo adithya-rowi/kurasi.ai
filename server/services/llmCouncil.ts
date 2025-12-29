@@ -456,7 +456,7 @@ async function claudeJudge(
 ): Promise<DailyBriefContent> {
   const today = new Date().toISOString().split("T")[0];
 
-  const judgePrompt = `Anda adalah HAKIM AKHIR dalam Dewan AI Kurasi.ai untuk kurasi berita.
+  const judgePrompt = `Anda adalah HAKIM AKHIR dalam Dewan AI Loper untuk kurasi berita.
 
 PROFIL PENGGUNA:
 ${profile.councilSystemPrompt || profile.personaSummary || "Eksekutif Indonesia"}
@@ -697,7 +697,7 @@ export function getCouncilStatus() {
 
 export function getCouncilInfo() {
   return {
-    name: "Dewan AI Kurasi.ai",
+    name: "Dewan AI Loper",
     description: "Multiple AI models bekerja paralel untuk brief Anda",
     models: Object.values(AI_COUNCIL).map((m) => ({
       name: m.name,
