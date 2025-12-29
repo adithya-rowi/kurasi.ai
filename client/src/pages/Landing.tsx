@@ -250,7 +250,7 @@ export default function Landing() {
               marginBottom: '1.5rem',
               animationDelay: '0.1s'
             }}>
-              Anda sibuk.<br />Satu brief, hanya yang penting.
+              Loper membaca dan merangkum informasi setiap hari.
             </h1>
             <p className="animate-fade-up" style={{
               fontSize: '1.125rem',
@@ -259,7 +259,7 @@ export default function Landing() {
               lineHeight: 1.7,
               animationDelay: '0.2s'
             }}>
-              Brief eksekutif yang berbeda untuk setiap orang.
+              Dari banyak sumber, jadi satu brief yang relevan untuk keputusan Anda.
             </p>
           </div>
         </div>
