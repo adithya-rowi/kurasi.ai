@@ -250,6 +250,36 @@ function generateBriefEmailHTML(brief: EspressoBrief, userName?: string): string
           </tr>
           ` : ""}
 
+          <!-- Trial CTA -->
+          <tr>
+            <td style="padding: 0 40px 40px 40px;">
+              <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td style="background: ${colors.midnight}; padding: 40px; text-align: center; position: relative;">
+                    <h3 style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 24px; font-weight: 400; color: ${colors.white}; margin: 0 0 12px 0;">
+                      Suka dengan brief ini?
+                    </h3>
+                    <p style="font-family: 'DM Sans', Arial, sans-serif; font-size: 15px; color: ${colors.silver}; margin: 0 0 24px 0; line-height: 1.6;">
+                      Brief seperti ini akan dikirim ke email Anda setiap hari selama 7 hari.<br>Gratis, tanpa kartu kredit.
+                    </p>
+                    <table cellpadding="0" cellspacing="0" border="0" align="center">
+                      <tr>
+                        <td style="background: ${colors.red}; border-radius: 8px;">
+                          <a href="https://kurasi.ai/register" target="_blank" style="display: inline-block; padding: 16px 32px; font-family: 'DM Sans', Arial, sans-serif; font-size: 15px; font-weight: 600; color: ${colors.white}; text-decoration: none;">
+                            Mulai Trial 7 Hari →
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="font-family: 'DM Sans', Arial, sans-serif; font-size: 13px; color: #64748b; margin: 16px 0 0 0;">
+                      Setelah trial: Rp 79.000/bulan
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
           <!-- Footer -->
           <tr>
             <td style="background: ${colors.midnight}; padding: 32px 40px; text-align: center;">
