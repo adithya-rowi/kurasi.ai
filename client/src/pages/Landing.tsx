@@ -898,44 +898,12 @@ export default function Landing() {
                     pointerEvents: 'none'
                   }} />
                   <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
-                    <h3 className="serif" style={{
-                      fontSize: 'clamp(1.25rem, 3vw, 1.75rem)',
-                      color: '#fff',
-                      marginBottom: '0.75rem',
-                      fontWeight: 400
-                    }}>
-                      Suka dengan brief ini?
-                    </h3>
                     <p style={{
-                      fontSize: '0.9375rem',
-                      color: '#94a3b8',
-                      marginBottom: '1.5rem',
+                      fontSize: '1rem',
+                      color: '#059669',
                       lineHeight: 1.6
                     }}>
-                      Brief seperti ini akan dikirim ke email Anda setiap hari selama 7 hari. Gratis, tanpa kartu kredit.
-                    </p>
-                    <button
-                      onClick={() => setLocation('/register')}
-                      style={{
-                        background: '#cc2936',
-                        color: '#fff',
-                        padding: '1rem 2rem',
-                        fontSize: '0.9375rem',
-                        fontWeight: 600,
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontFamily: "'DM Sans', sans-serif"
-                      }}
-                      data-testid="button-subscribe"
-                    >
-                      Mulai Trial 7 Hari →
-                    </button>
-                    <p style={{
-                      fontSize: '0.8125rem',
-                      color: '#64748b',
-                      marginTop: '1rem'
-                    }}>
-                      Setelah trial: Rp 79.000/bulan
+                      ✓ Trial 7 hari Anda sudah aktif. Brief akan dikirim ke {state.email} setiap hari.
                     </p>
                   </div>
                 </div>
