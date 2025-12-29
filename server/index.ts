@@ -60,17 +60,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Seed database on startup in development
-  if (process.env.NODE_ENV === "development") {
-    const { seedDatabase } = await import("./seed");
-    try {
-      await seedDatabase();
-    } catch (error) {
-      console.log("Database already seeded or seed failed:", error);
-    }
-  }
-
-  // Always seed subscription plans
+  // Seed subscription plans on startup
   const { seedSubscriptionPlans } = await import("./services/subscriptionService");
   try {
     await seedSubscriptionPlans();
