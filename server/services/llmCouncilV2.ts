@@ -528,29 +528,31 @@ Remember: Output ONLY the JSON object, nothing else.`;
     const groundingChunks = groundingMetadata?.groundingChunks || [];
     const citations = groundingChunks.map((c: any) => c.web?.uri).filter(Boolean);
 
-    // Robust JSON parsing: remove markdown, fix control characters, extract JSON
-    textContent = textContent
-      .replace(/```json\n?|\n?```/g, "")
-      .trim()
-      // Fix unescaped newlines in JSON strings
-      .replace(/[\r\n]+/g, " ")
-      // Fix other control characters
-      .replace(/[\x00-\x1F\x7F]/g, " ");
+    // Robust JSON parsing: remove markdown first
+    textContent = textContent.replace(/```json\n?|\n?```/g, "").trim();
 
-    // Try to extract JSON object if there's extra text
-    const jsonMatch = textContent.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      textContent = jsonMatch[0];
+    // Extract JSON from response - handle prefix/suffix garbage
+    const jsonStart = textContent.indexOf('{');
+    const jsonEnd = textContent.lastIndexOf('}');
+    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+      textContent = textContent.substring(jsonStart, jsonEnd + 1);
     }
+
+    // Remove control characters and fix newlines
+    textContent = textContent
+      .replace(/[\r\n]+/g, " ")
+      .replace(/[\x00-\x1F\x7F]/g, " ");
 
     let parsed;
     try {
       parsed = JSON.parse(textContent);
     } catch (parseError: any) {
-      // If JSON parsing fails, return empty articles
+      // If JSON parsing fails, log details and return empty articles
       console.error("❌ Gemini JSON parse failed:", parseError.message);
-      console.error("   📝 Raw text (first 500 chars):", textContent.substring(0, 500));
+      console.error("   📝 Raw response (first 300 chars):", textContent.substring(0, 300));
+      console.error("   📝 Raw response (last 100 chars):", textContent.substring(Math.max(0, textContent.length - 100)));
       console.error("   📝 Text length:", textContent.length);
+      console.error("   📝 JSON start index:", jsonStart, "JSON end index:", jsonEnd);
       parsed = { articles: [] };
     }
 
