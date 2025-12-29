@@ -310,7 +310,7 @@ export async function sendBriefEmail(
     const displayName = userName || brief.recipientName || "Eksekutif";
 
     const { data, error } = await resend.emails.send({
-      from: "Kurasi <brief@kurasi.ai>",
+      from: "Kurasi <onboarding@resend.dev>",
       to: [to],
       subject: `Brief Harian Anda - ${brief.briefDate}`,
       html,
