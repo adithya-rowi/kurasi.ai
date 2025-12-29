@@ -543,17 +543,60 @@ Remember: Output ONLY the JSON object, nothing else.`;
       .replace(/[\r\n]+/g, " ")
       .replace(/[\x00-\x1F\x7F]/g, " ");
 
+    // Fix trailing commas before } or ] (common JSON issue)
+    textContent = textContent.replace(/,\s*([}\]])/g, '$1');
+
     let parsed;
     try {
       parsed = JSON.parse(textContent);
     } catch (parseError: any) {
-      // If JSON parsing fails, log details and return empty articles
-      console.error("❌ Gemini JSON parse failed:", parseError.message);
-      console.error("   📝 Raw response (first 300 chars):", textContent.substring(0, 300));
-      console.error("   📝 Raw response (last 100 chars):", textContent.substring(Math.max(0, textContent.length - 100)));
-      console.error("   📝 Text length:", textContent.length);
-      console.error("   📝 JSON start index:", jsonStart, "JSON end index:", jsonEnd);
-      parsed = { articles: [] };
+      // First fallback: Try to extract and salvage articles with regex
+      console.log("⚠️ Gemini JSON parse failed, trying regex extraction...");
+      console.error("   Parse error:", parseError.message);
+
+      const articlesMatch = textContent.match(/"articles"\s*:\s*\[([\s\S]*?)\](?=\s*}?\s*$)/);
+      if (articlesMatch) {
+        // Try to salvage individual articles
+        const articlesContent = articlesMatch[1];
+        const articles: any[] = [];
+
+        // Split by article boundaries (look for },{ pattern)
+        const articleChunks = articlesContent.split(/}\s*,\s*{/);
+
+        for (let i = 0; i < articleChunks.length; i++) {
+          try {
+            let chunk = articleChunks[i].trim();
+            // Add missing braces
+            if (!chunk.startsWith('{')) chunk = '{' + chunk;
+            if (!chunk.endsWith('}')) chunk = chunk + '}';
+            // Fix trailing commas in this chunk
+            chunk = chunk.replace(/,\s*([}\]])/g, '$1');
+
+            const art = JSON.parse(chunk);
+            if (art.title && art.summary) {
+              articles.push(art);
+            }
+          } catch (e) {
+            // Skip malformed article chunk
+          }
+        }
+
+        if (articles.length > 0) {
+          console.log(`✅ Salvaged ${articles.length} articles from malformed JSON`);
+          parsed = { articles };
+        } else {
+          console.error("❌ Could not salvage any articles");
+          console.error("   📝 Raw response (first 500 chars):", textContent.substring(0, 500));
+          parsed = { articles: [] };
+        }
+      } else {
+        // No articles array found at all
+        console.error("❌ Gemini JSON parse failed completely:", parseError.message);
+        console.error("   📝 Raw response (first 300 chars):", textContent.substring(0, 300));
+        console.error("   📝 Raw response (last 100 chars):", textContent.substring(Math.max(0, textContent.length - 100)));
+        console.error("   📝 Text length:", textContent.length);
+        parsed = { articles: [] };
+      }
     }
 
     const articles: SearchArticle[] = (parsed.articles || []).map((a: any) => ({
