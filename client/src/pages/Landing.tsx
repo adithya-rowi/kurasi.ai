@@ -250,7 +250,7 @@ export default function Landing() {
               marginBottom: '1.5rem',
               animationDelay: '0.1s'
             }}>
-              Loper membaca, merangkum, dan mengantar informasi setiap hari.
+              Informasi yang relevan, diantar oleh Loper.
             </h1>
             <p className="animate-fade-up" style={{
               fontSize: '1.125rem',
@@ -259,7 +259,7 @@ export default function Landing() {
               lineHeight: 1.7,
               animationDelay: '0.2s'
             }}>
-              Dari banyak sumber, jadi satu brief yang relevan untuk keputusan Anda.
+              AI merangkum banyak sumber menjadi satu brief untuk pengambil keputusan.
             </p>
           </div>
         </div>
