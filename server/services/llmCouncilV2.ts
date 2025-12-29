@@ -66,7 +66,7 @@ const AI_COUNCIL_V2 = {
   },
   openai: {
     name: "GPT-5 mini",
-    model: "gpt-4o-mini",
+    model: "gpt-5-mini",
     provider: "OpenAI",
     layer: "analysis",
     icon: "🟢",
@@ -76,7 +76,7 @@ const AI_COUNCIL_V2 = {
   // Judge Layer
   claude: {
     name: "Claude Opus 4.5",
-    model: "claude-sonnet-4-20250514",
+    model: "claude-opus-4-5-20251101",
     provider: "Anthropic",
     layer: "judge",
     icon: "🟤",
@@ -382,16 +382,20 @@ async function searchWithPerplexity(profile: UserProfile): Promise<SearchResult>
   }
 
   const startTime = Date.now();
-  const today = new Date().toISOString().split("T")[0];
+  const now = new Date();
+  const today = now.toISOString().split("T")[0];
+  const todayIndo = now.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
   const ctx = buildSearchContext(profile);
 
-  const searchPrompt = `You are a news search assistant.
+  const searchPrompt = `You are a news search assistant. Search for TODAY'S news only.
 
 ${buildSearchPrompt(ctx)}
 
-DATE: ${today}
+TANGGAL HARI INI: ${todayIndo} (${today})
 
-Search for 5-7 latest and most relevant news articles. Return JSON:
+CRITICAL: Only include news from the LAST 24 HOURS. Add "berita hari ini ${todayIndo}" to your searches.
+
+Search for 5-7 LATEST news articles published TODAY. Return JSON:
 {
   "searchQueries": ["queries used"],
   "articles": [{
@@ -407,7 +411,8 @@ Search for 5-7 latest and most relevant news articles. Return JSON:
 }
 
 RULES:
-- Only include articles from the last 24-48 hours
+- PRIORITIZE articles from the last 24 hours (today's date: ${todayIndo})
+- EXCLUDE any news older than 48 hours unless highly relevant breaking news
 - Include valid URLs
 - Confidence: 9-10 official sources, 7-8 trusted media, 5-6 general media`;
 
@@ -463,18 +468,25 @@ async function searchWithGemini(profile: UserProfile): Promise<SearchResult> {
   }
 
   const startTime = Date.now();
-  const today = new Date().toISOString().split("T")[0];
+  const now = new Date();
+  const today = now.toISOString().split("T")[0];
+  const todayIndo = now.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
   const ctx = buildSearchContext(profile);
 
-  const searchPrompt = `You are a news search assistant.
+  const searchPrompt = `You are a news search assistant. Search for TODAY'S news only.
 
 IMPORTANT: You MUST respond with ONLY valid JSON. No explanations, no markdown, no text before or after the JSON.
 
 ${buildSearchPrompt(ctx)}
 
-DATE: ${today}
+TANGGAL HARI INI: ${todayIndo} (${today})
 
-Search for 5-7 latest news articles. Your response must be ONLY this JSON structure:
+RECENCY RULES:
+- Search for "berita hari ini ${todayIndo}" or "latest news today"
+- ONLY include articles from the LAST 24 HOURS
+- EXCLUDE any news older than 48 hours
+
+Search for 5-7 LATEST news articles published TODAY. Your response must be ONLY this JSON structure:
 {"articles":[{"title":"Article title","summary":"2-3 sentence summary in ${ctx.languageName}","source":"Source name","sourceType":"local|regional|global","url":"Full URL","publishedDate":"${today}","confidence":8}]}
 
 Remember: Output ONLY the JSON object, nothing else.`;
@@ -575,8 +587,10 @@ async function searchWithGrok(profile: UserProfile): Promise<SearchResult> {
   }
 
   const startTime = Date.now();
-  const today = new Date().toISOString().split("T")[0];
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const now = new Date();
+  const today = now.toISOString().split("T")[0];
+  const todayIndo = now.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split("T")[0];
   const ctx = buildSearchContext(profile);
 
   // Build search focus based on what user provided
@@ -586,9 +600,13 @@ async function searchWithGrok(profile: UserProfile): Promise<SearchResult> {
   if (ctx.keywords.length > 0) searchFocus.push(`Keywords: ${ctx.keywords.join(", ")}`);
   if (ctx.sources.length > 0) searchFocus.push(`Prioritize sources: ${ctx.sources.join(", ")}`);
 
-  const searchPrompt = `Search X/Twitter and web for latest discussions and news.
+  const searchPrompt = `Search X/Twitter and web for TODAY'S discussions and news (${todayIndo}).
 
 ${searchFocus.length > 0 ? searchFocus.join("\n") : "Search for trending business and finance news."}
+
+RECENCY: LAST 24 HOURS ONLY (since ${yesterday})
+- Only include tweets and news from TODAY
+- Exclude anything older than 24 hours
 
 FOCUS:
 - Tweets from influential accounts (analysts, economists, industry experts)
@@ -633,7 +651,7 @@ Return JSON in ${ctx.languageName}:
           mode: "on",
           sources: [{ type: "web" }, { type: "x" }],
           max_search_results: 20,
-          from_date: weekAgo,
+          from_date: yesterday, // Last 24 hours only
         },
       }),
     });
@@ -812,7 +830,7 @@ You MUST return valid JSON with this exact structure:
   try {
     console.log("🟢 GPT-5 mini fast analysis...");
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5-mini",
       messages: [
         {
           role: "system",
@@ -903,11 +921,19 @@ Opportunities: ${JSON.stringify(analysisResults.flatMap((r) => r.opportunities |
 INSTRUKSI HAKIM AKHIR
 ═══════════════════════════════════════════════════════════════
 
+RECENCY RULES (CRITICAL):
+- PRIORITIZE articles from the LAST 24 HOURS
+- EXCLUDE any news older than 48 hours UNLESS it's a major breaking story still developing
+- If publishedDate is missing or unclear, verify recency from context
+- Today's date: ${dateStr}
+
+CURATION PROCESS:
 1. DEDUPLIKASI: Gabungkan berita sama dari berbagai sumber
-2. VERIFIKASI: Beri score 1-10 (bonus jika multiple sources agree)
-3. KURASI: Pilih 3-5 berita terpenting dengan gaya Economist Espresso
-4. PERSONALISASI: "Why it matters" HARUS spesifik untuk user ini
-5. EDITORIAL: Tulis dengan tajam, witty, insightful
+2. RECENCY CHECK: Filter out stale news (>48 hours old)
+3. VERIFIKASI: Beri score 1-10 (bonus jika multiple sources agree)
+4. KURASI: Pilih 3-5 berita TERBARU dan terpenting dengan gaya Economist Espresso
+5. PERSONALISASI: "Why it matters" HARUS spesifik untuk user ini
+6. EDITORIAL: Tulis dengan tajam, witty, insightful
 
 OUTPUT JSON (Bahasa Indonesia yang elegan):
 {
@@ -948,7 +974,7 @@ OUTPUT JSON (Bahasa Indonesia yang elegan):
   try {
     console.log("🟤 Claude Opus 4.5 - HAKIM AKHIR deliberating...");
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-opus-4-5-20251101",
       max_tokens: 4096,
       messages: [{ role: "user", content: judgePrompt }],
     });
@@ -1114,33 +1140,31 @@ export async function runCouncilV2(
   console.log(`   🎯 Confidence: ${brief.confidenceScore}/10`);
 
   // ==========================================================================
-  // SAVE TO DATABASE (skip for guest users)
+  // SAVE TO DATABASE
   // ==========================================================================
   const totalMs = Date.now() - totalStart;
 
-  if (!userId.startsWith("guest-")) {
-    await db.insert(dailyBriefs).values({
-      userId,
-      content: brief,
-      councilMetadata: {
-        version: "v2",
-        architecture: "3-layer",
-        searchResults: searchResults.map((r) => ({
-          model: r.model,
-          articles: r.articles.length,
-          error: r.error,
-          latencyMs: r.latencyMs,
-        })),
-        analysisResults: analysisResults.map((r) => ({
-          model: r.model,
-          themes: r.themes.length,
-          error: r.error,
-          latencyMs: r.latencyMs,
-        })),
-        timing: { searchLayerMs, analysisLayerMs, judgeLayerMs, totalMs },
-      },
-    });
-  }
+  await db.insert(dailyBriefs).values({
+    userId,
+    content: brief,
+    councilMetadata: {
+      version: "v2",
+      architecture: "3-layer",
+      searchResults: searchResults.map((r) => ({
+        model: r.model,
+        articles: r.articles.length,
+        error: r.error,
+        latencyMs: r.latencyMs,
+      })),
+      analysisResults: analysisResults.map((r) => ({
+        model: r.model,
+        themes: r.themes.length,
+        error: r.error,
+        latencyMs: r.latencyMs,
+      })),
+      timing: { searchLayerMs, analysisLayerMs, judgeLayerMs, totalMs },
+    },
+  });
 
   console.log("\n" + "═".repeat(60));
   console.log("🏛️  COUNCIL V2 COMPLETE");
