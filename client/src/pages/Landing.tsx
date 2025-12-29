@@ -37,12 +37,6 @@ interface EspressoBrief {
   };
 }
 
-const SOURCES = {
-  indonesia: ['Kontan', 'Bisnis Indonesia', 'Kompas', 'Tempo', 'CNBC Indonesia', 'Katadata'],
-  asia: ['Straits Times', 'Nikkei Asia', 'Channel News Asia', 'SCMP'],
-  global: ['Bloomberg', 'Reuters', 'Financial Times', 'The Economist', 'WSJ']
-};
-
 const TOPICS = [
   'Ekonomi Makro', 'Perbankan & Keuangan', 'Kebijakan Pemerintah', 
   'Teknologi & AI', 'Startup & Venture', 'Energi & Resources', 
@@ -61,8 +55,6 @@ export default function Landing() {
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
   const [state, setState] = useState({
-    sources: [] as string[],
-    customSources: '',
     topics: [] as string[],
     institutions: '',
     voices: '',
@@ -93,15 +85,6 @@ export default function Landing() {
     return () => clearInterval(interval);
   }, [loading]);
 
-  const toggleSource = (source: string) => {
-    setState(prev => ({
-      ...prev,
-      sources: prev.sources.includes(source) 
-        ? prev.sources.filter(s => s !== source)
-        : [...prev.sources, source]
-    }));
-  };
-
   const toggleTopic = (topic: string) => {
     setState(prev => ({
       ...prev,
@@ -111,17 +94,13 @@ export default function Landing() {
     }));
   };
 
-  // Flexible validation: allow any combination of inputs
-  const hasAnySources = state.sources.length > 0 || state.customSources.trim().length > 0;
+  // Flexible validation: topics OR institutions OR voices
   const hasAnyFocus = state.topics.length > 0 || state.institutions.trim().length > 0 || state.voices.trim().length > 0;
-  const hasAnyPreference = hasAnySources || hasAnyFocus;
 
-  // Step 1: sources OR customSources
-  const canProceedStep1 = hasAnySources;
-  // Step 2: topics OR institutions OR voices
-  const canProceedStep2 = hasAnyFocus;
-  // Step 3: email required, but also need at least one preference overall
-  const canSubmit = state.email.includes('@') && hasAnyPreference;
+  // Step 1: topics OR institutions OR voices
+  const canProceedStep1 = hasAnyFocus;
+  // Step 2: email required + at least one focus preference
+  const canSubmit = state.email.includes('@') && hasAnyFocus;
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -132,8 +111,8 @@ export default function Landing() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sources: state.sources,
-          customSources: state.customSources,
+          sources: [],
+          customSources: '',
           topics: state.topics,
           institutions: state.institutions,
           voices: state.voices,
@@ -154,7 +133,7 @@ export default function Landing() {
         sessionStorage.setItem('kurasiBrief', JSON.stringify(data.brief));
         sessionStorage.setItem('kurasiEmail', state.email);
         sessionStorage.setItem('kurasiTime', state.time);
-        setCurrentStep(4); // Go to Step 4: Show brief
+        setCurrentStep(3); // Go to Step 3: Show brief
       } else {
         setError('Gagal membuat brief. Silakan coba lagi.');
       }
@@ -179,7 +158,7 @@ export default function Landing() {
     setFeedbackSubmitted(true);
   };
 
-  const progressWidth = brief ? 100 : loading ? 75 : (currentStep / 3) * 100;
+  const progressWidth = brief ? 100 : loading ? 75 : (currentStep / 2) * 100;
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#fff', color: '#0a1628', minHeight: '100vh' }}>
@@ -271,7 +250,7 @@ export default function Landing() {
               marginBottom: '1.5rem',
               animationDelay: '0.1s'
             }}>
-              Puluhan sumber berita.<br />Satu email terkurasi.
+              Anda sibuk.<br />Satu brief, hanya yang penting.
             </h1>
             <p className="animate-fade-up" style={{
               fontSize: '1.125rem',
@@ -280,7 +259,7 @@ export default function Landing() {
               lineHeight: 1.7,
               animationDelay: '0.2s'
             }}>
-              Jawab 3 pertanyaan. Brief eksekutif pertama Anda siap dalam hitungan menit.
+              Brief eksekutif yang berbeda untuk setiap orang.
             </p>
           </div>
         </div>
@@ -293,91 +272,12 @@ export default function Landing() {
               <div style={{ height: '100%', background: '#cc2936', width: `${progressWidth}%`, transition: 'width 0.3s ease' }} />
             </div>
 
-            {/* Step 1: Sources */}
+            {/* Step 1: Focus */}
             {currentStep === 1 && (
               <div className="animate-fade-in">
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '1rem', marginBottom: '1.5rem' }}>
-                  <span style={{ fontSize: '1.125rem', fontWeight: 700, color: '#0a1628' }}>1. Sumber apa yang ingin kami baca untuk Anda?</span>
-                  <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Pertanyaan 1 dari 3</span>
-                </div>
-
-                <p className="serif" style={{ fontSize: '1.5rem', fontWeight: 500, color: '#0a1628', marginBottom: '1.5rem' }}>Indonesia</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '2rem' }}>
-                  {SOURCES.indonesia.map(source => (
-                    <Chip key={source} label={source} selected={state.sources.includes(source)} onClick={() => toggleSource(source)} />
-                  ))}
-                </div>
-
-                <p className="serif" style={{ fontSize: '1.5rem', fontWeight: 500, color: '#0a1628', marginBottom: '1.5rem' }}>ASEAN & Asia</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '2rem' }}>
-                  {SOURCES.asia.map(source => (
-                    <Chip key={source} label={source} selected={state.sources.includes(source)} onClick={() => toggleSource(source)} />
-                  ))}
-                </div>
-
-                <p className="serif" style={{ fontSize: '1.5rem', fontWeight: 500, color: '#0a1628', marginBottom: '1.5rem' }}>Global</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '2rem' }}>
-                  {SOURCES.global.map(source => (
-                    <Chip key={source} label={source} selected={state.sources.includes(source)} onClick={() => toggleSource(source)} />
-                  ))}
-                </div>
-
-                <div style={{ marginBottom: '2rem' }}>
-                  <label style={{ fontSize: '0.875rem', color: '#2a3f5f', marginBottom: '0.5rem', display: 'block' }}>
-                    Sumber lain? Newsletter, Substack, podcast, atau akun X yang Anda ikuti
-                  </label>
-                  <input
-                    type="text"
-                    value={state.customSources}
-                    onChange={(e) => setState(prev => ({ ...prev, customSources: e.target.value }))}
-                    placeholder="Contoh: Morning Brew, Stratechery, Lex Fridman Podcast"
-                    style={{
-                      width: '100%',
-                      padding: '1rem 1.25rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: 4,
-                      fontSize: '1rem',
-                      fontFamily: "'DM Sans', sans-serif",
-                      color: '#0a1628',
-                      outline: 'none'
-                    }}
-                    data-testid="input-custom-sources"
-                  />
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginTop: '2rem' }}>
-                  <button
-                    onClick={() => setCurrentStep(2)}
-                    disabled={!canProceedStep1}
-                    style={{
-                      background: canProceedStep1 ? '#cc2936' : '#d1d5db',
-                      color: '#fff',
-                      padding: '1rem 2rem',
-                      fontSize: '0.9375rem',
-                      fontWeight: 600,
-                      border: 'none',
-                      cursor: canProceedStep1 ? 'pointer' : 'not-allowed',
-                      fontFamily: "'DM Sans', sans-serif"
-                    }}
-                    data-testid="button-next-1"
-                  >
-                    Lanjut →
-                  </button>
-                  {!canProceedStep1 && (
-                    <span style={{ fontSize: '0.8125rem', color: '#94a3b8', fontStyle: 'italic' }}>
-                      Pilih minimal satu sumber atau isi sumber lain
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Step 2: Focus */}
-            {currentStep === 2 && (
-              <div className="animate-fade-in">
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '1rem', marginBottom: '1.5rem' }}>
-                  <span style={{ fontSize: '1.125rem', fontWeight: 700, color: '#0a1628' }}>2. Apa fokus Anda?</span>
-                  <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Pertanyaan 2 dari 3</span>
+                  <span style={{ fontSize: '1.125rem', fontWeight: 700, color: '#0a1628' }}>1. Apa fokus Anda?</span>
+                  <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Pertanyaan 1 dari 2</span>
                 </div>
 
                 <p className="serif" style={{ fontSize: '1.5rem', fontWeight: 500, color: '#0a1628', marginBottom: '1.5rem' }}>Topik</p>
@@ -438,38 +338,23 @@ export default function Landing() {
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginTop: '2rem' }}>
                   <button
-                    onClick={() => setCurrentStep(1)}
+                    onClick={() => setCurrentStep(2)}
+                    disabled={!canProceedStep1}
                     style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#2a3f5f',
-                      fontSize: '0.875rem',
-                      cursor: 'pointer',
-                      padding: '0.5rem 0',
-                      fontFamily: "'DM Sans', sans-serif"
-                    }}
-                    data-testid="button-back-2"
-                  >
-                    ← Kembali
-                  </button>
-                  <button
-                    onClick={() => setCurrentStep(3)}
-                    disabled={!canProceedStep2}
-                    style={{
-                      background: canProceedStep2 ? '#cc2936' : '#d1d5db',
+                      background: canProceedStep1 ? '#cc2936' : '#d1d5db',
                       color: '#fff',
                       padding: '1rem 2rem',
                       fontSize: '0.9375rem',
                       fontWeight: 600,
                       border: 'none',
-                      cursor: canProceedStep2 ? 'pointer' : 'not-allowed',
+                      cursor: canProceedStep1 ? 'pointer' : 'not-allowed',
                       fontFamily: "'DM Sans', sans-serif"
                     }}
-                    data-testid="button-next-2"
+                    data-testid="button-next-1"
                   >
                     Lanjut →
                   </button>
-                  {!canProceedStep2 && (
+                  {!canProceedStep1 && (
                     <span style={{ fontSize: '0.8125rem', color: '#94a3b8', fontStyle: 'italic' }}>
                       Pilih minimal satu topik, institusi, atau tokoh
                     </span>
@@ -478,12 +363,12 @@ export default function Landing() {
               </div>
             )}
 
-            {/* Step 3: Delivery */}
-            {currentStep === 3 && (
+            {/* Step 2: Delivery */}
+            {currentStep === 2 && (
               <div className="animate-fade-in">
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '1rem', marginBottom: '1.5rem' }}>
-                  <span style={{ fontSize: '1.125rem', fontWeight: 700, color: '#0a1628' }}>3. Kapan brief Anda dikirim?</span>
-                  <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Pertanyaan 3 dari 3</span>
+                  <span style={{ fontSize: '1.125rem', fontWeight: 700, color: '#0a1628' }}>2. Kapan brief Anda dikirim?</span>
+                  <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Pertanyaan 2 dari 2</span>
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -550,17 +435,17 @@ export default function Landing() {
                     marginBottom: '1rem'
                   }}>Ringkasan Preferensi Anda</div>
                   <div style={{ marginBottom: '0.75rem' }}>
-                    <div style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>Sumber</div>
-                    <div style={{ fontSize: '0.9375rem', color: '#0a1628', fontWeight: 500 }}>
-                      {[...state.sources, state.customSources].filter(Boolean).join(', ') || '-'}
-                    </div>
-                  </div>
-                  <div style={{ marginBottom: '0.75rem' }}>
-                    <div style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>Fokus</div>
+                    <div style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>Topik</div>
                     <div style={{ fontSize: '0.9375rem', color: '#0a1628', fontWeight: 500 }}>
                       {state.topics.join(', ') || '-'}
                     </div>
                   </div>
+                  {state.institutions && (
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <div style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>Institusi</div>
+                      <div style={{ fontSize: '0.9375rem', color: '#0a1628', fontWeight: 500 }}>{state.institutions}</div>
+                    </div>
+                  )}
                   {state.voices && (
                     <div>
                       <div style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>Tokoh</div>
@@ -586,7 +471,7 @@ export default function Landing() {
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginTop: '2rem' }}>
                   <button
-                    onClick={() => setCurrentStep(2)}
+                    onClick={() => setCurrentStep(1)}
                     disabled={loading}
                     style={{
                       background: 'none',
@@ -597,7 +482,7 @@ export default function Landing() {
                       padding: '0.5rem 0',
                       fontFamily: "'DM Sans', sans-serif"
                     }}
-                    data-testid="button-back-3"
+                    data-testid="button-back-2"
                   >
                     ← Kembali
                   </button>
@@ -647,8 +532,8 @@ export default function Landing() {
               </div>
             )}
 
-            {/* Step 4: Brief Preview + Feedback */}
-            {currentStep === 4 && brief && (
+            {/* Step 3: Brief Preview + Feedback */}
+            {currentStep === 3 && brief && (
               <div className="animate-fade-in">
                 {/* Brief Header - Economist Espresso style */}
                 <div style={{ marginBottom: '2.5rem' }}>
@@ -702,7 +587,7 @@ export default function Landing() {
                       color: '#cc2936',
                       marginBottom: '1rem'
                     }}>
-                      The World in Brief
+                      Sekilas Brief
                     </div>
                     <p className="serif" style={{
                       fontSize: '1.125rem',
@@ -874,9 +759,9 @@ export default function Landing() {
                       <span>Tingkat kepercayaan:</span>
                       <span style={{
                         fontWeight: 600,
-                        color: brief.confidenceScore >= 0.8 ? '#059669' : brief.confidenceScore >= 0.6 ? '#d97706' : '#94a3b8'
+                        color: brief.confidenceScore >= 8 ? '#059669' : brief.confidenceScore >= 6 ? '#d97706' : '#94a3b8'
                       }}>
-                        {Math.round(brief.confidenceScore * 100)}%
+                        {brief.confidenceScore.toFixed(1)}/10
                       </span>
                     </div>
                   </div>
