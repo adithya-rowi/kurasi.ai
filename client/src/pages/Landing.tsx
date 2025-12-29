@@ -419,6 +419,23 @@ export default function Landing() {
                   />
                 </div>
 
+                {/* Context text */}
+                <div style={{
+                  textAlign: 'center',
+                  marginTop: '1.5rem',
+                  marginBottom: '0.5rem'
+                }}>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#94a3b8',
+                    margin: 0,
+                    lineHeight: 1.6
+                  }}>
+                    Brief pertama langsung tampil.<br />
+                    7 hari berikutnya dikirim ke email — gratis.
+                  </p>
+                </div>
+
                 {/* Summary Panel */}
                 <div style={{
                   background: '#f9fafb',
