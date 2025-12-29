@@ -511,7 +511,7 @@ export default function Landing() {
                         {loadingMessage}
                       </>
                     ) : (
-                      'Kirim Brief Pertama Saya →'
+                      'Lihat Brief Pertama Saya →'
                     )}
                   </button>
                 </div>
@@ -887,7 +887,7 @@ export default function Landing() {
                       marginBottom: '0.75rem',
                       fontWeight: 400
                     }}>
-                      Dapatkan brief seperti ini setiap hari
+                      Suka dengan brief ini?
                     </h3>
                     <p style={{
                       fontSize: '0.9375rem',
@@ -895,7 +895,7 @@ export default function Landing() {
                       marginBottom: '1.5rem',
                       lineHeight: 1.6
                     }}>
-                      Brief akan dikirim ke <span style={{ color: '#fff', fontWeight: 500 }}>{state.email}</span> setiap pukul <span style={{ color: '#fff', fontWeight: 500 }}>{state.time}</span>
+                      Brief seperti ini akan dikirim ke email Anda setiap hari selama 7 hari. Gratis, tanpa kartu kredit.
                     </p>
                     <button
                       onClick={() => setLocation('/register')}
@@ -911,8 +911,15 @@ export default function Landing() {
                       }}
                       data-testid="button-subscribe"
                     >
-                      Langganan Sekarang →
+                      Mulai Trial 7 Hari →
                     </button>
+                    <p style={{
+                      fontSize: '0.8125rem',
+                      color: '#64748b',
+                      marginTop: '1rem'
+                    }}>
+                      Setelah trial: Rp 79.000/bulan
+                    </p>
                   </div>
                 </div>
               </div>
