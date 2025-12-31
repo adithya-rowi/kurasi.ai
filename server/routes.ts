@@ -160,6 +160,8 @@ Respond with valid JSON only, no markdown.`;
 
   // Public Brief Generation (no auth required - for onboarding)
   const generateBriefSchema = z.object({
+    role: z.string().min(1, "Role is required"),
+    decisionContext: z.string().nullable().default(null),
     sources: z.array(z.string()).default([]),
     customSources: z.string().default(""),
     topics: z.array(z.string()).default([]),
@@ -175,7 +177,7 @@ Respond with valid JSON only, no markdown.`;
         return res.status(400).json({ error: validated.error.issues[0]?.message || "Invalid request" });
       }
 
-      const { sources, customSources, topics, institutions, voices, email } = validated.data;
+      const { role, decisionContext, sources, customSources, topics, institutions, voices, email } = validated.data;
 
       // Validate: at least ONE preference field has content
       const hasAnySources = sources.length > 0 || customSources.trim().length > 0;
@@ -205,6 +207,8 @@ Respond with valid JSON only, no markdown.`;
 
       // Create user profile object for the council
       const profile = {
+        role,
+        decisionContext,
         preferredSources: [...sources, ...parsedCustomSources],
         primaryTopics: topics,
         entitiesToTrack: entitiesList,
@@ -212,6 +216,8 @@ Respond with valid JSON only, no markdown.`;
       };
 
       console.log(`📧 Generate brief for: ${email}`);
+      console.log(`   Role: ${profile.role}`);
+      console.log(`   Decision Context: ${profile.decisionContext || "(none)"}`);
       console.log(`   Sources: ${profile.preferredSources.join(", ") || "(none)"}`);
       console.log(`   Topics: ${profile.primaryTopics.join(", ") || "(none)"}`);
       console.log(`   Entities: ${profile.entitiesToTrack.join(", ") || "(none)"}`);

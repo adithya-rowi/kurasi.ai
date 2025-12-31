@@ -38,9 +38,20 @@ interface EspressoBrief {
 }
 
 const TOPICS = [
-  'Ekonomi Makro', 'Perbankan & Keuangan', 'Kebijakan Pemerintah', 
-  'Teknologi & AI', 'Startup & Venture', 'Energi & Resources', 
+  'Ekonomi Makro', 'Perbankan & Keuangan', 'Kebijakan Pemerintah',
+  'Teknologi & AI', 'Startup & Venture', 'Energi & Resources',
   'Properti', 'Pasar Modal'
+];
+
+const ROLES = [
+  'Investor / Fund Manager',
+  'CEO / Founder',
+  'Eksekutif Korporat (CFO/COO/Head)',
+  'Komisaris / Penasihat Senior',
+  'Konsultan / Advisor',
+  'Regulator / Pemerintahan',
+  'Akademisi / Peneliti',
+  'Lainnya'
 ];
 
 export default function Landing() {
@@ -55,6 +66,8 @@ export default function Landing() {
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
   const [state, setState] = useState({
+    role: '',
+    decisionContext: '',
     topics: [] as string[],
     institutions: '',
     voices: '',
@@ -97,8 +110,8 @@ export default function Landing() {
   // Flexible validation: topics OR institutions OR voices
   const hasAnyFocus = state.topics.length > 0 || state.institutions.trim().length > 0 || state.voices.trim().length > 0;
 
-  // Step 1: topics OR institutions OR voices
-  const canProceedStep1 = hasAnyFocus;
+  // Step 1: role is required AND (topics OR institutions OR voices)
+  const canProceedStep1 = state.role !== '' && hasAnyFocus;
   // Step 2: email required + at least one focus preference
   const canSubmit = state.email.includes('@') && hasAnyFocus;
 
@@ -111,6 +124,8 @@ export default function Landing() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          role: state.role,
+          decisionContext: state.decisionContext || null,
           sources: [],
           customSources: '',
           topics: state.topics,
@@ -280,6 +295,43 @@ export default function Landing() {
                   <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Pertanyaan 1 dari 2</span>
                 </div>
 
+                {/* Role Selection */}
+                <p className="serif" style={{ fontSize: '1.5rem', fontWeight: 500, color: '#0a1628', marginBottom: '1rem' }}>Peran Anda</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '2rem' }}>
+                  {ROLES.map(role => (
+                    <Chip
+                      key={role}
+                      label={role}
+                      selected={state.role === role}
+                      onClick={() => setState(prev => ({ ...prev, role }))}
+                    />
+                  ))}
+                </div>
+
+                {/* Decision Context */}
+                <div style={{ marginBottom: '2rem' }}>
+                  <label style={{ fontSize: '0.875rem', color: '#2a3f5f', marginBottom: '0.5rem', display: 'block' }}>
+                    Konteks keputusan Anda (opsional)
+                  </label>
+                  <input
+                    type="text"
+                    value={state.decisionContext}
+                    onChange={(e) => setState(prev => ({ ...prev, decisionContext: e.target.value }))}
+                    placeholder="Contoh: alokasi portofolio 2026, ekspansi bisnis ke Vietnam"
+                    style={{
+                      width: '100%',
+                      padding: '1rem 1.25rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: 4,
+                      fontSize: '1rem',
+                      fontFamily: "'DM Sans', sans-serif",
+                      color: '#0a1628',
+                      outline: 'none'
+                    }}
+                    data-testid="input-decision-context"
+                  />
+                </div>
+
                 <p className="serif" style={{ fontSize: '1.5rem', fontWeight: 500, color: '#0a1628', marginBottom: '1.5rem' }}>Topik</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '2rem' }}>
                   {TOPICS.map(topic => (
@@ -356,7 +408,7 @@ export default function Landing() {
                   </button>
                   {!canProceedStep1 && (
                     <span style={{ fontSize: '0.8125rem', color: '#94a3b8', fontStyle: 'italic' }}>
-                      Pilih minimal satu topik, institusi, atau tokoh
+                      {state.role === '' ? 'Pilih peran Anda' : 'Pilih minimal satu topik, institusi, atau tokoh'}
                     </span>
                   )}
                 </div>
@@ -451,6 +503,18 @@ export default function Landing() {
                     color: '#2a3f5f',
                     marginBottom: '1rem'
                   }}>Ringkasan Preferensi Anda</div>
+                  <div style={{ marginBottom: '0.75rem' }}>
+                    <div style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>Peran</div>
+                    <div style={{ fontSize: '0.9375rem', color: '#0a1628', fontWeight: 500 }}>
+                      {state.role || '-'}
+                    </div>
+                  </div>
+                  {state.decisionContext && (
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <div style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>Konteks Keputusan</div>
+                      <div style={{ fontSize: '0.9375rem', color: '#0a1628', fontWeight: 500 }}>{state.decisionContext}</div>
+                    </div>
+                  )}
                   <div style={{ marginBottom: '0.75rem' }}>
                     <div style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>Topik</div>
                     <div style={{ fontSize: '0.9375rem', color: '#0a1628', fontWeight: 500 }}>
