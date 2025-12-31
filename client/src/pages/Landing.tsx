@@ -290,10 +290,13 @@ export default function Landing() {
             {/* Step 1: Focus */}
             {currentStep === 1 && (
               <div className="animate-fade-in">
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '1rem', marginBottom: '1.5rem' }}>
-                  <span style={{ fontSize: '1.125rem', fontWeight: 700, color: '#0a1628' }}>1. Apa fokus Anda?</span>
-                  <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Pertanyaan 1 dari 2</span>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '1rem', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '1.125rem', fontWeight: 700, color: '#0a1628' }}>1. Ceritakan kebutuhan Anda</span>
+                  <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>1/2</span>
                 </div>
+                <p style={{ fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '1.5rem' }}>
+                  Ini membantu AI menulis 'Mengapa penting' sesuai peran Anda.
+                </p>
 
                 {/* Role Selection */}
                 <p className="serif" style={{ fontSize: '1.5rem', fontWeight: 500, color: '#0a1628', marginBottom: '1rem' }}>Peran Anda</p>
@@ -311,7 +314,7 @@ export default function Landing() {
                 {/* Decision Context */}
                 <div style={{ marginBottom: '2rem' }}>
                   <label style={{ fontSize: '0.875rem', color: '#2a3f5f', marginBottom: '0.5rem', display: 'block' }}>
-                    Konteks keputusan Anda (opsional)
+                    Keputusan yang sedang dipikirkan (opsional)
                   </label>
                   <input
                     type="text"
@@ -332,7 +335,7 @@ export default function Landing() {
                   />
                 </div>
 
-                <p className="serif" style={{ fontSize: '1.5rem', fontWeight: 500, color: '#0a1628', marginBottom: '1.5rem' }}>Topik</p>
+                <p className="serif" style={{ fontSize: '1.5rem', fontWeight: 500, color: '#0a1628', marginBottom: '1.5rem' }}>Fokus (pilih beberapa)</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '2rem' }}>
                   {TOPICS.map(topic => (
                     <Chip key={topic} label={topic} selected={state.topics.includes(topic)} onClick={() => toggleTopic(topic)} />
@@ -420,7 +423,7 @@ export default function Landing() {
               <div className="animate-fade-in">
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '1rem', marginBottom: '1.5rem' }}>
                   <span style={{ fontSize: '1.125rem', fontWeight: 700, color: '#0a1628' }}>2. Kapan brief Anda dikirim?</span>
-                  <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Pertanyaan 2 dari 2</span>
+                  <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>2/2</span>
                 </div>
 
                 <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
