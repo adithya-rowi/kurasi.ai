@@ -168,6 +168,8 @@ interface AnalysisTheme {
 interface UserProfile {
   id: string;
   userId: string;
+  role: string; // Required: one of ALLOWED_ROLES from schema
+  decisionContext: string | null; // Optional: context for decision-making
   personaSummary: string | null;
   roleDescription: string | null;
   organizationContext: string | null;
@@ -180,7 +182,6 @@ interface UserProfile {
   languagePreference: string | null;
   councilSystemPrompt: string | null;
   successDefinition: string | null;
-  decisionContext: string | null;
 }
 
 interface EspressoBrief {
@@ -227,6 +228,8 @@ interface EspressoStory {
 // =============================================================================
 
 interface SearchContext {
+  role: string; // Phase 0.2: passed through from profile
+  decisionContext: string | null; // Phase 0.2: passed through from profile
   topics: string[];
   entities: string[];
   sources: string[];
@@ -280,6 +283,8 @@ function buildSearchContext(profile: UserProfile): SearchContext {
   const persona = profile.councilSystemPrompt || profile.personaSummary || profile.roleDescription || "";
 
   return {
+    role: profile.role, // Phase 0.2: pass through exactly as provided
+    decisionContext: profile.decisionContext, // Phase 0.2: pass through exactly as provided (may be null)
     topics,
     entities,
     sources,
@@ -293,27 +298,423 @@ function buildSearchContext(profile: UserProfile): SearchContext {
   };
 }
 
+// =============================================================================
+// PHASE 1.1: EXPLICIT SEARCH QUERY GENERATION
+// =============================================================================
+
+interface SearchQueryResult {
+  queries: string[];
+  requirements: {
+    mustCoverTokoh: string[];
+    mustCoverInstitusi: string[];
+    mustCoverTopics: string[];
+  };
+}
+
+/**
+ * Determines if an entity looks like a person (tokoh) or institution (institusi).
+ * Simple heuristic: if it has spaces and doesn't match known institution patterns, treat as person.
+ */
+function classifyEntity(entity: string): "tokoh" | "institusi" {
+  const institutionPatterns = [
+    /^(BI|OJK|BEI|IDX|Kemenkeu|Bappenas|BUMN|LPS|Kemkominfo|BPK|KPK|MUI|NU|Muhammadiyah)$/i,
+    /\b(bank|indonesia|kementerian|badan|otoritas|bursa|lembaga|perusahaan|pt\.|tbk|inc|corp|ltd)\b/i,
+    /^[A-Z]{2,5}$/, // Acronyms like OJK, BI, etc.
+  ];
+
+  for (const pattern of institutionPatterns) {
+    if (pattern.test(entity)) {
+      return "institusi";
+    }
+  }
+
+  // If it has spaces and looks like a name (2-4 words), treat as person
+  const words = entity.trim().split(/\s+/);
+  if (words.length >= 2 && words.length <= 4) {
+    // Check if words look like names (capitalized)
+    const looksLikeName = words.every(w => /^[A-Z][a-z]+$/.test(w) || /^[A-Z]+$/.test(w));
+    if (looksLikeName) {
+      return "tokoh";
+    }
+  }
+
+  // Default to institusi for single words or unclear cases
+  return words.length === 1 ? "institusi" : "tokoh";
+}
+
+/**
+ * Phase 1.1: Generate explicit search queries from SearchContext.
+ * Treats user profile as mandatory directives, not hints.
+ */
+function generateSearchQueries(ctx: SearchContext): SearchQueryResult {
+  const queries: string[] = [];
+  const mustCoverTokoh: string[] = [];
+  const mustCoverInstitusi: string[] = [];
+  const mustCoverTopics: string[] = [];
+
+  // Get today's date in Indonesian format
+  const now = new Date();
+  const todayIndo = now.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+  const year = now.getFullYear();
+
+  // 1. Role + DecisionContext queries (1-2 queries)
+  if (ctx.role && ctx.decisionContext) {
+    // Generate role-specific decision queries
+    const roleQueryMap: Record<string, string[]> = {
+      "Investor / Fund Manager": [
+        `${ctx.decisionContext} investment outlook ${year}`,
+        `${ctx.decisionContext} market analysis Indonesia hari ini`,
+      ],
+      "CEO / Founder": [
+        `${ctx.decisionContext} business strategy ${year}`,
+        `${ctx.decisionContext} startup ecosystem Indonesia hari ini`,
+      ],
+      "Eksekutif Korporat (CFO/COO/Head)": [
+        `${ctx.decisionContext} corporate strategy ${year}`,
+        `${ctx.decisionContext} regulatory update Indonesia hari ini`,
+      ],
+      "Komisaris / Penasihat Senior": [
+        `${ctx.decisionContext} governance insights ${year}`,
+        `${ctx.decisionContext} board advisory Indonesia hari ini`,
+      ],
+      "Konsultan / Advisor": [
+        `${ctx.decisionContext} consulting trends ${year}`,
+        `${ctx.decisionContext} advisory market Indonesia hari ini`,
+      ],
+      "Regulator / Pemerintahan": [
+        `${ctx.decisionContext} policy update ${year}`,
+        `${ctx.decisionContext} regulation Indonesia hari ini`,
+      ],
+      "Akademisi / Peneliti": [
+        `${ctx.decisionContext} research insights ${year}`,
+        `${ctx.decisionContext} academic perspective Indonesia hari ini`,
+      ],
+    };
+
+    const roleQueries = roleQueryMap[ctx.role] || [
+      `${ctx.decisionContext} latest news ${year}`,
+      `${ctx.decisionContext} Indonesia hari ini`,
+    ];
+    queries.push(...roleQueries.slice(0, 2));
+  } else if (ctx.role) {
+    // Only role, no decisionContext - generate 1 generic role query
+    const genericRoleQueries: Record<string, string> = {
+      "Investor / Fund Manager": `investment trends Indonesia ${year} hari ini`,
+      "CEO / Founder": `startup business news Indonesia ${year} hari ini`,
+      "Eksekutif Korporat (CFO/COO/Head)": `corporate news Indonesia ${year} hari ini`,
+      "Komisaris / Penasihat Senior": `governance news Indonesia ${year} hari ini`,
+      "Konsultan / Advisor": `consulting market Indonesia ${year} hari ini`,
+      "Regulator / Pemerintahan": `regulatory news Indonesia ${year} hari ini`,
+      "Akademisi / Peneliti": `research news Indonesia ${year} hari ini`,
+    };
+    queries.push(genericRoleQueries[ctx.role] || `business news Indonesia ${year} hari ini`);
+  }
+
+  // 2. Entity queries (tokoh and institusi)
+  for (const entity of ctx.entities) {
+    const entityType = classifyEntity(entity);
+
+    if (entityType === "tokoh") {
+      mustCoverTokoh.push(entity);
+      // Add tokoh-specific queries
+      queries.push(`${entity} latest interview OR podcast OR talk ${year}`);
+      queries.push(`${entity} thoughts venture capital ${year}`);
+      queries.push(`${entity} X Twitter recent insights`);
+    } else {
+      mustCoverInstitusi.push(entity);
+      // Add institusi-specific queries
+      queries.push(`${entity} press release hari ini ${todayIndo}`);
+      queries.push(`${entity} regulation update hari ini`);
+    }
+  }
+
+  // 3. Topic queries
+  for (const topic of ctx.topics) {
+    mustCoverTopics.push(topic);
+    queries.push(`${topic} Indonesia berita hari ini ${todayIndo}`);
+    queries.push(`${topic} global latest today ${year}`);
+  }
+
+  // 4. Truncate intelligently to 8-12 queries
+  // Priority: role queries > tokoh queries > institusi queries > topic queries
+  let finalQueries = queries;
+  if (finalQueries.length > 12) {
+    // Keep first 2 (role), then balance tokoh/institusi/topics
+    const roleQueries = finalQueries.slice(0, 2);
+    const remaining = finalQueries.slice(2);
+
+    // Take proportionally from remaining, up to 10 more
+    finalQueries = [...roleQueries, ...remaining.slice(0, 10)];
+  }
+
+  // Ensure minimum of 8 queries by adding generic ones if needed
+  while (finalQueries.length < 8) {
+    if (ctx.hasIndonesianFocus) {
+      finalQueries.push(`berita ekonomi bisnis Indonesia hari ini ${todayIndo}`);
+    } else {
+      finalQueries.push(`global business news today ${year}`);
+    }
+    // Avoid infinite loop
+    if (finalQueries.length >= 8) break;
+    finalQueries.push(`market trends ${ctx.languageName === "Bahasa Indonesia" ? "Indonesia" : "global"} ${year}`);
+  }
+
+  // Final trim to max 12
+  finalQueries = finalQueries.slice(0, 12);
+
+  return {
+    queries: finalQueries,
+    requirements: {
+      mustCoverTokoh,
+      mustCoverInstitusi,
+      mustCoverTopics,
+    },
+  };
+}
+
+// =============================================================================
+// PHASE 1.2: DEDUPE + COVERAGE GUARDRAIL
+// =============================================================================
+
+/**
+ * Normalizes a URL for deduplication:
+ * - Lowercase
+ * - Strip tracking params (utm_*, fbclid, gclid, ref, etc.)
+ * - Strip trailing slashes
+ */
+function normalizeUrl(url: string): string {
+  if (!url) return "";
+
+  try {
+    const parsed = new URL(url.toLowerCase());
+
+    // Remove common tracking parameters
+    const trackingParams = [
+      "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+      "fbclid", "gclid", "ref", "source", "ref_src", "ref_url",
+      "campaign", "affiliate", "partner", "click_id", "tracking_id",
+    ];
+
+    trackingParams.forEach(param => parsed.searchParams.delete(param));
+
+    // Rebuild URL without trailing slash
+    let normalized = `${parsed.protocol}//${parsed.host}${parsed.pathname}`;
+    if (parsed.search) {
+      normalized += parsed.search;
+    }
+
+    return normalized.replace(/\/$/, ""); // Strip trailing slash
+  } catch {
+    // If URL parsing fails, just lowercase and trim
+    return url.toLowerCase().trim();
+  }
+}
+
+/**
+ * Normalizes a title for deduplication:
+ * - Lowercase
+ * - Trim
+ * - Collapse multiple whitespace to single space
+ */
+function normalizeTitle(title: string): string {
+  if (!title) return "";
+  return title.toLowerCase().trim().replace(/\s+/g, " ");
+}
+
+/**
+ * Deduplicates search articles across all search results.
+ * - Prefers deduplication by canonical URL
+ * - Falls back to normalized title if URL is missing
+ * - Keeps first occurrence, drops duplicates
+ */
+function dedupeSearchResults(searchResults: SearchResult[]): SearchResult[] {
+  const seenUrls = new Set<string>();
+  const seenTitles = new Set<string>();
+
+  return searchResults.map(result => {
+    const dedupedArticles = result.articles.filter(article => {
+      // Try URL-based dedupe first
+      if (article.url) {
+        const normalizedUrl = normalizeUrl(article.url);
+        if (seenUrls.has(normalizedUrl)) {
+          return false; // Duplicate by URL
+        }
+        seenUrls.add(normalizedUrl);
+      }
+
+      // Fallback to title-based dedupe
+      if (article.title) {
+        const normalizedTitle = normalizeTitle(article.title);
+        if (seenTitles.has(normalizedTitle)) {
+          return false; // Duplicate by title
+        }
+        seenTitles.add(normalizedTitle);
+      }
+
+      return true; // Keep this article
+    });
+
+    return {
+      ...result,
+      articles: dedupedArticles,
+    };
+  });
+}
+
+/**
+ * Checks if a text contains a mention of the given entity (case-insensitive).
+ */
+function textContainsEntity(text: string, entity: string): boolean {
+  if (!text || !entity) return false;
+  return text.toLowerCase().includes(entity.toLowerCase());
+}
+
+/**
+ * Computes coverage of required entities in search results.
+ * Returns lists of covered and missing tokoh/institusi.
+ */
+interface CoverageResult {
+  tokohCovered: string[];
+  tokohMissing: string[];
+  institusiCovered: string[];
+  institusiMissing: string[];
+  topicsCovered: string[];
+  topicsMissing: string[];
+  warnings: string[];
+}
+
+function computeCoverage(
+  searchResults: SearchResult[],
+  requirements: SearchQueryResult["requirements"]
+): CoverageResult {
+  // Collect all searchable text from articles
+  const allText = searchResults
+    .flatMap(r => r.articles)
+    .map(a => `${a.title} ${a.summary} ${a.url} ${a.source}`)
+    .join(" ");
+
+  const tokohCovered: string[] = [];
+  const tokohMissing: string[] = [];
+  const institusiCovered: string[] = [];
+  const institusiMissing: string[] = [];
+  const topicsCovered: string[] = [];
+  const topicsMissing: string[] = [];
+  const warnings: string[] = [];
+
+  // Check tokoh coverage
+  for (const tokoh of requirements.mustCoverTokoh) {
+    if (textContainsEntity(allText, tokoh)) {
+      tokohCovered.push(tokoh);
+    } else {
+      tokohMissing.push(tokoh);
+      warnings.push(`Tidak ditemukan berita relevan untuk tokoh: ${tokoh} (7 hari terakhir)`);
+    }
+  }
+
+  // Check institusi coverage
+  for (const institusi of requirements.mustCoverInstitusi) {
+    if (textContainsEntity(allText, institusi)) {
+      institusiCovered.push(institusi);
+    } else {
+      institusiMissing.push(institusi);
+      warnings.push(`Tidak ditemukan update untuk institusi: ${institusi} (24 jam terakhir)`);
+    }
+  }
+
+  // Check topic coverage
+  for (const topic of requirements.mustCoverTopics) {
+    if (textContainsEntity(allText, topic)) {
+      topicsCovered.push(topic);
+    } else {
+      topicsMissing.push(topic);
+      warnings.push(`Tidak ditemukan berita untuk topik: ${topic} (48 jam terakhir)`);
+    }
+  }
+
+  return {
+    tokohCovered,
+    tokohMissing,
+    institusiCovered,
+    institusiMissing,
+    topicsCovered,
+    topicsMissing,
+    warnings,
+  };
+}
+
+/**
+ * Creates a synthetic SearchResult entry containing coverage warnings.
+ * This allows downstream layers (analysis, judge) to see what's missing.
+ */
+function createCoverageWarningResult(coverage: CoverageResult): SearchResult | null {
+  if (coverage.warnings.length === 0) {
+    return null;
+  }
+
+  return {
+    model: "CoverageGuardrail",
+    provider: "System",
+    layer: "search",
+    articles: coverage.warnings.map((warning, i) => ({
+      title: `⚠️ Coverage Warning ${i + 1}`,
+      summary: warning,
+      source: "System Coverage Check",
+      sourceType: "local" as const,
+      url: "",
+      publishedDate: new Date().toISOString().split("T")[0],
+      confidence: 10,
+      isRealTime: false,
+    })),
+  };
+}
+
 function buildSearchPrompt(ctx: SearchContext): string {
   const sections: string[] = [];
+
+  // Phase 1.1: Generate explicit search queries
+  const queryResult = generateSearchQueries(ctx);
+
+  // MANDATORY QUERIES section - treat as directives, not hints
+  sections.push(`═══════════════════════════════════════════════════════════════
+MANDATORY QUERIES - Execute these searches in order:
+═══════════════════════════════════════════════════════════════
+
+${queryResult.queries.map((q, i) => `${i + 1}. ${q}`).join("\n")}
+
+═══════════════════════════════════════════════════════════════`);
+
+  // Phase 1.2: Recency by type + Coverage requirements
+  const coverageRules: string[] = [];
+
+  // RECENCY RULES BY TYPE
+  sections.push(`═══════════════════════════════════════════════════════════════
+RECENCY RULES BY TYPE:
+═══════════════════════════════════════════════════════════════
+• INSTITUSI queries (${queryResult.requirements.mustCoverInstitusi.join(", ") || "none"}): LAST 24 HOURS only
+• TOPIC queries (${queryResult.requirements.mustCoverTopics.join(", ") || "none"}): LAST 48 HOURS
+• TOKOH queries (${queryResult.requirements.mustCoverTokoh.join(", ") || "none"}): LAST 7 DAYS (prefer last 48h if available)
+═══════════════════════════════════════════════════════════════`);
+
+  if (queryResult.requirements.mustCoverTokoh.length > 0) {
+    coverageRules.push(`TOKOH COVERAGE REQUIRED: At least 2 results must mention each of: ${queryResult.requirements.mustCoverTokoh.join(", ")}`);
+    coverageRules.push(`Tokoh recency: search up to 7 days back. If no recent news found, explicitly state: "Tidak ditemukan berita terkini tentang [nama tokoh] (7 hari terakhir)."`);
+  }
+  if (queryResult.requirements.mustCoverInstitusi.length > 0) {
+    coverageRules.push(`INSTITUSI COVERAGE REQUIRED: At least 1 result must mention each of: ${queryResult.requirements.mustCoverInstitusi.join(", ")}`);
+    coverageRules.push(`Institusi recency: LAST 24 HOURS only. If no update found, state: "Tidak ditemukan update untuk [institusi] (24 jam terakhir)."`);
+  }
+  if (queryResult.requirements.mustCoverTopics.length > 0) {
+    coverageRules.push(`TOPIC COVERAGE REQUIRED: At least 1 result must cover each of: ${queryResult.requirements.mustCoverTopics.join(", ")}`);
+    coverageRules.push(`Topic recency: LAST 48 HOURS.`);
+  }
+
+  if (coverageRules.length > 0) {
+    sections.push(`COVERAGE REQUIREMENTS:\n${coverageRules.join("\n")}`);
+  }
 
   // Add source guidance only if sources are specified
   if (ctx.sources.length > 0) {
     sections.push(`PREFERRED SOURCES: ${ctx.sources.join(", ")}`);
-  }
-
-  // Add topics if specified
-  if (ctx.topics.length > 0) {
-    sections.push(`TOPICS TO COVER: ${ctx.topics.join(", ")}`);
-  }
-
-  // Add entities/people to monitor
-  if (ctx.entities.length > 0) {
-    sections.push(`ENTITIES/PEOPLE TO MONITOR: ${ctx.entities.join(", ")}`);
-  }
-
-  // Add keywords
-  if (ctx.keywords.length > 0) {
-    sections.push(`KEYWORDS TO TRACK: ${ctx.keywords.join(", ")}`);
   }
 
   // Add topics to avoid
@@ -328,11 +729,6 @@ function buildSearchPrompt(ctx: SearchContext): string {
 
   // Add language preference
   sections.push(`OUTPUT LANGUAGE: ${ctx.languageName}`);
-
-  // If nothing specified, provide minimal guidance
-  if (sections.length === 1) {
-    sections.unshift("Search for latest relevant news and discussions.");
-  }
 
   return sections.join("\n\n");
 }
@@ -387,17 +783,24 @@ async function searchWithPerplexity(profile: UserProfile): Promise<SearchResult>
   const todayIndo = now.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
   const ctx = buildSearchContext(profile);
 
+  // Phase 1.1: Get mandatory queries for enforcement
+  const queryResult = generateSearchQueries(ctx);
+
   const searchPrompt = `You are a news search assistant. Search for TODAY'S news only.
 
 ${buildSearchPrompt(ctx)}
 
 TANGGAL HARI INI: ${todayIndo} (${today})
 
-CRITICAL: Only include news from the LAST 24 HOURS. Add "berita hari ini ${todayIndo}" to your searches.
+CRITICAL INSTRUCTIONS:
+1. Execute the MANDATORY QUERIES listed above IN ORDER
+2. Only include news from the LAST 24 HOURS
+3. For each query, find at least 1 relevant article
+4. If a tokoh/person has no recent news, explicitly note: "Tidak ditemukan berita terkini tentang [nama] hari ini"
 
-Search for 5-7 LATEST news articles published TODAY. Return JSON:
+Search for 7-10 LATEST news articles published TODAY. Return JSON:
 {
-  "searchQueries": ["queries used"],
+  "searchQueries": ["actual queries you executed"],
   "articles": [{
     "title": "Title",
     "summary": "2-3 sentence summary in ${ctx.languageName}",
@@ -406,15 +809,23 @@ Search for 5-7 LATEST news articles published TODAY. Return JSON:
     "url": "Full URL",
     "publishedDate": "${today}",
     "confidence": 8,
-    "isPaywalled": false
-  }]
+    "isPaywalled": false,
+    "matchedQuery": "which mandatory query this article answers"
+  }],
+  "coverageReport": {
+    "tokohCovered": ["names found"],
+    "tokohNotFound": ["names with no recent news"],
+    "institusiCovered": ["institutions found"],
+    "topicsCovered": ["topics found"]
+  }
 }
 
 RULES:
 - PRIORITIZE articles from the last 24 hours (today's date: ${todayIndo})
 - EXCLUDE any news older than 48 hours unless highly relevant breaking news
 - Include valid URLs
-- Confidence: 9-10 official sources, 7-8 trusted media, 5-6 general media`;
+- Confidence: 9-10 official sources, 7-8 trusted media, 5-6 general media
+- MUST cover tokoh/institusi/topics from COVERAGE REQUIREMENTS above`;
 
   try {
     console.log("🔴 Perplexity searching web/news...");
@@ -473,6 +884,9 @@ async function searchWithGemini(profile: UserProfile): Promise<SearchResult> {
   const todayIndo = now.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
   const ctx = buildSearchContext(profile);
 
+  // Phase 1.1: Get mandatory queries for enforcement
+  const queryResult = generateSearchQueries(ctx);
+
   const searchPrompt = `You are a news search assistant. Search for TODAY'S news only.
 
 IMPORTANT: You MUST respond with ONLY valid JSON. No explanations, no markdown, no text before or after the JSON.
@@ -481,15 +895,17 @@ ${buildSearchPrompt(ctx)}
 
 TANGGAL HARI INI: ${todayIndo} (${today})
 
-RECENCY RULES:
-- Search for "berita hari ini ${todayIndo}" or "latest news today"
-- ONLY include articles from the LAST 24 HOURS
-- EXCLUDE any news older than 48 hours
+CRITICAL INSTRUCTIONS:
+1. Execute the MANDATORY QUERIES listed above using Google Search
+2. ONLY include articles from the LAST 24 HOURS
+3. EXCLUDE any news older than 48 hours
+4. Ensure coverage of tokoh/institusi/topics as specified
+5. If a tokoh has no recent news, note in summary: "Tidak ditemukan berita terkini"
 
-Search for 5-7 LATEST news articles published TODAY. Your response must be ONLY this JSON structure:
-{"articles":[{"title":"Article title","summary":"2-3 sentence summary in ${ctx.languageName}","source":"Source name","sourceType":"local|regional|global","url":"Full URL","publishedDate":"${today}","confidence":8}]}
+Search for 7-10 LATEST news articles published TODAY. Your response must be ONLY this JSON structure:
+{"articles":[{"title":"Article title","summary":"2-3 sentence summary in ${ctx.languageName}","source":"Source name","sourceType":"local|regional|global","url":"Full URL","publishedDate":"${today}","confidence":8,"matchedQuery":"which mandatory query this answers"}]}
 
-Remember: Output ONLY the JSON object, nothing else.`;
+Remember: Output ONLY the JSON object, nothing else. Cover ALL mandatory queries.`;
 
   try {
     console.log("🔵 Gemini searching with Google grounding...");
@@ -638,26 +1054,28 @@ async function searchWithGrok(profile: UserProfile): Promise<SearchResult> {
   const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split("T")[0];
   const ctx = buildSearchContext(profile);
 
-  // Build search focus based on what user provided
-  const searchFocus: string[] = [];
-  if (ctx.entities.length > 0) searchFocus.push(`Entities/People: ${ctx.entities.join(", ")}`);
-  if (ctx.topics.length > 0) searchFocus.push(`Topics: ${ctx.topics.join(", ")}`);
-  if (ctx.keywords.length > 0) searchFocus.push(`Keywords: ${ctx.keywords.join(", ")}`);
-  if (ctx.sources.length > 0) searchFocus.push(`Prioritize sources: ${ctx.sources.join(", ")}`);
+  // Phase 1.1: Get mandatory queries for enforcement
+  const queryResult = generateSearchQueries(ctx);
 
   const searchPrompt = `Search X/Twitter and web for TODAY'S discussions and news (${todayIndo}).
 
-${searchFocus.length > 0 ? searchFocus.join("\n") : "Search for trending business and finance news."}
+${buildSearchPrompt(ctx)}
 
 RECENCY: LAST 24 HOURS ONLY (since ${yesterday})
 - Only include tweets and news from TODAY
 - Exclude anything older than 24 hours
 
+CRITICAL INSTRUCTIONS:
+1. Execute the MANDATORY QUERIES listed above on X/Twitter and web
+2. Prioritize finding tokoh mentions and social media discussions
+3. For each tokoh, find their recent tweets, mentions, or discussions
+4. If a tokoh has no X/Twitter presence today, note: "Tidak ditemukan aktivitas X/Twitter terkini"
+
 FOCUS:
-- Tweets from influential accounts (analysts, economists, industry experts)
+- Tweets from the specified tokoh/people in queries
+- Tweets mentioning specified institutions
 - Public sentiment and market reactions
-- Breaking news and trending discussions
-- Key opinion leader insights
+- Breaking news and trending discussions about specified topics
 
 Return JSON in ${ctx.languageName}:
 {
@@ -670,10 +1088,15 @@ Return JSON in ${ctx.languageName}:
     "publishedDate": "${today}",
     "confidence": 7,
     "isSocialMedia": true,
-    "sentiment": "positive|negative|neutral|mixed"
+    "sentiment": "positive|negative|neutral|mixed",
+    "matchedQuery": "which mandatory query this answers"
   }],
   "trendingTopics": ["#hashtag1", "#hashtag2"],
-  "overallSentiment": "neutral"
+  "overallSentiment": "neutral",
+  "tokohActivity": {
+    "found": ["tokoh with recent activity"],
+    "notFound": ["tokoh with no recent activity"]
+  }
 }`;
 
   try {
@@ -745,14 +1168,15 @@ Return JSON in ${ctx.languageName}:
 
 async function analyzeWithDeepSeek(
   profile: UserProfile,
-  searchResults: SearchResult[]
+  searchResults: SearchResult[],
+  ctx: SearchContext // Phase 0.3: receive SearchContext with role and decisionContext
 ): Promise<AnalysisResult> {
   if (!deepseek) {
     return { model: "DeepSeek", provider: "DeepSeek", layer: "analysis", themes: [], error: "Not configured" };
   }
 
   const startTime = Date.now();
-  const ctx = buildSearchContext(profile);
+  // Phase 0.3: ctx is now passed in (contains role and decisionContext)
   const allArticles = searchResults.flatMap((r, idx) =>
     r.articles.map((a, i) => ({ ...a, resultIndex: idx, articleIndex: i }))
   );
@@ -823,14 +1247,15 @@ Return JSON in ${ctx.languageName}:
 
 async function analyzeWithGPT(
   profile: UserProfile,
-  searchResults: SearchResult[]
+  searchResults: SearchResult[],
+  ctx: SearchContext // Phase 0.3: receive SearchContext with role and decisionContext
 ): Promise<AnalysisResult> {
   if (!openai) {
     return { model: "GPT-5 mini", provider: "OpenAI", layer: "analysis", themes: [], error: "Not configured" };
   }
 
   const startTime = Date.now();
-  const ctx = buildSearchContext(profile);
+  // Phase 0.3: ctx is now passed in (contains role and decisionContext)
   const allArticles = searchResults.flatMap((r) => r.articles);
 
   // Prepare simplified article data for analysis
@@ -915,7 +1340,8 @@ You MUST return valid JSON with this exact structure:
 async function claudeJudge(
   profile: UserProfile,
   searchResults: SearchResult[],
-  analysisResults: AnalysisResult[]
+  analysisResults: AnalysisResult[],
+  ctx: SearchContext // Phase 0.3: receive SearchContext with role and decisionContext
 ): Promise<EspressoBrief> {
   const today = new Date();
   const dateStr = today.toISOString().split("T")[0];
@@ -1066,9 +1492,12 @@ export async function runCouncilV2(
 
   if (providedProfile) {
     // Use provided profile (for public onboarding without DB user)
+    // role is required - default to "Lainnya" if not provided
     profile = {
       id: "temp-" + Date.now(),
       userId: userId,
+      role: providedProfile.role || "Lainnya", // Required field
+      decisionContext: providedProfile.decisionContext || null, // Optional field
       personaSummary: providedProfile.personaSummary || null,
       roleDescription: providedProfile.roleDescription || null,
       organizationContext: providedProfile.organizationContext || null,
@@ -1081,9 +1510,8 @@ export async function runCouncilV2(
       languagePreference: providedProfile.languagePreference || "id",
       councilSystemPrompt: providedProfile.councilSystemPrompt || null,
       successDefinition: providedProfile.successDefinition || null,
-      decisionContext: providedProfile.decisionContext || null,
     };
-    console.log(`👤 Guest User (onboarding)`);
+    console.log(`👤 Guest User (onboarding) - Role: ${profile.role}`);
   } else {
     // Fetch from database
     const [dbProfile] = await db
@@ -1097,6 +1525,10 @@ export async function runCouncilV2(
     profile = dbProfile;
     console.log(`👤 User: ${profile.personaSummary?.split(".")[0] || userId}`);
   }
+
+  // Phase 0.3: Build SearchContext once for use in analysis and judge layers
+  // This ensures role and decisionContext are propagated through all layers
+  const searchContext = buildSearchContext(profile);
 
   // Check API availability
   const apis = {
@@ -1135,17 +1567,47 @@ export async function runCouncilV2(
     console.log("⚠️  No search APIs configured, using Claude alone...");
   }
 
-  const searchResults = await Promise.all(searchPromises);
+  const rawSearchResults = await Promise.all(searchPromises);
   const searchLayerMs = Date.now() - searchStart;
 
-  console.log(`\n📊 Search Results (${searchLayerMs}ms):`);
-  searchResults.forEach((r) => {
+  console.log(`\n📊 Raw Search Results (${searchLayerMs}ms):`);
+  rawSearchResults.forEach((r) => {
     const status = r.error ? "❌" : "✅";
     console.log(`   ${status} ${r.model}: ${r.articles.length} articles (${r.latencyMs || 0}ms)`);
   });
 
+  const rawTotalArticles = rawSearchResults.reduce((sum, r) => sum + r.articles.length, 0);
+
+  // Phase 1.2: Dedupe search results
+  const dedupedResults = dedupeSearchResults(rawSearchResults);
+  const dedupedTotalArticles = dedupedResults.reduce((sum, r) => sum + r.articles.length, 0);
+  const duplicatesRemoved = rawTotalArticles - dedupedTotalArticles;
+
+  console.log(`   📚 Total: ${rawTotalArticles} articles → ${dedupedTotalArticles} after dedupe (${duplicatesRemoved} duplicates removed)`);
+
+  // Phase 1.2: Compute coverage and generate warnings
+  const queryResult = generateSearchQueries(searchContext);
+  const coverage = computeCoverage(dedupedResults, queryResult.requirements);
+
+  // Log coverage status
+  if (coverage.tokohCovered.length > 0 || coverage.tokohMissing.length > 0) {
+    console.log(`   👤 Tokoh: ${coverage.tokohCovered.length} covered, ${coverage.tokohMissing.length} missing`);
+  }
+  if (coverage.institusiCovered.length > 0 || coverage.institusiMissing.length > 0) {
+    console.log(`   🏛️  Institusi: ${coverage.institusiCovered.length} covered, ${coverage.institusiMissing.length} missing`);
+  }
+  if (coverage.warnings.length > 0) {
+    console.log(`   ⚠️  Coverage warnings: ${coverage.warnings.length}`);
+    coverage.warnings.forEach(w => console.log(`      - ${w}`));
+  }
+
+  // Add coverage warnings as synthetic search result for downstream layers
+  const coverageWarningResult = createCoverageWarningResult(coverage);
+  const searchResults = coverageWarningResult
+    ? [...dedupedResults, coverageWarningResult]
+    : dedupedResults;
+
   const totalArticles = searchResults.reduce((sum, r) => sum + r.articles.length, 0);
-  console.log(`   📚 Total: ${totalArticles} articles from ${searchResults.filter((r) => !r.error).length} sources`);
 
   // ==========================================================================
   // LAYER 2: ANALYSIS (Parallel)
@@ -1157,8 +1619,9 @@ export async function runCouncilV2(
   const analysisStart = Date.now();
   const analysisPromises: Promise<AnalysisResult>[] = [];
 
-  if (apis.deepseek && totalArticles > 0) analysisPromises.push(analyzeWithDeepSeek(profile, searchResults));
-  if (apis.openai && totalArticles > 0) analysisPromises.push(analyzeWithGPT(profile, searchResults));
+  // Phase 0.3: Pass searchContext to analysis functions (contains role and decisionContext)
+  if (apis.deepseek && totalArticles > 0) analysisPromises.push(analyzeWithDeepSeek(profile, searchResults, searchContext));
+  if (apis.openai && totalArticles > 0) analysisPromises.push(analyzeWithGPT(profile, searchResults, searchContext));
 
   const analysisResults = await Promise.all(analysisPromises);
   const analysisLayerMs = Date.now() - analysisStart;
@@ -1177,7 +1640,8 @@ export async function runCouncilV2(
   console.log("─".repeat(60));
 
   const judgeStart = Date.now();
-  const brief = await claudeJudge(profile, searchResults, analysisResults);
+  // Phase 0.3: Pass searchContext to judge function (contains role and decisionContext)
+  const brief = await claudeJudge(profile, searchResults, analysisResults, searchContext);
   const judgeLayerMs = Date.now() - judgeStart;
 
   console.log(`\n✅ Brief generated (${judgeLayerMs}ms)`);
@@ -1263,3 +1727,15 @@ export async function getLatestBriefV2(userId: string) {
 
   return brief;
 }
+
+// Export for testing (Phase 0.2)
+export { buildSearchContext };
+export type { SearchContext, UserProfile };
+
+// Export for testing (Phase 1.1)
+export { generateSearchQueries, classifyEntity };
+export type { SearchQueryResult };
+
+// Export for testing (Phase 1.2)
+export { normalizeUrl, normalizeTitle, dedupeSearchResults, computeCoverage, createCoverageWarningResult };
+export type { CoverageResult };

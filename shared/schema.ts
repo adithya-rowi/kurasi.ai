@@ -51,10 +51,25 @@ export const onboardingConversations = pgTable("onboarding_conversations", {
   isComplete: boolean("is_complete").default(false).notNull(),
 });
 
+// Allowed role values for user profiles
+export const ALLOWED_ROLES = [
+  "Investor / Fund Manager",
+  "CEO / Founder",
+  "Eksekutif Korporat (CFO/COO/Head)",
+  "Komisaris / Penasihat Senior",
+  "Konsultan / Advisor",
+  "Regulator / Pemerintahan",
+  "Akademisi / Peneliti",
+  "Lainnya",
+] as const;
+
+export type AllowedRole = typeof ALLOWED_ROLES[number];
+
 // User profiles generated from onboarding
 export const userProfiles = pgTable("user_profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
+  role: text("role").notNull(), // Required: one of ALLOWED_ROLES
   personaSummary: text("persona_summary"),
   roleDescription: text("role_description"),
   organizationContext: text("organization_context"),

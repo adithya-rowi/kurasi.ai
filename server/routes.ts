@@ -279,6 +279,7 @@ Respond with valid JSON only, no markdown.`;
       if (profile && profile.councilSystemPrompt) {
         await db.insert(userProfiles).values({
           userId: newUser.id,
+          role: profile.role || "Lainnya", // Required field with fallback
           personaSummary: `${profile.role || ""} di ${profile.organization || ""}`.trim() || null,
           roleDescription: profile.role || null,
           organizationContext: profile.organization || null,

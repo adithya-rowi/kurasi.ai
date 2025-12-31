@@ -234,6 +234,7 @@ export async function generateUserProfile(userId: string): Promise<boolean> {
       await db
         .update(userProfiles)
         .set({
+          role: profile.role || existing.role || "Lainnya", // Required field with fallback
           personaSummary: profile.personaSummary,
           roleDescription: profile.roleDescription,
           organizationContext: profile.organizationContext,
@@ -254,6 +255,7 @@ export async function generateUserProfile(userId: string): Promise<boolean> {
     } else {
       await db.insert(userProfiles).values({
         userId,
+        role: profile.role || "Lainnya", // Required field with fallback
         personaSummary: profile.personaSummary,
         roleDescription: profile.roleDescription,
         organizationContext: profile.organizationContext,
