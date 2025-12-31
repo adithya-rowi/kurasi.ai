@@ -256,7 +256,7 @@ export default function Landing() {
               textTransform: 'uppercase',
               color: '#cc2936',
               marginBottom: '1.5rem'
-            }}>Executive Intelligence</div>
+            }}>Personalized Decision Intelligence</div>
             <h1 className="serif animate-fade-up" style={{
               fontSize: 'clamp(2.5rem, 6vw, 4rem)',
               fontWeight: 400,
@@ -265,7 +265,7 @@ export default function Landing() {
               marginBottom: '1.5rem',
               animationDelay: '0.1s'
             }}>
-              Informasi yang relevan, diantar oleh Loper.
+              Insights yang mengerti Anda.
             </h1>
             <p className="animate-fade-up" style={{
               fontSize: '1.125rem',
@@ -274,7 +274,7 @@ export default function Landing() {
               lineHeight: 1.7,
               animationDelay: '0.2s'
             }}>
-              AI merangkum banyak sumber menjadi satu brief untuk pengambil keputusan.
+              Loper memahami peran dan konteks Anda, lalu merangkum informasi menjadi satu brief untuk keputusan yang lebih tepat.
             </p>
           </div>
         </div>
