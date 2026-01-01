@@ -25,6 +25,9 @@ import { eq, desc } from "drizzle-orm";
 // AI COUNCIL CONFIGURATION
 // =============================================================================
 
+// Phase 1.3: Safe cap applied AFTER dedupe + coverage guardrail
+const MAX_CANDIDATES_FOR_ANALYSIS = 60;
+
 const AI_COUNCIL_V2 = {
   // Search Layer
   perplexity: {
@@ -668,6 +671,69 @@ function createCoverageWarningResult(coverage: CoverageResult): SearchResult | n
   };
 }
 
+// =============================================================================
+// Phase 2.2: WhyItMatters Validator
+// =============================================================================
+
+export type WhyItMattersViolation = {
+  index: number;
+  reasons: string[];
+  original: string;
+};
+
+/**
+ * Validates whyItMatters fields against the PERSONALIZATION CONTRACT.
+ * Returns violations if any rules are broken.
+ */
+export function validateWhyItMatters(
+  role: string,
+  decisionContext: string | null,
+  items: { whyItMatters?: string; headline?: string }[]
+): WhyItMattersViolation[] {
+  const violations: WhyItMattersViolation[] = [];
+  const expectedPrefix = `Sebagai ${role},`;
+
+  items.forEach((item, index) => {
+    const reasons: string[] = [];
+    const whyItMatters = item.whyItMatters || "";
+
+    // Rule 1: whyItMatters must exist and be non-empty
+    if (!whyItMatters || whyItMatters.trim().length === 0) {
+      reasons.push("missing_why");
+    } else {
+      // Rule 2: must start with "Sebagai ${role},"
+      const trimmed = whyItMatters.trim();
+      if (!trimmed.startsWith(expectedPrefix)) {
+        reasons.push("missing_prefix");
+      }
+
+      // Rule 3: if decisionContext is non-null and not empty, must include it
+      if (decisionContext && decisionContext.trim().length > 0) {
+        if (!trimmed.toLowerCase().includes(decisionContext.toLowerCase())) {
+          reasons.push("missing_decision_context");
+        }
+      }
+
+      // Rule 4: generic phrase ban (unless role is Eksekutif Korporat)
+      if (role !== "Eksekutif Korporat (CFO/COO/Head)") {
+        if (trimmed.toLowerCase().includes("bagi eksekutif")) {
+          reasons.push("uses_generic_exec_phrase");
+        }
+      }
+    }
+
+    if (reasons.length > 0) {
+      violations.push({
+        index,
+        reasons,
+        original: whyItMatters,
+      });
+    }
+  });
+
+  return violations;
+}
+
 function buildSearchPrompt(ctx: SearchContext): string {
   const sections: string[] = [];
 
@@ -1259,7 +1325,8 @@ async function analyzeWithGPT(
   const allArticles = searchResults.flatMap((r) => r.articles);
 
   // Prepare simplified article data for analysis
-  const simplifiedArticles = allArticles.slice(0, 15).map((a, i) => ({
+  // Phase 1.3: Removed premature .slice(0, 15) - cap is now applied in orchestrator after dedupe
+  const simplifiedArticles = allArticles.map((a, i) => ({
     index: i,
     title: a.title,
     summary: a.summary,
@@ -1371,6 +1438,35 @@ ${profile.councilSystemPrompt || profile.personaSummary || "Eksekutif senior Ind
 Kriteria sukses: "${profile.successDefinition || "Menerima intelijen yang actionable untuk keputusan strategis"}"
 
 ═══════════════════════════════════════════════════════════════
+PERSONALIZATION CONTRACT (Phase 2.1 - NON-NEGOTIABLE)
+═══════════════════════════════════════════════════════════════
+
+ROLE: ${ctx.role}
+DECISION CONTEXT: ${ctx.decisionContext || "(none)"}
+
+STRICT RULES FOR "Mengapa penting" (whyItMatters):
+
+1. WAJIB: Setiap "Mengapa penting" HARUS dimulai dengan:
+   "Sebagai ${ctx.role}, ..."
+
+2. JIKA DECISION CONTEXT ada (bukan "(none)"):
+   - "Mengapa penting" HARUS menyebut koneksi langsung ke: "${ctx.decisionContext || "(none)"}"
+   - Contoh: "Sebagai ${ctx.role}, ini relevan untuk ${ctx.decisionContext || "keputusan Anda"}..."
+
+3. DILARANG: Frasa generik seperti "Bagi eksekutif" atau "Untuk para pemimpin"
+   - KECUALI jika ROLE adalah "Eksekutif Korporat (CFO/COO/Head)"
+
+4. KHUSUS untuk ROLE "Konsultan / Advisor":
+   - Framing HARUS tentang: implikasi klien, peluang advisory, packaging penawaran,
+     sudut pitch, rate card, partnership/subcontracting, atau langkah konkret berikutnya
+   - Contoh yang BENAR:
+     "Sebagai Konsultan / Advisor, kekurangan talenta cyber ini membuka peluang
+     partnership dengan vendor training untuk menawarkan paket upskilling ke klien
+     enterprise Anda dengan margin konsultasi 30-40%."
+   - Contoh yang SALAH:
+     "Bagi eksekutif, keamanan siber penting untuk bisnis." (terlalu generik)
+
+═══════════════════════════════════════════════════════════════
 DATA DARI SEARCH LAYER (${searchModels.join(", ")})
 ═══════════════════════════════════════════════════════════════
 
@@ -1443,15 +1539,101 @@ OUTPUT JSON (Bahasa Indonesia yang elegan):
 }`;
 
   try {
+    const judgeModel = AI_COUNCIL_V2.claude.model;
     console.log("🟤 Claude Opus 4.5 - HAKIM AKHIR deliberating...");
     const response = await anthropic.messages.create({
-      model: "claude-opus-4-5-20251101",
+      model: judgeModel,
       max_tokens: 4096,
       messages: [{ role: "user", content: judgePrompt }],
     });
 
     const content = response.content[0].type === "text" ? response.content[0].text : "{}";
-    return JSON.parse(content.replace(/```json\n?|\n?```/g, "").trim());
+    let brief: EspressoBrief = JSON.parse(content.replace(/```json\n?|\n?```/g, "").trim());
+
+    // Phase 2.2: Validate whyItMatters and auto-repair if needed
+    const violations = validateWhyItMatters(
+      ctx.role,
+      ctx.decisionContext,
+      brief.topStories || []
+    );
+
+    if (violations.length > 0 && violations.length <= 5) {
+      console.log(`⚠️  Phase 2.2: ${violations.length} whyItMatters violations detected, initiating repair...`);
+      violations.forEach(v => {
+        console.log(`   - Story ${v.index}: ${v.reasons.join(", ")}`);
+      });
+
+      // Build repair prompt
+      const repairPrompt = `You are a personalization specialist. Fix the whyItMatters fields that violate the rules.
+
+ROLE: ${ctx.role}
+DECISION CONTEXT: ${ctx.decisionContext || "(none)"}
+
+RULES:
+1. Every whyItMatters MUST start with: "Sebagai ${ctx.role}, ..."
+2. If DECISION CONTEXT exists, whyItMatters MUST mention connection to: "${ctx.decisionContext || "(none)"}"
+3. BANNED: Generic phrases like "Bagi eksekutif" (unless role is "Eksekutif Korporat (CFO/COO/Head)")
+
+VIOLATIONS TO FIX:
+${violations.map(v => `
+Story ${v.index}:
+  - Headline: "${brief.topStories?.[v.index]?.headline || "N/A"}"
+  - Current whyItMatters: "${v.original}"
+  - Problems: ${v.reasons.join(", ")}
+`).join("\n")}
+
+OUTPUT JSON (array of patches):
+[
+  {
+    "index": 0,
+    "whyItMatters": "Sebagai ${ctx.role}, ... (fixed version with proper personalization)"
+  }
+]
+
+Return ONLY the JSON array. Each patch fixes one story.`;
+
+      try {
+        const repairResponse = await anthropic.messages.create({
+          model: judgeModel,
+          max_tokens: 2048,
+          messages: [{ role: "user", content: repairPrompt }],
+        });
+
+        const repairContent = repairResponse.content[0].type === "text" ? repairResponse.content[0].text : "[]";
+        const patches: Array<{ index: number; whyItMatters: string }> = JSON.parse(
+          repairContent.replace(/```json\n?|\n?```/g, "").trim()
+        );
+
+        // Apply patches
+        patches.forEach(patch => {
+          if (brief.topStories?.[patch.index]) {
+            brief.topStories[patch.index].whyItMatters = patch.whyItMatters;
+            console.log(`   ✅ Repaired story ${patch.index}`);
+          }
+        });
+
+        // Re-validate after repair
+        const postRepairViolations = validateWhyItMatters(
+          ctx.role,
+          ctx.decisionContext,
+          brief.topStories || []
+        );
+
+        if (postRepairViolations.length > 0) {
+          console.log(`⚠️  ${postRepairViolations.length} violations remain after repair`);
+        } else {
+          console.log(`✅ All whyItMatters fields now comply with personalization rules`);
+        }
+      } catch (repairError: any) {
+        console.error("⚠️  Repair call failed, returning original brief:", repairError.message);
+      }
+    } else if (violations.length > 5) {
+      console.log(`⚠️  Phase 2.2: ${violations.length} violations (>5), skipping repair to avoid token waste`);
+    } else {
+      console.log(`✅ Phase 2.2: All whyItMatters fields comply with personalization rules`);
+    }
+
+    return brief;
   } catch (error: any) {
     console.error("❌ Claude Judge error:", error.message);
     throw error;
@@ -1603,9 +1785,31 @@ export async function runCouncilV2(
 
   // Add coverage warnings as synthetic search result for downstream layers
   const coverageWarningResult = createCoverageWarningResult(coverage);
+
+  // Phase 1.3: Apply safe cap AFTER dedupe + coverage guardrail
+  // Cap real results to MAX_CANDIDATES_FOR_ANALYSIS, but never drop CoverageGuardrail
+  let cappedResults = dedupedResults;
+  const totalBeforeCap = dedupedResults.reduce((sum, r) => sum + r.articles.length, 0);
+
+  if (totalBeforeCap > MAX_CANDIDATES_FOR_ANALYSIS) {
+    // Cap articles across all search results proportionally
+    let remaining = MAX_CANDIDATES_FOR_ANALYSIS;
+    cappedResults = dedupedResults.map(r => {
+      if (remaining <= 0) {
+        return { ...r, articles: [] };
+      }
+      const take = Math.min(r.articles.length, remaining);
+      remaining -= take;
+      return { ...r, articles: r.articles.slice(0, take) };
+    }).filter(r => r.articles.length > 0 || r.error);
+
+    console.log(`   ✂️  Capped: ${totalBeforeCap} → ${MAX_CANDIDATES_FOR_ANALYSIS} articles for analysis`);
+  }
+
+  // Append coverage guardrail (never dropped)
   const searchResults = coverageWarningResult
-    ? [...dedupedResults, coverageWarningResult]
-    : dedupedResults;
+    ? [...cappedResults, coverageWarningResult]
+    : cappedResults;
 
   const totalArticles = searchResults.reduce((sum, r) => sum + r.articles.length, 0);
 
@@ -1739,3 +1943,34 @@ export type { SearchQueryResult };
 // Export for testing (Phase 1.2)
 export { normalizeUrl, normalizeTitle, dedupeSearchResults, computeCoverage, createCoverageWarningResult };
 export type { CoverageResult };
+
+// Export for testing (Phase 1.3)
+export { MAX_CANDIDATES_FOR_ANALYSIS };
+
+/**
+ * Test helper: applies the exact cap logic used in runCouncilV2 orchestrator.
+ * Exported only for testing purposes.
+ */
+export function __test_applyCapAndGuardrail(
+  dedupedResults: SearchResult[],
+  coverageWarningResult: SearchResult | null
+): SearchResult[] {
+  let cappedResults = dedupedResults;
+  const totalBeforeCap = dedupedResults.reduce((sum, r) => sum + r.articles.length, 0);
+
+  if (totalBeforeCap > MAX_CANDIDATES_FOR_ANALYSIS) {
+    let remaining = MAX_CANDIDATES_FOR_ANALYSIS;
+    cappedResults = dedupedResults.map(r => {
+      if (remaining <= 0) {
+        return { ...r, articles: [] };
+      }
+      const take = Math.min(r.articles.length, remaining);
+      remaining -= take;
+      return { ...r, articles: r.articles.slice(0, take) };
+    }).filter(r => r.articles.length > 0 || r.error);
+  }
+
+  return coverageWarningResult
+    ? [...cappedResults, coverageWarningResult]
+    : cappedResults;
+}
