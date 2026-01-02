@@ -1002,6 +1002,7 @@ async function searchWithPerplexity(profile: UserProfile): Promise<SearchResult>
   // Phase 1.1: Get mandatory queries for enforcement
   const queryResult = generateSearchQueries(ctx);
 
+  // Phase 2.10.1: Simplified prompt - articles only, no searchQueries
   const searchPrompt = `RESPOND WITH ONLY VALID JSON. NO EXPLANATIONS. NO APOLOGIES. NO TEXT BEFORE OR AFTER THE JSON.
 
 You are a news search assistant. Search for TODAY'S news only.
@@ -1014,34 +1015,15 @@ CRITICAL INSTRUCTIONS:
 1. Execute the MANDATORY QUERIES listed above IN ORDER
 2. Only include news from the LAST 24 HOURS
 3. For each query, find at least 1 relevant article
-4. If a tokoh/person has no recent news, explicitly note: "Tidak ditemukan berita terkini tentang [nama] hari ini"
+4. DO NOT output searchQueries. Return ONLY the articles array.
 
-Search for 7-10 LATEST news articles published TODAY. Return JSON:
-{
-  "searchQueries": ["actual queries you executed"],
-  "articles": [{
-    "title": "Title",
-    "summary": "2-3 sentence summary in ${ctx.languageName}",
-    "source": "Source name",
-    "sourceType": "local|regional|global",
-    "url": "Full URL",
-    "publishedDate": "${today}",
-    "confidence": 8,
-    "isPaywalled": false,
-    "matchedQuery": "which mandatory query this article answers"
-  }],
-  "coverageReport": {
-    "tokohCovered": ["names found"],
-    "tokohNotFound": ["names with no recent news"],
-    "institusiCovered": ["institutions found"],
-    "topicsCovered": ["topics found"]
-  }
-}
+Search for 7-10 LATEST news articles published TODAY. Return ONLY this JSON structure:
+{"articles":[{"title":"Article title","summary":"2-3 sentence summary in ${ctx.languageName}","source":"Source name","url":"Full URL","publishedDate":"${today}","confidence":8}]}
 
 RULES:
 - PRIORITIZE articles from the last 24 hours (today's date: ${todayIndo})
 - EXCLUDE any news older than 48 hours unless highly relevant breaking news
-- Include valid URLs
+- Include valid URLs for each article
 - Confidence: 9-10 official sources, 7-8 trusted media, 5-6 general media
 - MUST cover tokoh/institusi/topics from COVERAGE REQUIREMENTS above
 
@@ -1061,7 +1043,7 @@ YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
           { role: "user", content: searchPrompt },
         ],
         temperature: 0.2,
-        max_tokens: 2048,
+        max_tokens: 4096, // Phase 2.10.1: Doubled to reduce truncation
       });
 
       const rawContent = response.choices[0].message.content || "";
@@ -1109,6 +1091,18 @@ YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
       }
 
       const parsed = JSON.parse(extraction.json);
+
+      // Phase 2.10.1: Detect contract violation - searchQueries but no articles
+      if (parsed.searchQueries && (!parsed.articles || !Array.isArray(parsed.articles))) {
+        console.log(`❌ Perplexity attempt ${attempt}: Contract violation - returned searchQueries but no articles`);
+        lastError = "Contract violation";
+        if (attempt < maxAttempts) {
+          const jitter = 300 + Math.random() * 200;
+          await new Promise(r => setTimeout(r, jitter));
+          continue;
+        }
+        return { model: "Perplexity", provider: "Perplexity", layer: "search", articles: [], error: "Contract violation" };
+      }
 
       // Extract citations from Perplexity response
       const citations = (response as any).citations || [];
