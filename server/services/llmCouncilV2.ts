@@ -776,6 +776,114 @@ export function extractJsonFromResponse(rawContent: string): JsonExtractionResul
   }
 }
 
+// =============================================================================
+// Phase 2.7: Bracket-depth article array extraction
+// =============================================================================
+
+/**
+ * Extracts the articles array from a JSON string using bracket depth counting.
+ * More reliable than regex when the full JSON is malformed.
+ */
+export function extractArticlesArrayByDepth(text: string): string | null {
+  // Find "articles" key
+  const articlesKeyIndex = text.indexOf('"articles"');
+  if (articlesKeyIndex === -1) return null;
+
+  // Find the opening bracket after "articles":
+  const colonIndex = text.indexOf(':', articlesKeyIndex);
+  if (colonIndex === -1) return null;
+
+  let bracketStart = -1;
+  for (let i = colonIndex + 1; i < text.length; i++) {
+    if (text[i] === '[') {
+      bracketStart = i;
+      break;
+    } else if (text[i] !== ' ' && text[i] !== '\n' && text[i] !== '\r' && text[i] !== '\t') {
+      // Non-whitespace before bracket means malformed
+      return null;
+    }
+  }
+
+  if (bracketStart === -1) return null;
+
+  // Count bracket depth to find matching ]
+  let depth = 1;
+  let inString = false;
+  let escapeNext = false;
+
+  for (let i = bracketStart + 1; i < text.length; i++) {
+    const char = text[i];
+
+    if (escapeNext) {
+      escapeNext = false;
+      continue;
+    }
+
+    if (char === '\\' && inString) {
+      escapeNext = true;
+      continue;
+    }
+
+    if (char === '"' && !escapeNext) {
+      inString = !inString;
+      continue;
+    }
+
+    if (!inString) {
+      if (char === '[') depth++;
+      if (char === ']') depth--;
+      if (depth === 0) {
+        return text.substring(bracketStart, i + 1);
+      }
+    }
+  }
+
+  return null; // No matching bracket found
+}
+
+/**
+ * Salvages article objects from text using forgiving regex.
+ * Last resort when JSON parsing and bracket extraction fail.
+ */
+export function salvageArticlesWithRegex(text: string): any[] {
+  const articles: any[] = [];
+
+  // Match objects that look like articles (have title and summary)
+  const objectPattern = /\{[^{}]*"title"\s*:\s*"[^"]*"[^{}]*"summary"\s*:\s*"[^"]*"[^{}]*\}/g;
+  const matches = text.match(objectPattern) || [];
+
+  for (const match of matches) {
+    try {
+      // Fix common issues before parsing
+      let fixed = match
+        .replace(/,\s*}/g, '}')  // trailing comma
+        .replace(/'/g, '"');     // single quotes to double
+
+      const obj = JSON.parse(fixed);
+      if (obj.title && obj.summary) {
+        articles.push(obj);
+      }
+    } catch {
+      // Try extracting fields manually
+      const titleMatch = match.match(/"title"\s*:\s*"([^"]*)"/);
+      const summaryMatch = match.match(/"summary"\s*:\s*"([^"]*)"/);
+      const sourceMatch = match.match(/"source"\s*:\s*"([^"]*)"/);
+      const urlMatch = match.match(/"url"\s*:\s*"([^"]*)"/);
+
+      if (titleMatch && summaryMatch) {
+        articles.push({
+          title: titleMatch[1],
+          summary: summaryMatch[1],
+          source: sourceMatch?.[1] || "",
+          url: urlMatch?.[1] || "",
+        });
+      }
+    }
+  }
+
+  return articles;
+}
+
 function buildSearchPrompt(ctx: SearchContext): string {
   const sections: string[] = [];
 
@@ -1086,55 +1194,75 @@ YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
     textContent = textContent.replace(/,\s*([}\]])/g, '$1');
 
     let parsed;
+    let parseError: string | null = null;
+
     try {
       parsed = JSON.parse(textContent);
-    } catch (parseError: any) {
-      // First fallback: Try to extract and salvage articles with regex
-      console.log("⚠️ Gemini JSON parse failed, trying regex extraction...");
-      console.error("   Parse error:", parseError.message);
+    } catch (err: any) {
+      // Phase 2.7: Enhanced fallback with bracket-depth extraction
+      console.log("⚠️ Gemini JSON parse failed, trying bracket-depth extraction...");
+      console.error("   Parse error:", err.message);
+      console.error("   📝 Response (first 200):", textContent.substring(0, 200));
+      console.error("   📝 Response (last 200):", textContent.substring(Math.max(0, textContent.length - 200)));
 
-      const articlesMatch = textContent.match(/"articles"\s*:\s*\[([\s\S]*?)\](?=\s*}?\s*$)/);
-      if (articlesMatch) {
-        // Try to salvage individual articles
-        const articlesContent = articlesMatch[1];
-        const articles: any[] = [];
+      // Fallback 1: Extract articles array using bracket depth counting
+      const articlesArrayStr = extractArticlesArrayByDepth(textContent);
+      if (articlesArrayStr) {
+        try {
+          const articlesArray = JSON.parse(articlesArrayStr);
+          if (Array.isArray(articlesArray) && articlesArray.length > 0) {
+            console.log(`✅ Bracket-depth extraction succeeded: ${articlesArray.length} articles`);
+            parsed = { articles: articlesArray };
+          }
+        } catch {
+          console.log("   Bracket-depth array parse failed, trying chunk splitting...");
+        }
+      }
 
-        // Split by article boundaries (look for },{ pattern)
-        const articleChunks = articlesContent.split(/}\s*,\s*{/);
+      // Fallback 2: Split by },{ and parse individual chunks
+      if (!parsed) {
+        const articlesMatch = textContent.match(/"articles"\s*:\s*\[/);
+        if (articlesMatch && articlesArrayStr) {
+          const articles: any[] = [];
+          // Remove outer brackets and split
+          const innerContent = articlesArrayStr.slice(1, -1);
+          const articleChunks = innerContent.split(/}\s*,\s*{/);
 
-        for (let i = 0; i < articleChunks.length; i++) {
-          try {
-            let chunk = articleChunks[i].trim();
-            // Add missing braces
-            if (!chunk.startsWith('{')) chunk = '{' + chunk;
-            if (!chunk.endsWith('}')) chunk = chunk + '}';
-            // Fix trailing commas in this chunk
-            chunk = chunk.replace(/,\s*([}\]])/g, '$1');
+          for (let i = 0; i < articleChunks.length; i++) {
+            try {
+              let chunk = articleChunks[i].trim();
+              if (!chunk.startsWith('{')) chunk = '{' + chunk;
+              if (!chunk.endsWith('}')) chunk = chunk + '}';
+              chunk = chunk.replace(/,\s*([}\]])/g, '$1');
 
-            const art = JSON.parse(chunk);
-            if (art.title && art.summary) {
-              articles.push(art);
+              const art = JSON.parse(chunk);
+              if (art.title && art.summary) {
+                articles.push(art);
+              }
+            } catch {
+              // Skip malformed chunk
             }
-          } catch (e) {
-            // Skip malformed article chunk
+          }
+
+          if (articles.length > 0) {
+            console.log(`✅ Chunk splitting salvaged ${articles.length} articles`);
+            parsed = { articles };
           }
         }
+      }
 
-        if (articles.length > 0) {
-          console.log(`✅ Salvaged ${articles.length} articles from malformed JSON`);
-          parsed = { articles };
+      // Fallback 3: Regex salvage as last resort
+      if (!parsed) {
+        console.log("   Trying regex salvage as last resort...");
+        const salvaged = salvageArticlesWithRegex(textContent);
+        if (salvaged.length > 0) {
+          console.log(`✅ Regex salvage recovered ${salvaged.length} articles`);
+          parsed = { articles: salvaged };
         } else {
-          console.error("❌ Could not salvage any articles");
-          console.error("   📝 Raw response (first 500 chars):", textContent.substring(0, 500));
+          console.error("❌ All salvage attempts failed");
           parsed = { articles: [] };
+          parseError = "JSON parse failed";
         }
-      } else {
-        // No articles array found at all
-        console.error("❌ Gemini JSON parse failed completely:", parseError.message);
-        console.error("   📝 Raw response (first 300 chars):", textContent.substring(0, 300));
-        console.error("   📝 Raw response (last 100 chars):", textContent.substring(Math.max(0, textContent.length - 100)));
-        console.error("   📝 Text length:", textContent.length);
-        parsed = { articles: [] };
       }
     }
 
@@ -1150,7 +1278,7 @@ YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
       citations,
     }));
 
-    return {
+    const result: SearchResult = {
       model: "Gemini",
       provider: "Google",
       layer: "search",
@@ -1159,6 +1287,13 @@ YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
       citations,
       latencyMs: Date.now() - startTime,
     };
+
+    // Phase 2.7: Include error when parsing failed completely
+    if (parseError && articles.length === 0) {
+      result.error = parseError;
+    }
+
+    return result;
   } catch (error: any) {
     console.error("❌ Gemini error:", error.message);
     return { model: "Gemini", provider: "Google", layer: "search", articles: [], error: error.message };
