@@ -21,6 +21,7 @@ interface EspressoBrief {
   edition: string;
   recipientName: string;
   greeting: string;
+  executiveThesis?: string;
   theWorldInBrief: string;
   topStories: EspressoStory[];
   marketsSnapshot?: string;
@@ -643,6 +644,21 @@ export default function Landing() {
                   <p style={{ fontSize: '0.875rem', color: '#94a3b8' }}>
                     {brief.briefDate} · {brief.edition}
                   </p>
+                  {brief.executiveThesis && (
+                    <p style={{
+                      fontWeight: 600,
+                      fontSize: '1.05em',
+                      color: '#1a2a3a',
+                      fontStyle: 'italic',
+                      margin: '16px 0',
+                      padding: '12px 16px',
+                      borderLeft: '3px solid #cc2936',
+                      background: '#f8f9fa',
+                      fontFamily: "'Cormorant Garamond', Georgia, serif"
+                    }}>
+                      {brief.executiveThesis}
+                    </p>
+                  )}
                 </div>
 
                 {/* The World in Brief - Hero treatment */}

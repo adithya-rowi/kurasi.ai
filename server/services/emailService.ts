@@ -20,6 +20,7 @@ interface EspressoBrief {
   edition: string;
   recipientName: string;
   greeting: string;
+  executiveThesis?: string;
   theWorldInBrief: string;
   topStories: EspressoStory[];
   marketsSnapshot?: string;
@@ -194,6 +195,11 @@ function generateBriefEmailHTML(brief: EspressoBrief, userName?: string): string
               <h1 style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 32px; font-weight: 400; color: ${colors.midnight}; margin: 0 0 8px 0; line-height: 1.2;">
                 ${brief.greeting}
               </h1>
+              ${brief.executiveThesis ? `
+              <p style="font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 600; font-size: 1.05em; color: #1a2a3a; font-style: italic; margin: 16px 0; padding: 12px 16px; border-left: 3px solid #cc2936; background: #f8f9fa;">
+                ${brief.executiveThesis}
+              </p>
+              ` : ''}
             </td>
           </tr>
 

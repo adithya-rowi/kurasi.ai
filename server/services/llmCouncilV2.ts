@@ -192,6 +192,7 @@ interface EspressoBrief {
   edition: string;
   recipientName: string;
   greeting: string;
+  executiveThesis?: string; // Phase 2.16: Non-neutral, time-bound thesis
   theWorldInBrief: string;
   topStories: EspressoStory[];
   marketsSnapshot?: string;
@@ -1760,6 +1761,7 @@ OUTPUT JSON (Bahasa Indonesia yang elegan):
   "edition": "${formattedDate}",
   "recipientName": "${profile.personaSummary?.split(".")[0] || "Eksekutif"}",
   "greeting": "Selamat pagi yang elegan dan personal",
+  "executiveThesis": "Single sentence (max 30 words), non-neutral, time-bound thesis. Example: Q1 2026 adalah jendela terakhir bagi startup AI Indonesia untuk mengamankan compute sebelum pengetatan global.",
   "theWorldInBrief": "2-3 kalimat overview tajam tentang hari ini",
   "topStories": [
     {
