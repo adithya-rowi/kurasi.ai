@@ -1115,6 +1115,7 @@ async function searchWithGemini(profile: UserProfile): Promise<SearchResult> {
   // Phase 1.1: Get mandatory queries for enforcement
   const queryResult = generateSearchQueries(ctx);
 
+  // Phase 2.8: Removed url from JSON to prevent truncation - urls come from grounding metadata
   const searchPrompt = `RESPOND WITH ONLY VALID JSON. NO EXPLANATIONS. NO TEXT BEFORE OR AFTER THE JSON.
 
 You are a news search assistant. Search for TODAY'S news only.
@@ -1129,9 +1130,10 @@ CRITICAL INSTRUCTIONS:
 3. EXCLUDE any news older than 48 hours
 4. Ensure coverage of tokoh/institusi/topics as specified
 5. If a tokoh has no recent news, note in summary: "Tidak ditemukan berita terkini"
+6. DO NOT include any URLs in the JSON - URLs will be added from search metadata
 
 Search for 7-10 LATEST news articles published TODAY. Your response must be ONLY this JSON structure:
-{"articles":[{"title":"Article title","summary":"2-3 sentence summary in ${ctx.languageName}","source":"Source name","sourceType":"local|regional|global","url":"Full URL","publishedDate":"${today}","confidence":8,"matchedQuery":"which mandatory query this answers"}]}
+{"articles":[{"title":"Article title","summary":"2-3 sentence summary in ${ctx.languageName}","source":"Source name","sourceType":"local|regional|global","publishedDate":"${today}","confidence":8,"matchedQuery":"which mandatory query this answers"}]}
 
 YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
 
@@ -1152,7 +1154,7 @@ YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
           tools: [{ google_search: {} }],
           generationConfig: {
             temperature: 0.2,
-            maxOutputTokens: 4096,
+            maxOutputTokens: 8192, // Phase 2.8: Doubled to reduce truncation
           },
         }),
       }
@@ -1266,12 +1268,13 @@ YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
       }
     }
 
-    const articles: SearchArticle[] = (parsed.articles || []).map((a: any) => ({
+    // Phase 2.8: Map citations to article URLs (url removed from JSON to prevent truncation)
+    const articles: SearchArticle[] = (parsed.articles || []).map((a: any, i: number) => ({
       title: a.title || "",
       summary: a.summary || "",
       source: a.source || "",
       sourceType: a.sourceType || "local",
-      url: a.url || "",
+      url: a.url || citations[i] || "", // Prefer parsed url, fallback to citation by index
       publishedDate: a.publishedDate || today,
       confidence: a.confidence || 7,
       isRealTime: true,
