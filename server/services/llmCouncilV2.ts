@@ -734,6 +734,48 @@ export function validateWhyItMatters(
   return violations;
 }
 
+// =============================================================================
+// Phase 2.3: JSON Recovery Helper (exported for testing)
+// =============================================================================
+
+export type JsonExtractionResult =
+  | { success: true; json: string }
+  | { success: false; error: string };
+
+/**
+ * Attempts to extract valid JSON from a string that may have non-JSON prefix/suffix.
+ * Used by Perplexity parser to recover from conversational responses.
+ */
+export function extractJsonFromResponse(rawContent: string): JsonExtractionResult {
+  const trimmed = rawContent.replace(/```json\n?|\n?```/g, "").trim();
+
+  // Fast path: try direct parse if it looks like JSON
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    try {
+      JSON.parse(trimmed);
+      return { success: true, json: trimmed };
+    } catch {
+      // Fall through to extraction
+    }
+  }
+
+  // Slow path: try to extract JSON substring
+  const firstBrace = trimmed.indexOf('{');
+  const lastBrace = trimmed.lastIndexOf('}');
+
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+    return { success: false, error: "Non-JSON response" };
+  }
+
+  const jsonCandidate = trimmed.slice(firstBrace, lastBrace + 1);
+  try {
+    JSON.parse(jsonCandidate); // Validate
+    return { success: true, json: jsonCandidate };
+  } catch {
+    return { success: false, error: "Non-JSON response" };
+  }
+}
+
 function buildSearchPrompt(ctx: SearchContext): string {
   const sections: string[] = [];
 
@@ -852,7 +894,9 @@ async function searchWithPerplexity(profile: UserProfile): Promise<SearchResult>
   // Phase 1.1: Get mandatory queries for enforcement
   const queryResult = generateSearchQueries(ctx);
 
-  const searchPrompt = `You are a news search assistant. Search for TODAY'S news only.
+  const searchPrompt = `RESPOND WITH ONLY VALID JSON. NO EXPLANATIONS. NO APOLOGIES. NO TEXT BEFORE OR AFTER THE JSON.
+
+You are a news search assistant. Search for TODAY'S news only.
 
 ${buildSearchPrompt(ctx)}
 
@@ -891,7 +935,9 @@ RULES:
 - EXCLUDE any news older than 48 hours unless highly relevant breaking news
 - Include valid URLs
 - Confidence: 9-10 official sources, 7-8 trusted media, 5-6 general media
-- MUST cover tokoh/institusi/topics from COVERAGE REQUIREMENTS above`;
+- MUST cover tokoh/institusi/topics from COVERAGE REQUIREMENTS above
+
+YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
 
   try {
     console.log("🔴 Perplexity searching web/news...");
@@ -906,7 +952,15 @@ RULES:
     });
 
     const content = response.choices[0].message.content || "{}";
-    const parsed = JSON.parse(content.replace(/```json\n?|\n?```/g, "").trim());
+
+    // Phase 2.3: Use helper for JSON extraction with recovery
+    const extraction = extractJsonFromResponse(content);
+    if (!extraction.success) {
+      console.log('❌ Perplexity returned non-JSON response:', content.substring(0, 100));
+      return { model: "Perplexity", provider: "Perplexity", layer: "search", articles: [], error: extraction.error };
+    }
+
+    const parsed = JSON.parse(extraction.json);
 
     // Extract citations from Perplexity response
     const citations = (response as any).citations || [];
@@ -953,9 +1007,9 @@ async function searchWithGemini(profile: UserProfile): Promise<SearchResult> {
   // Phase 1.1: Get mandatory queries for enforcement
   const queryResult = generateSearchQueries(ctx);
 
-  const searchPrompt = `You are a news search assistant. Search for TODAY'S news only.
+  const searchPrompt = `RESPOND WITH ONLY VALID JSON. NO EXPLANATIONS. NO TEXT BEFORE OR AFTER THE JSON.
 
-IMPORTANT: You MUST respond with ONLY valid JSON. No explanations, no markdown, no text before or after the JSON.
+You are a news search assistant. Search for TODAY'S news only.
 
 ${buildSearchPrompt(ctx)}
 
@@ -971,7 +1025,7 @@ CRITICAL INSTRUCTIONS:
 Search for 7-10 LATEST news articles published TODAY. Your response must be ONLY this JSON structure:
 {"articles":[{"title":"Article title","summary":"2-3 sentence summary in ${ctx.languageName}","source":"Source name","sourceType":"local|regional|global","url":"Full URL","publishedDate":"${today}","confidence":8,"matchedQuery":"which mandatory query this answers"}]}
 
-Remember: Output ONLY the JSON object, nothing else. Cover ALL mandatory queries.`;
+YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
 
   try {
     console.log("🔵 Gemini searching with Google grounding...");
@@ -1010,8 +1064,11 @@ Remember: Output ONLY the JSON object, nothing else. Cover ALL mandatory queries
     const groundingChunks = groundingMetadata?.groundingChunks || [];
     const citations = groundingChunks.map((c: any) => c.web?.uri).filter(Boolean);
 
-    // Robust JSON parsing: remove markdown first
-    textContent = textContent.replace(/```json\n?|\n?```/g, "").trim();
+    // Robust JSON parsing: remove markdown and citation tokens first
+    textContent = textContent
+      .replace(/```json\n?|\n?```/g, "")
+      .replace(/\[cite:\s*\d+\]/g, "") // Remove [cite: 1] tokens
+      .trim();
 
     // Extract JSON from response - handle prefix/suffix garbage
     const jsonStart = textContent.indexOf('{');
