@@ -1047,58 +1047,121 @@ RULES:
 
 YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
 
-  try {
-    console.log("🔴 Perplexity searching web/news...");
-    const response = await perplexity.chat.completions.create({
-      model: "sonar",
-      messages: [
-        { role: "system", content: "Search the web for latest Indonesian business news. Return valid JSON with real URLs." },
-        { role: "user", content: searchPrompt },
-      ],
-      temperature: 0.2,
-      max_tokens: 2048,
-    });
+  // Phase 2.10: Retry with jitter (max 2 attempts)
+  const maxAttempts = 2;
+  let lastError = "";
 
-    const content = response.choices[0].message.content || "{}";
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      console.log(`🔴 Perplexity searching web/news... (attempt ${attempt}/${maxAttempts})`);
+      const response = await perplexity.chat.completions.create({
+        model: "sonar",
+        messages: [
+          { role: "system", content: "Search the web for latest Indonesian business news. Return valid JSON with real URLs." },
+          { role: "user", content: searchPrompt },
+        ],
+        temperature: 0.2,
+        max_tokens: 2048,
+      });
 
-    // Phase 2.3: Use helper for JSON extraction with recovery
-    const extraction = extractJsonFromResponse(content);
-    if (!extraction.success) {
-      console.log('❌ Perplexity returned non-JSON response:', content.substring(0, 100));
-      return { model: "Perplexity", provider: "Perplexity", layer: "search", articles: [], error: extraction.error };
+      const rawContent = response.choices[0].message.content || "";
+
+      // Phase 2.10: Log raw content BEFORE any parsing
+      console.log(`🔴 Perplexity raw (${rawContent.length} chars):`, rawContent.substring(0, 300));
+
+      // Phase 2.10: Clean content BEFORE JSON extraction
+      // Strip citation tokens including ranges like [cite: 2-13] or [cite: 1, 3, 5]
+      const cleanedContent = rawContent
+        .replace(/```json\n?|\n?```/g, "")
+        .replace(/\[cite:\s*[\d\-,\s]+\]/g, "");
+
+      // Check for refusal patterns before parsing
+      const refusalPatterns = [
+        /I appreciate your/i,
+        /I'm unable to/i,
+        /I cannot perform/i,
+        /I apologize/i,
+        /cannot search/i,
+      ];
+      const isRefusal = refusalPatterns.some(p => p.test(cleanedContent));
+      if (isRefusal && !cleanedContent.includes('"articles"')) {
+        console.log(`❌ Perplexity attempt ${attempt}: Refusal response detected`);
+        lastError = "Refusal response";
+        if (attempt < maxAttempts) {
+          const jitter = 300 + Math.random() * 200; // 300-500ms
+          await new Promise(r => setTimeout(r, jitter));
+          continue;
+        }
+        return { model: "Perplexity", provider: "Perplexity", layer: "search", articles: [], error: "Refusal response" };
+      }
+
+      // Phase 2.3: Use helper for JSON extraction with recovery
+      const extraction = extractJsonFromResponse(cleanedContent);
+      if (!extraction.success) {
+        console.log(`❌ Perplexity attempt ${attempt}: Non-JSON response`);
+        lastError = "Non-JSON response";
+        if (attempt < maxAttempts) {
+          const jitter = 300 + Math.random() * 200;
+          await new Promise(r => setTimeout(r, jitter));
+          continue;
+        }
+        return { model: "Perplexity", provider: "Perplexity", layer: "search", articles: [], error: "Non-JSON response" };
+      }
+
+      const parsed = JSON.parse(extraction.json);
+
+      // Extract citations from Perplexity response
+      const citations = (response as any).citations || [];
+
+      const articles: SearchArticle[] = (parsed.articles || []).map((a: any) => ({
+        title: a.title || "",
+        summary: a.summary || "",
+        source: a.source || "",
+        sourceType: a.sourceType || "local",
+        url: a.url || "",
+        publishedDate: a.publishedDate || today,
+        confidence: a.confidence || 7,
+        isPaywalled: a.isPaywalled || false,
+        isRealTime: true,
+        citations,
+      }));
+
+      // Phase 2.10: Check for empty articles
+      if (articles.length === 0) {
+        console.log(`❌ Perplexity attempt ${attempt}: Empty articles`);
+        lastError = "Empty articles";
+        if (attempt < maxAttempts) {
+          const jitter = 300 + Math.random() * 200;
+          await new Promise(r => setTimeout(r, jitter));
+          continue;
+        }
+        return { model: "Perplexity", provider: "Perplexity", layer: "search", articles: [], error: "Empty articles" };
+      }
+
+      console.log(`✅ Perplexity returned ${articles.length} articles on attempt ${attempt}`);
+      return {
+        model: "Perplexity",
+        provider: "Perplexity",
+        layer: "search",
+        articles,
+        searchQueries: parsed.searchQueries,
+        citations,
+        latencyMs: Date.now() - startTime,
+      };
+    } catch (error: any) {
+      console.error(`❌ Perplexity attempt ${attempt} error:`, error.message);
+      lastError = "API error";
+      if (attempt < maxAttempts) {
+        const jitter = 300 + Math.random() * 200;
+        await new Promise(r => setTimeout(r, jitter));
+        continue;
+      }
+      return { model: "Perplexity", provider: "Perplexity", layer: "search", articles: [], error: "API error" };
     }
-
-    const parsed = JSON.parse(extraction.json);
-
-    // Extract citations from Perplexity response
-    const citations = (response as any).citations || [];
-
-    const articles: SearchArticle[] = (parsed.articles || []).map((a: any) => ({
-      title: a.title || "",
-      summary: a.summary || "",
-      source: a.source || "",
-      sourceType: a.sourceType || "local",
-      url: a.url || "",
-      publishedDate: a.publishedDate || today,
-      confidence: a.confidence || 7,
-      isPaywalled: a.isPaywalled || false,
-      isRealTime: true,
-      citations,
-    }));
-
-    return {
-      model: "Perplexity",
-      provider: "Perplexity",
-      layer: "search",
-      articles,
-      searchQueries: parsed.searchQueries,
-      citations,
-      latencyMs: Date.now() - startTime,
-    };
-  } catch (error: any) {
-    console.error("❌ Perplexity error:", error.message);
-    return { model: "Perplexity", provider: "Perplexity", layer: "search", articles: [], error: error.message };
   }
+
+  // Should not reach here, but fallback
+  return { model: "Perplexity", provider: "Perplexity", layer: "search", articles: [], error: lastError || "Unknown error" }
 }
 
 async function searchWithGemini(profile: UserProfile): Promise<SearchResult> {
