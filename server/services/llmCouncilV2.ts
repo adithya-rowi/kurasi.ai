@@ -22,6 +22,24 @@ import { userProfiles, dailyBriefs } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
 // =============================================================================
+// UTILITY FUNCTIONS
+// =============================================================================
+
+function computeRecencyLabel(publishedDate: string): string {
+  if (!publishedDate) return "Tanggal tidak tersedia";
+  const date = new Date(publishedDate);
+  if (isNaN(date.getTime())) return "Tanggal tidak tersedia";
+
+  const now = new Date();
+  const hoursAgo = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+
+  if (hoursAgo <= 24) return "Hari ini";
+  if (hoursAgo <= 48) return "2 hari terakhir";
+  if (hoursAgo <= 168) return "7 hari terakhir";
+  return "Insight";
+}
+
+// =============================================================================
 // AI COUNCIL CONFIGURATION
 // =============================================================================
 
@@ -1116,7 +1134,7 @@ YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
         source: a.source || "",
         sourceType: a.sourceType || "local",
         url: a.url || "",
-        publishedDate: a.publishedDate || today,
+        publishedDate: a.publishedDate || "",
         confidence: a.confidence || 7,
         isPaywalled: a.isPaywalled || false,
         isRealTime: true,
@@ -1335,7 +1353,7 @@ YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
       source: a.source || "",
       sourceType: a.sourceType || "local",
       url: a.url || citations[i] || "", // Prefer parsed url, fallback to citation by index
-      publishedDate: a.publishedDate || today,
+      publishedDate: a.publishedDate || "",
       confidence: a.confidence || 7,
       isRealTime: true,
       citations,
@@ -1462,7 +1480,7 @@ Return JSON in ${ctx.languageName}:
       source: a.source || "",
       sourceType: a.sourceType || "social",
       url: a.url || "",
-      publishedDate: a.publishedDate || today,
+      publishedDate: a.publishedDate || "",
       confidence: a.confidence || 6,
       isRealTime: true,
       isSocialMedia: a.isSocialMedia || a.sourceType === "social",
@@ -2185,6 +2203,42 @@ export async function runCouncilV2(
   console.log(`\n✅ Brief generated (${judgeLayerMs}ms)`);
   console.log(`   📰 Stories: ${brief.topStories?.length || 0}`);
   console.log(`   🎯 Confidence: ${brief.confidenceScore}/10`);
+
+  // Phase 2.19: URL validation - remove hallucinated URLs
+  const allowedUrls = new Set<string>();
+  for (const result of searchResults) {
+    for (const article of result.articles) {
+      if (article.url && article.url.trim()) {
+        allowedUrls.add(article.url);
+      }
+    }
+  }
+
+  // Validate topStories URLs
+  for (const story of brief.topStories) {
+    if (story.url && !allowedUrls.has(story.url)) {
+      console.log(`⚠️ Hallucinated URL removed from topStories: ${story.url}`);
+      story.url = "";
+    }
+  }
+
+  // Validate tokohInsights URLs
+  for (const story of brief.tokohInsights || []) {
+    if (story.url && !allowedUrls.has(story.url)) {
+      console.log(`⚠️ Hallucinated URL removed from tokohInsights: ${story.url}`);
+      story.url = "";
+    }
+  }
+
+  console.log(`✅ URL validation complete. ${allowedUrls.size} allowed URLs.`);
+
+  // Phase 2.19: Add recency labels
+  for (const story of brief.topStories) {
+    story.recencyLabel = computeRecencyLabel(story.publishedDate || "");
+  }
+  for (const story of brief.tokohInsights || []) {
+    story.recencyLabel = computeRecencyLabel(story.publishedDate || "");
+  }
 
   // ==========================================================================
   // SAVE TO DATABASE (skip for guest users)
