@@ -1742,29 +1742,39 @@ Opportunities: ${JSON.stringify(analysisResults.flatMap((r) => r.opportunities |
 INSTRUKSI HAKIM AKHIR
 ═══════════════════════════════════════════════════════════════
 
-${coverage.tokohCovered.length > 0 ? `
 ╔═══════════════════════════════════════════════════════════════╗
-║  🚨 MANDATORY TOKOH RULE (Phase 2.17) - HIGHEST PRIORITY 🚨   ║
+║  📰 BRIEF STRUCTURE (Phase 2.19)                               ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
-║  The user SPECIFICALLY requested to track these people:       ║
-║  ${coverage.tokohCovered.map(t => `• ${t}`).join("\n║  ")}
+║  SECTION 1 - BERITA UTAMA (3-4 stories):                      ║
+║  • Fresh news from last 48 hours ONLY                         ║
+║  • Includes: Topic news + Institusi announcements             ║
+║  • NO tokoh stories here - they go in Section 2               ║
+║  • Categories: Kritis, Penting                                ║
 ║                                                               ║
-║  HARD RULES:                                                  ║
-║  1. You MUST include at least ONE story featuring EACH        ║
-║     tracked tokoh listed above in topStories.                 ║
-║                                                               ║
-║  2. These stories take PRIORITY over general news, even if    ║
-║     general news seems "bigger" or "more important".          ║
-║                                                               ║
-║  3. The user SPECIFICALLY requested to track these people -   ║
-║     ignoring them violates the core product promise.          ║
-║                                                               ║
-║  4. Search found articles mentioning these tokoh. You MUST    ║
-║     include them. Do NOT drop covered tokoh for generic news. ║
+║  SECTION 2 - INSIGHT TOKOH (0-2 stories, optional):           ║
+║  • For tracked tokoh: ${coverage.tokohCovered.join(", ") || "none"}
+║  • Category: 'Insight' (NOT Kritis or Penting)                ║
+║  • CAN be older content - show actual date transparently!     ║
+║  • Max 2 stories total for all tokoh combined                 ║
+║  • If no quality tokoh content with real URL, skip section    ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
-` : ""}
+
+╔═══════════════════════════════════════════════════════════════╗
+║  🔗 URL INTEGRITY RULE (CRITICAL - ZERO TOLERANCE)            ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  • story.url MUST be copied EXACTLY from SearchArticle.url    ║
+║  • DO NOT invent, modify, guess, or construct URLs            ║
+║  • DO NOT create plausible-looking URLs                       ║
+║  • If no valid URL exists, set url to empty string ""         ║
+║                                                               ║
+║  • story.publishedDate MUST be from same SearchArticle        ║
+║  • If date unknown, set publishedDate to empty string ""      ║
+║  • NEVER pretend old content is fresh                         ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
 
 ╔═══════════════════════════════════════════════════════════════╗
 ║  ⚠️ MANDATORY UNIQUENESS RULE (Phase 2.18) ⚠️                  ║
@@ -1795,11 +1805,6 @@ RECENCY RULES (CRITICAL):
 - EXCLUDE any news older than 48 hours UNLESS it's a major breaking story still developing
 - If publishedDate is missing or unclear, verify recency from context
 - Today's date: ${dateStr}
-
-STORY SELECTION PROCESS (in this exact order):
-1. TOKOH FIRST: For EACH covered tokoh (${coverage.tokohCovered.join(", ") || "none"}), select their most relevant/recent story FIRST
-2. FILL REMAINING: After tokoh stories are selected, fill remaining slots (up to 5 total) with other high-value stories
-3. NEVER drop a covered tokoh story in favor of generic news - tokoh stories are MANDATORY
 
 CURATION PROCESS:
 1. DEDUPLIKASI: Gabungkan berita sama dari berbagai sumber
