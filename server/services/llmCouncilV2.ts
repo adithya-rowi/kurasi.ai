@@ -1763,21 +1763,27 @@ INSTRUKSI HAKIM AKHIR
 ═══════════════════════════════════════════════════════════════
 
 ╔═══════════════════════════════════════════════════════════════╗
-║  📰 BRIEF STRUCTURE (Phase 2.19)                               ║
+║  📰 BRIEF STRUCTURE (Phase 2.19) - STRICT SEPARATION          ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
-║  SECTION 1 - BERITA UTAMA (3-4 stories):                      ║
-║  • Fresh news from last 48 hours ONLY                         ║
-║  • Includes: Topic news + Institusi announcements             ║
-║  • NO tokoh stories here - they go in Section 2               ║
-║  • Categories: Kritis, Penting                                ║
+║  You MUST output TWO separate arrays:                         ║
 ║                                                               ║
-║  SECTION 2 - INSIGHT TOKOH (0-2 stories, optional):           ║
-║  • For tracked tokoh: ${coverage.tokohCovered.join(", ") || "none"}
-║  • Category: 'Insight' (NOT Kritis or Penting)                ║
-║  • CAN be older content - show actual date transparently!     ║
-║  • Max 2 stories total for all tokoh combined                 ║
-║  • If no quality tokoh content with real URL, skip section    ║
+║  1. "topStories" (3-4 stories) - FRESH NEWS ONLY:             ║
+║     • News from last 48 hours                                 ║
+║     • Topic news + Institusi announcements                    ║
+║     • ⛔ NEVER put tracked tokoh here (${coverage.tokohCovered.join(", ") || "none"})
+║     • Categories: Kritis, Penting, Konteks                    ║
+║                                                               ║
+║  2. "tokohInsights" (1-2 stories) - TOKOH ONLY:               ║
+║     • Stories about: ${coverage.tokohCovered.join(", ") || "none"}
+║     • ✅ PUT ALL tokoh stories HERE, not in topStories        ║
+║     • Can be older content (show actual date)                 ║
+║     • Category: Insight                                       ║
+║     • If no tokoh found in search, return empty array []      ║
+║                                                               ║
+║  ⚠️ VALIDATION: If any story in topStories mentions           ║
+║  ${coverage.tokohCovered.join(" or ") || "a tracked tokoh"}, you have made an error.
+║  Move it to tokohInsights immediately.                        ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 
