@@ -195,6 +195,7 @@ interface EspressoBrief {
   executiveThesis?: string; // Phase 2.16: Non-neutral, time-bound thesis
   theWorldInBrief: string;
   topStories: EspressoStory[];
+  tokohInsights?: EspressoStory[]; // Phase 2.19: Separate section for tracked tokoh
   marketsSnapshot?: string;
   quotaOfTheDay?: {
     quote: string;
@@ -221,6 +222,7 @@ interface EspressoStory {
   sentiment?: "positive" | "negative" | "neutral" | "mixed";
   isBreaking?: boolean;
   isSocialTrending?: boolean;
+  recencyLabel?: string; // Phase 2.19: For tokoh insights that may be older
 }
 
 // =============================================================================
@@ -1837,6 +1839,19 @@ OUTPUT JSON (Bahasa Indonesia yang elegan):
       "isSocialTrending": false
     }
   ],
+  "tokohInsights": [
+    {
+      "headline": "Tokoh insight headline",
+      "body": "2-3 sentences",
+      "whyItMatters": "Why this insight matters for user role",
+      "category": "Insight",
+      "verificationScore": 7,
+      "source": "Source name",
+      "url": "EXACT URL from search results or empty string",
+      "publishedDate": "Actual date or empty string",
+      "recencyLabel": "Insight"
+    }
+  ],
   "marketsSnapshot": "Ringkasan pasar jika relevan (opsional)",
   "quotaOfTheDay": {
     "quote": "Kutipan menarik dari berita hari ini",
@@ -1862,6 +1877,11 @@ OUTPUT JSON (Bahasa Indonesia yang elegan):
 
     const content = response.content[0].type === "text" ? response.content[0].text : "{}";
     let brief: EspressoBrief = JSON.parse(content.replace(/```json\n?|\n?```/g, "").trim());
+
+    // Phase 2.19: Ensure tokohInsights is always an array
+    if (!brief.tokohInsights) {
+      brief.tokohInsights = [];
+    }
 
     // Phase 2.2: Validate whyItMatters and auto-repair if needed
     const violations = validateWhyItMatters(
