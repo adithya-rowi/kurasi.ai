@@ -1766,6 +1766,30 @@ ${coverage.tokohCovered.length > 0 ? `
 ╚═══════════════════════════════════════════════════════════════╝
 ` : ""}
 
+╔═══════════════════════════════════════════════════════════════╗
+║  ⚠️ MANDATORY UNIQUENESS RULE (Phase 2.18) ⚠️                  ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  Each 'Mengapa penting' MUST be UNIQUE. No duplicate advice.  ║
+║                                                               ║
+║  EACH STORY MUST ANSWER A DIFFERENT QUESTION:                 ║
+║  • Story 1 (Kritis): Apa TINDAKAN konkret yang harus diambil? ║
+║  • Story 2 (Penting): Apa RISIKO yang harus dihindari?        ║
+║  • Story 3 (Penting): Apa PELUANG yang terbuka?               ║
+║  • Story 4 (Penting): Bagaimana ini mempengaruhi STRATEGI?    ║
+║  • Story 5 (Konteks): Apa IMPLIKASI jangka panjang?           ║
+║                                                               ║
+║  DILARANG:                                                    ║
+║  - Menyalin frasa yang sama antar cerita                      ║
+║  - Memberikan saran identik dengan kata berbeda               ║
+║  - Mengulang call-to-action yang sama                         ║
+║                                                               ║
+║  Jika dua cerita menghasilkan saran yang sama:                ║
+║  → GABUNGKAN menjadi satu cerita                              ║
+║  → Pilih cerita LAIN untuk slot tersebut                      ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+
 RECENCY RULES (CRITICAL):
 - PRIORITIZE articles from the LAST 24 HOURS
 - EXCLUDE any news older than 48 hours UNLESS it's a major breaking story still developing
