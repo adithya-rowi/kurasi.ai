@@ -13,6 +13,8 @@ interface EspressoStory {
   verificationScore: number;
   category: "critical" | "important" | "background";
   sentiment?: "positive" | "negative" | "neutral" | "mixed";
+  recencyLabel?: string;
+  publishedDate?: string;
 }
 
 interface EspressoBrief {
@@ -23,6 +25,7 @@ interface EspressoBrief {
   executiveThesis?: string;
   theWorldInBrief: string;
   topStories: EspressoStory[];
+  tokohInsights?: EspressoStory[];
   marketsSnapshot?: string;
   quotaOfTheDay?: {
     quote: string;
@@ -116,7 +119,7 @@ function generateStoryHTML(story: EspressoStory, isLast: boolean): string {
         <table cellpadding="0" cellspacing="0" border="0">
           <tr>
             <td style="font-family: 'DM Sans', Arial, sans-serif; font-size: 12px; color: ${colors.silver};">
-              ${story.source}
+              ${story.recencyLabel || ''}${story.publishedDate ? ` · ${story.publishedDate}` : ''} · ${story.source || ''}
             </td>
             ${story.url ? `
             <td style="padding-left: 8px;">
@@ -232,6 +235,48 @@ function generateBriefEmailHTML(brief: EspressoBrief, userName?: string): string
               </table>
             </td>
           </tr>
+
+          <!-- Tokoh Insights -->
+          ${brief.tokohInsights && brief.tokohInsights.length > 0 ? `
+          <tr>
+            <td style="padding: 0 40px 32px 40px;">
+              <p style="font-family: 'DM Sans', Arial, sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: ${colors.navy}; margin: 0 0 24px 0; padding-bottom: 12px; border-bottom: 1px solid ${colors.border};">
+                📚 Insight Tokoh
+              </p>
+              <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                ${brief.tokohInsights.map((story, idx) => `
+                <tr>
+                  <td style="padding: 0 0 ${idx === (brief.tokohInsights?.length || 1) - 1 ? '0' : '24px'} 0; border-bottom: ${idx === (brief.tokohInsights?.length || 1) - 1 ? 'none' : `1px solid ${colors.border}`};">
+                    <p style="font-family: 'DM Sans', Arial, sans-serif; font-size: 12px; color: ${colors.silver}; margin: 0 0 8px 0;">
+                      ${story.recencyLabel || 'Insight'}${story.publishedDate ? ` · ${story.publishedDate}` : ''} · ${story.source || 'Sumber tidak tersedia'}
+                    </p>
+                    <h3 style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 18px; font-weight: 500; color: ${colors.midnight}; margin: 0 0 8px 0; line-height: 1.3;">
+                      ${story.headline}
+                    </h3>
+                    <p style="font-family: 'DM Sans', Arial, sans-serif; font-size: 14px; color: ${colors.navy}; line-height: 1.6; margin: 0 0 12px 0;">
+                      ${story.body}
+                    </p>
+                    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 8px;">
+                      <tr>
+                        <td style="background: ${colors.pearl}; border-left: 2px solid ${colors.red}; padding: 12px 14px;">
+                          <span style="font-family: 'DM Sans', Arial, sans-serif; font-size: 13px; font-weight: 600; color: ${colors.midnight};">Mengapa penting: </span>
+                          <span style="font-family: 'DM Sans', Arial, sans-serif; font-size: 13px; color: ${colors.navy}; line-height: 1.5;">${story.whyItMatters}</span>
+                        </td>
+                      </tr>
+                    </table>
+                    ${story.url ? `
+                    <a href="${story.url}" target="_blank" style="font-family: 'DM Sans', Arial, sans-serif; font-size: 12px; color: ${colors.red}; text-decoration: none;">
+                      Baca selengkapnya →
+                    </a>
+                    ` : ''}
+                  </td>
+                </tr>
+                ${idx !== (brief.tokohInsights?.length || 1) - 1 ? `<tr><td style="height: 24px;"></td></tr>` : ''}
+                `).join('')}
+              </table>
+            </td>
+          </tr>
+          ` : ''}
 
           <!-- Council Consensus -->
           ${brief.councilConsensus ? `

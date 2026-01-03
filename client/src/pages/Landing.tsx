@@ -14,6 +14,8 @@ interface EspressoStory {
   verificationScore: number;
   category: 'critical' | 'important' | 'background';
   sentiment?: 'positive' | 'negative' | 'neutral' | 'mixed';
+  recencyLabel?: string;
+  publishedDate?: string;
 }
 
 interface EspressoBrief {
@@ -24,6 +26,7 @@ interface EspressoBrief {
   executiveThesis?: string;
   theWorldInBrief: string;
   topStories: EspressoStory[];
+  tokohInsights?: EspressoStory[];
   marketsSnapshot?: string;
   quotaOfTheDay?: {
     quote: string;
@@ -800,7 +803,7 @@ export default function Landing() {
                         fontSize: '0.75rem',
                         color: '#94a3b8'
                       }}>
-                        <span>{story.source}</span>
+                        <span>{story.recencyLabel || ''}{story.publishedDate ? ` · ${story.publishedDate}` : ''} · {story.source || ''}</span>
                         {story.url && (
                           <a
                             href={story.url}
@@ -822,6 +825,55 @@ export default function Landing() {
                     </article>
                   ))}
                 </div>
+
+                {/* Tokoh Insights Section */}
+                {brief.tokohInsights && brief.tokohInsights.length > 0 && (
+                  <>
+                    <h2 style={{
+                      fontFamily: "'Cormorant Garamond', Georgia, serif",
+                      fontSize: '1.25rem',
+                      fontWeight: 600,
+                      color: '#1a2a3a',
+                      marginTop: '2rem',
+                      marginBottom: '1rem',
+                      paddingBottom: '0.5rem',
+                      borderBottom: '1px solid #e5e5e5'
+                    }}>
+                      📚 Insight Tokoh
+                    </h2>
+                    {brief.tokohInsights.map((story, index) => (
+                      <div key={`tokoh-${index}`} style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid #f0f0f0' }}>
+                        <p style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.25rem' }}>
+                          {story.recencyLabel || 'Insight'}{story.publishedDate ? ` · ${story.publishedDate}` : ''} · {story.source || 'Sumber tidak tersedia'}
+                        </p>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1a2a3a', marginBottom: '0.5rem' }}>
+                          {story.headline}
+                        </h3>
+                        <p style={{ fontSize: '0.9rem', color: '#475569', marginBottom: '0.5rem', lineHeight: 1.5 }}>
+                          {story.body}
+                        </p>
+                        <div style={{
+                          background: '#f9fafb',
+                          borderLeft: '2px solid #cc2936',
+                          padding: '0.875rem 1rem',
+                          marginBottom: '0.5rem'
+                        }}>
+                          <span style={{ fontWeight: 600, color: '#0a1628', fontSize: '0.8125rem' }}>
+                            Mengapa penting:{' '}
+                          </span>
+                          <span style={{ color: '#2a3f5f', fontSize: '0.8125rem', lineHeight: 1.6 }}>
+                            {story.whyItMatters}
+                          </span>
+                        </div>
+                        {story.url && (
+                          <a href={story.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.85rem', color: '#cc2936', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                            Baca selengkapnya <ExternalLink size={10} />
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </>
+                )}
 
                 {/* Council Consensus - Matching summary panel style */}
                 {brief.councilConsensus && (
