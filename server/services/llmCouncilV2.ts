@@ -1661,7 +1661,8 @@ async function claudeJudge(
   profile: UserProfile,
   searchResults: SearchResult[],
   analysisResults: AnalysisResult[],
-  ctx: SearchContext // Phase 0.3: receive SearchContext with role and decisionContext
+  ctx: SearchContext, // Phase 0.3: receive SearchContext with role and decisionContext
+  coverage: CoverageResult // Phase 2.17: receive coverage info for mandatory tokoh enforcement
 ): Promise<EspressoBrief> {
   const today = new Date();
   const dateStr = today.toISOString().split("T")[0];
@@ -1741,11 +1742,40 @@ Opportunities: ${JSON.stringify(analysisResults.flatMap((r) => r.opportunities |
 INSTRUKSI HAKIM AKHIR
 ═══════════════════════════════════════════════════════════════
 
+${coverage.tokohCovered.length > 0 ? `
+╔═══════════════════════════════════════════════════════════════╗
+║  🚨 MANDATORY TOKOH RULE (Phase 2.17) - HIGHEST PRIORITY 🚨   ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  The user SPECIFICALLY requested to track these people:       ║
+║  ${coverage.tokohCovered.map(t => `• ${t}`).join("\n║  ")}
+║                                                               ║
+║  HARD RULES:                                                  ║
+║  1. You MUST include at least ONE story featuring EACH        ║
+║     tracked tokoh listed above in topStories.                 ║
+║                                                               ║
+║  2. These stories take PRIORITY over general news, even if    ║
+║     general news seems "bigger" or "more important".          ║
+║                                                               ║
+║  3. The user SPECIFICALLY requested to track these people -   ║
+║     ignoring them violates the core product promise.          ║
+║                                                               ║
+║  4. Search found articles mentioning these tokoh. You MUST    ║
+║     include them. Do NOT drop covered tokoh for generic news. ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+` : ""}
+
 RECENCY RULES (CRITICAL):
 - PRIORITIZE articles from the LAST 24 HOURS
 - EXCLUDE any news older than 48 hours UNLESS it's a major breaking story still developing
 - If publishedDate is missing or unclear, verify recency from context
 - Today's date: ${dateStr}
+
+STORY SELECTION PROCESS (in this exact order):
+1. TOKOH FIRST: For EACH covered tokoh (${coverage.tokohCovered.join(", ") || "none"}), select their most relevant/recent story FIRST
+2. FILL REMAINING: After tokoh stories are selected, fill remaining slots (up to 5 total) with other high-value stories
+3. NEVER drop a covered tokoh story in favor of generic news - tokoh stories are MANDATORY
 
 CURATION PROCESS:
 1. DEDUPLIKASI: Gabungkan berita sama dari berbagai sumber
@@ -2099,7 +2129,8 @@ export async function runCouncilV2(
 
   const judgeStart = Date.now();
   // Phase 0.3: Pass searchContext to judge function (contains role and decisionContext)
-  const brief = await claudeJudge(profile, searchResults, analysisResults, searchContext);
+  // Phase 2.17: Pass coverage to enforce mandatory tokoh rule
+  const brief = await claudeJudge(profile, searchResults, analysisResults, searchContext, coverage);
   const judgeLayerMs = Date.now() - judgeStart;
 
   console.log(`\n✅ Brief generated (${judgeLayerMs}ms)`);
