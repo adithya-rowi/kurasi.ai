@@ -26,9 +26,9 @@ import { eq, desc } from "drizzle-orm";
 // =============================================================================
 
 function computeRecencyLabel(publishedDate: string): string {
-  if (!publishedDate) return "Tanggal tidak tersedia";
+  if (!publishedDate) return "";
   const date = new Date(publishedDate);
-  if (isNaN(date.getTime())) return "Tanggal tidak tersedia";
+  if (isNaN(date.getTime())) return "";
 
   const now = new Date();
   const hoursAgo = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
@@ -84,7 +84,7 @@ export function enforceFreshTopStories(
 
     resultStories = brief.topStories.map((s) => ({
       ...s,
-      recencyLabel: s.publishedDate ? s.recencyLabel : "Tanggal belum diverifikasi",
+      recencyLabel: s.publishedDate ? s.recencyLabel : "",
     }));
   } else {
     resultStories = freshStories;

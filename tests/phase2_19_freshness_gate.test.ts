@@ -108,7 +108,7 @@ function enforceFreshTopStories(
   if (freshStories.length === 0 && brief.topStories && brief.topStories.length > 0) {
     resultStories = brief.topStories.map((s) => ({
       ...s,
-      recencyLabel: s.publishedDate ? s.recencyLabel : "Tanggal belum diverifikasi",
+      recencyLabel: s.publishedDate ? s.recencyLabel : "",
     }));
   } else {
     resultStories = freshStories;
@@ -330,8 +330,8 @@ assertEqual(
 );
 
 assert(
-  result6.topStories.every((s) => s.recencyLabel === "Tanggal belum diverifikasi"),
-  "Test 6: Undated stories marked with 'Tanggal belum diverifikasi'"
+  result6.topStories.every((s) => s.recencyLabel === ""),
+  "Test 6: Undated stories have empty recencyLabel (no placeholder text)"
 );
 
 // ============================================================================
