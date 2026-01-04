@@ -11,7 +11,7 @@
  * - GPT-5 mini (gpt-5-mini) - fast analysis
  *
  * JUDGE LAYER:
- * - Claude Opus 4.5 - HAKIM AKHIR
+ * - Claude Sonnet 4.5 - HAKIM AKHIR
  * - Economist Espresso style brief in Bahasa Indonesia
  */
 
@@ -179,8 +179,8 @@ const AI_COUNCIL_V2 = {
   },
   // Judge Layer
   claude: {
-    name: "Claude Opus 4.5",
-    model: "claude-opus-4-5-20251101",
+    name: "Claude Sonnet 4.5",
+    model: "claude-sonnet-4-5-20250929",
     provider: "Anthropic",
     layer: "judge",
     icon: "🟤",
@@ -2025,7 +2025,7 @@ OUTPUT JSON (Bahasa Indonesia yang elegan):
 
   try {
     const judgeModel = AI_COUNCIL_V2.claude.model;
-    console.log("🟤 Claude Opus 4.5 - HAKIM AKHIR deliberating...");
+    console.log("🟤 Claude Sonnet 4.5 - HAKIM AKHIR deliberating...");
     const response = await anthropic.messages.create({
       model: judgeModel,
       max_tokens: 4096,
@@ -2215,7 +2215,7 @@ export async function runCouncilV2(
   console.log("\n📊 API Status:");
   console.log(`   SEARCH:   Perplexity ${apis.perplexity ? "✅" : "❌"} | Gemini ${apis.gemini ? "✅" : "❌"} | Grok ${apis.grok ? "✅" : "❌"}`);
   console.log(`   ANALYSIS: DeepSeek ${apis.deepseek ? "✅" : "❌"} | GPT-5 mini ${apis.openai ? "✅" : "❌"}`);
-  console.log(`   JUDGE:    Claude Opus 4.5 ${apis.anthropic ? "✅" : "❌"}`);
+  console.log(`   JUDGE:    Claude Sonnet 4.5 ${apis.anthropic ? "✅" : "❌"}`);
 
   if (!apis.anthropic) {
     return { success: false, error: "Claude (Anthropic) is required as HAKIM AKHIR" };
@@ -2327,10 +2327,10 @@ export async function runCouncilV2(
   });
 
   // ==========================================================================
-  // LAYER 3: JUDGE (Claude Opus 4.5)
+  // LAYER 3: JUDGE (Claude Sonnet 4.5)
   // ==========================================================================
   console.log("\n" + "─".repeat(60));
-  console.log("⚖️  LAYER 3: JUDGE (Claude Opus 4.5 - HAKIM AKHIR)");
+  console.log("⚖️  LAYER 3: JUDGE (Claude Sonnet 4.5 - HAKIM AKHIR)");
   console.log("─".repeat(60));
 
   const judgeStart = Date.now();
