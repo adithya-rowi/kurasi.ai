@@ -1551,6 +1551,7 @@ async function searchWithGrok(profile: UserProfile): Promise<SearchResult> {
   const today = now.toISOString().split("T")[0];
   const todayIndo = now.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split("T")[0];
   const ctx = buildSearchContext(profile);
 
   // Phase 1.1: Get mandatory queries for enforcement
