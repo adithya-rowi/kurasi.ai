@@ -86,7 +86,7 @@ function generateStoryHTML(story: EspressoStory, isLast: boolean): string {
     <tr>
       <td style="padding: 0 0 ${isLast ? "0" : "32px"} 0; border-bottom: ${isLast ? "none" : `1px solid ${colors.border}`};">
         <!-- Category Badge -->
-        <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 12px;">
+        <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 8px;">
           <tr>
             <td style="width: 8px; height: 8px; background: ${getCategoryColor(story.category)}; border-radius: 50%;"></td>
             <td style="padding-left: 8px; font-family: 'DM Sans', Arial, sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: ${colors.silver};">
@@ -94,6 +94,11 @@ function generateStoryHTML(story: EspressoStory, isLast: boolean): string {
             </td>
           </tr>
         </table>
+
+        <!-- Date & Source (above headline) -->
+        <p style="font-family: 'DM Sans', Arial, sans-serif; font-size: 12px; color: ${colors.silver}; margin: 0 0 8px 0;">
+          ${story.recencyLabel || ''}${story.publishedDate ? ` · ${story.publishedDate}` : ''} · ${story.source || ''}
+        </p>
 
         <!-- Headline -->
         <h3 style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 22px; font-weight: 500; color: ${colors.midnight}; margin: 0 0 12px 0; line-height: 1.3;">
@@ -115,21 +120,12 @@ function generateStoryHTML(story: EspressoStory, isLast: boolean): string {
           </tr>
         </table>
 
-        <!-- Source & Link -->
-        <table cellpadding="0" cellspacing="0" border="0">
-          <tr>
-            <td style="font-family: 'DM Sans', Arial, sans-serif; font-size: 12px; color: ${colors.silver};">
-              ${story.recencyLabel || ''}${story.publishedDate ? ` · ${story.publishedDate}` : ''} · ${story.source || ''}
-            </td>
-            ${story.url ? `
-            <td style="padding-left: 8px;">
-              <a href="${story.url}" target="_blank" style="font-family: 'DM Sans', Arial, sans-serif; font-size: 12px; color: ${colors.red}; text-decoration: none;">
-                Baca selengkapnya →
-              </a>
-            </td>
-            ` : ""}
-          </tr>
-        </table>
+        <!-- Link -->
+        ${story.url ? `
+        <a href="${story.url}" target="_blank" style="font-family: 'DM Sans', Arial, sans-serif; font-size: 12px; color: ${colors.red}; text-decoration: none;">
+          Baca selengkapnya →
+        </a>
+        ` : ""}
       </td>
     </tr>
     ${!isLast ? `<tr><td style="height: 32px;"></td></tr>` : ""}

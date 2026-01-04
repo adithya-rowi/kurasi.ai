@@ -732,7 +732,7 @@ export default function Landing() {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.5rem',
-                        marginBottom: '0.75rem'
+                        marginBottom: '0.5rem'
                       }}>
                         <span style={{
                           width: 8,
@@ -749,6 +749,15 @@ export default function Landing() {
                         }}>
                           {story.category === 'critical' ? 'Kritis' : story.category === 'important' ? 'Penting' : 'Konteks'}
                         </span>
+                      </div>
+
+                      {/* Date & Source (above headline) */}
+                      <div style={{
+                        fontSize: '0.75rem',
+                        color: '#94a3b8',
+                        marginBottom: '0.5rem'
+                      }}>
+                        {story.recencyLabel || ''}{story.publishedDate ? ` · ${story.publishedDate}` : ''} · {story.source || ''}
                       </div>
 
                       {/* Headline */}
@@ -795,33 +804,24 @@ export default function Landing() {
                         </span>
                       </div>
 
-                      {/* Source */}
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        fontSize: '0.75rem',
-                        color: '#94a3b8'
-                      }}>
-                        <span>{story.recencyLabel || ''}{story.publishedDate ? ` · ${story.publishedDate}` : ''} · {story.source || ''}</span>
-                        {story.url && (
-                          <a
-                            href={story.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              color: '#cc2936',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.25rem',
-                              textDecoration: 'none',
-                              fontSize: '0.75rem'
-                            }}
-                          >
-                            Baca selengkapnya <ExternalLink size={10} />
-                          </a>
-                        )}
-                      </div>
+                      {/* Link */}
+                      {story.url && (
+                        <a
+                          href={story.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            color: '#cc2936',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            textDecoration: 'none',
+                            fontSize: '0.75rem'
+                          }}
+                        >
+                          Baca selengkapnya <ExternalLink size={10} />
+                        </a>
+                      )}
                     </article>
                   ))}
                 </div>
