@@ -28,6 +28,7 @@ interface EspressoBrief {
   theWorldInBrief: string;
   topStories: EspressoStory[];
   tokohInsights?: EspressoStory[];
+  institusiInsights?: EspressoStory[];
   marketsSnapshot?: string;
   quotaOfTheDay?: {
     quote: string;
@@ -828,6 +829,57 @@ export default function Landing() {
                     </article>
                   ))}
                 </div>
+
+                {/* Institusi Insights Section */}
+                {brief.institusiInsights && brief.institusiInsights.length > 0 && (
+                  <>
+                    <h2 style={{
+                      fontFamily: "'Cormorant Garamond', Georgia, serif",
+                      fontSize: '1.25rem',
+                      fontWeight: 600,
+                      color: '#1a2a3a',
+                      marginTop: '2rem',
+                      marginBottom: '1rem',
+                      paddingBottom: '0.5rem',
+                      borderBottom: '1px solid #e5e5e5'
+                    }}>
+                      🏢 Update Institusi
+                    </h2>
+                    {brief.institusiInsights.map((story, index) => (
+                      <div key={`institusi-${index}`} style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid #f0f0f0' }}>
+                        {[story.recencyLabel, story.publishedDate, story.source].filter(Boolean).length > 0 && (
+                          <p style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.25rem' }}>
+                            {[story.recencyLabel, story.publishedDate, story.source].filter(Boolean).join(' · ')}
+                          </p>
+                        )}
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1a2a3a', marginBottom: '0.5rem' }}>
+                          {story.headline}
+                        </h3>
+                        <p style={{ fontSize: '0.9rem', color: '#475569', marginBottom: '0.5rem', lineHeight: 1.5 }}>
+                          {story.body}
+                        </p>
+                        <div style={{
+                          background: '#f9fafb',
+                          borderLeft: '2px solid #cc2936',
+                          padding: '0.875rem 1rem',
+                          marginBottom: '0.5rem'
+                        }}>
+                          <span style={{ fontWeight: 600, color: '#0a1628', fontSize: '0.8125rem' }}>
+                            Mengapa penting:{' '}
+                          </span>
+                          <span style={{ color: '#2a3f5f', fontSize: '0.8125rem', lineHeight: 1.6 }}>
+                            {story.whyItMatters}
+                          </span>
+                        </div>
+                        {story.url && story.isUrlVerified && (
+                          <a href={story.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.85rem', color: '#cc2936', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                            Baca selengkapnya <ExternalLink size={10} />
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </>
+                )}
 
                 {/* Tokoh Insights Section */}
                 {brief.tokohInsights && brief.tokohInsights.length > 0 && (
