@@ -1109,7 +1109,7 @@ async function searchWithPerplexity(profile: UserProfile): Promise<SearchResult>
   // Phase 2.10.1: Simplified prompt - articles only, no searchQueries
   const searchPrompt = `RESPOND WITH ONLY VALID JSON. NO EXPLANATIONS. NO APOLOGIES. NO TEXT BEFORE OR AFTER THE JSON.
 
-You are a news search assistant. Search for TODAY'S news only.
+You are a news search assistant. Follow the RECENCY RULES BY TYPE specified below.
 
 ${buildSearchPrompt(ctx)}
 
@@ -1117,13 +1117,13 @@ TANGGAL HARI INI: ${todayIndo} (${today})
 
 CRITICAL INSTRUCTIONS:
 1. Execute the MANDATORY QUERIES listed above IN ORDER
-2. Only include news from the LAST 24 HOURS
+2. Follow recency rules: INSTITUSI 24h, TOPICS 48h, TOKOH 7 days
 3. For each query, find at least 1 relevant article
 4. DO NOT output searchQueries. Return ONLY the articles array.
 
-CRITICAL: If you cannot determine a publishedDate, DO NOT include the article.
+CRITICAL: If you cannot determine a publishedDate, leave it empty - do not skip the article.
 
-Search for 7-10 LATEST news articles published TODAY. Return ONLY this JSON structure:
+Search for 7-10 LATEST news articles following the recency rules above. Return ONLY this JSON structure:
 {"articles":[{"title":"Article title","summary":"2-3 sentence summary in ${ctx.languageName}","source":"Source name","url":"Full URL","publishedDate":"REQUIRED. Format YYYY-MM-DD. Extract from article metadata, byline, or page header. If article says today/hari ini use ${today}. If yesterday/kemarin calculate. If X days ago calculate. EVERY news article has a publish date. MUST NOT be empty.","confidence":8}]}
 
 RULES:
@@ -1226,11 +1226,11 @@ YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
         citations,
       }));
 
-      // Phase 2.19: Filter out articles without publishedDate
-      const articles = rawArticles.filter(a => a.publishedDate && a.publishedDate.trim() !== "");
-      const droppedCount = rawArticles.length - articles.length;
-      if (droppedCount > 0) {
-        console.log(`⚠️ Perplexity: Dropped ${droppedCount} articles without publishedDate`);
+      // Keep all articles - don't drop based on date. Mark missing dates later.
+      const articles = rawArticles;
+      const noDateCount = rawArticles.filter(a => !a.publishedDate || a.publishedDate.trim() === "").length;
+      if (noDateCount > 0) {
+        console.log(`⚠️ Perplexity: ${noDateCount} articles have no publishedDate (will be marked as unverified)`);
       }
 
       // Phase 2.10: Check for empty articles
@@ -1288,7 +1288,7 @@ async function searchWithGemini(profile: UserProfile): Promise<SearchResult> {
   // Phase 2.8: Removed url from JSON to prevent truncation - urls come from grounding metadata
   const searchPrompt = `RESPOND WITH ONLY VALID JSON. NO EXPLANATIONS. NO TEXT BEFORE OR AFTER THE JSON.
 
-You are a news search assistant. Search for TODAY'S news only.
+You are a news search assistant. Follow the RECENCY RULES BY TYPE specified below.
 
 ${buildSearchPrompt(ctx)}
 
@@ -1296,15 +1296,14 @@ TANGGAL HARI INI: ${todayIndo} (${today})
 
 CRITICAL INSTRUCTIONS:
 1. Execute the MANDATORY QUERIES listed above using Google Search
-2. ONLY include articles from the LAST 24 HOURS
-3. EXCLUDE any news older than 48 hours
-4. Ensure coverage of tokoh/institusi/topics as specified
-5. If a tokoh has no recent news, note in summary: "Tidak ditemukan berita terkini"
-6. DO NOT include any URLs in the JSON - URLs will be added from search metadata
+2. Follow recency rules: INSTITUSI 24h, TOPICS 48h, TOKOH 7 days
+3. Ensure coverage of tokoh/institusi/topics as specified
+4. If a tokoh has no recent news, note in summary: "Tidak ditemukan berita terkini"
+5. DO NOT include any URLs in the JSON - URLs will be added from search metadata
 
-CRITICAL: If you cannot determine a publishedDate, DO NOT include the article.
+CRITICAL: If you cannot determine a publishedDate, leave it empty - do not skip the article.
 
-Search for 7-10 LATEST news articles published TODAY. Your response must be ONLY this JSON structure:
+Search for 7-10 LATEST news articles following the recency rules above. Your response must be ONLY this JSON structure:
 {"articles":[{"title":"Article title","summary":"2-3 sentence summary in ${ctx.languageName}","source":"Source name","sourceType":"local|regional|global","publishedDate":"REQUIRED. Format YYYY-MM-DD. Extract from article metadata, byline, or page header. If article says today/hari ini use ${today}. If yesterday/kemarin calculate. If X days ago calculate. EVERY news article has a publish date. MUST NOT be empty.","confidence":8,"matchedQuery":"which mandatory query this answers"}]}
 
 YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
@@ -1453,11 +1452,11 @@ YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
       citations,
     }));
 
-    // Phase 2.19: Filter out articles without publishedDate
-    const articles = rawArticles.filter(a => a.publishedDate && a.publishedDate.trim() !== "");
-    const droppedCount = rawArticles.length - articles.length;
-    if (droppedCount > 0) {
-      console.log(`⚠️ Gemini: Dropped ${droppedCount} articles without publishedDate`);
+    // Keep all articles - don't drop based on date. Mark missing dates later.
+    const articles = rawArticles;
+    const noDateCount = rawArticles.filter(a => !a.publishedDate || a.publishedDate.trim() === "").length;
+    if (noDateCount > 0) {
+      console.log(`⚠️ Gemini: ${noDateCount} articles have no publishedDate (will be marked as unverified)`);
     }
 
     const result: SearchResult = {
@@ -1497,19 +1496,20 @@ async function searchWithGrok(profile: UserProfile): Promise<SearchResult> {
   // Phase 1.1: Get mandatory queries for enforcement
   const queryResult = generateSearchQueries(ctx);
 
-  const searchPrompt = `Search X/Twitter and web for TODAY'S discussions and news (${todayIndo}).
+  const searchPrompt = `Search X/Twitter and web for recent discussions and news (${todayIndo}).
 
 ${buildSearchPrompt(ctx)}
 
-RECENCY: LAST 24 HOURS ONLY (since ${yesterday})
-- Only include tweets and news from TODAY
-- Exclude anything older than 24 hours
+RECENCY RULES BY TYPE:
+- INSTITUSI: Last 24 hours
+- TOPICS: Last 48 hours
+- TOKOH: Last 7 days (people may not tweet daily)
 
 CRITICAL INSTRUCTIONS:
 1. Execute the MANDATORY QUERIES listed above on X/Twitter and web
 2. Prioritize finding tokoh mentions and social media discussions
 3. For each tokoh, find their recent tweets, mentions, or discussions
-4. If a tokoh has no X/Twitter presence today, note: "Tidak ditemukan aktivitas X/Twitter terkini"
+4. If a tokoh has no X/Twitter presence recently, note: "Tidak ditemukan aktivitas X/Twitter terkini"
 
 FOCUS:
 - Tweets from the specified tokoh/people in queries
@@ -1517,7 +1517,7 @@ FOCUS:
 - Public sentiment and market reactions
 - Breaking news and trending discussions about specified topics
 
-CRITICAL: If you cannot determine a publishedDate, DO NOT include the article.
+CRITICAL: If you cannot determine a publishedDate, leave it empty - do not skip the article.
 
 Return JSON in ${ctx.languageName}:
 {
@@ -1590,11 +1590,11 @@ Return JSON in ${ctx.languageName}:
       citations,
     }));
 
-    // Phase 2.19: Filter out articles without publishedDate
-    const articles = rawArticles.filter(a => a.publishedDate && a.publishedDate.trim() !== "");
-    const droppedCount = rawArticles.length - articles.length;
-    if (droppedCount > 0) {
-      console.log(`⚠️ Grok: Dropped ${droppedCount} articles without publishedDate`);
+    // Keep all articles - don't drop based on date. Mark missing dates later.
+    const articles = rawArticles;
+    const noDateCount = rawArticles.filter(a => !a.publishedDate || a.publishedDate.trim() === "").length;
+    if (noDateCount > 0) {
+      console.log(`⚠️ Grok: ${noDateCount} articles have no publishedDate (will be marked as unverified)`);
     }
 
     return {
