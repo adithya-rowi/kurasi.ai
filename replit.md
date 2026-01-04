@@ -89,7 +89,20 @@ The server handles user management, onboarding conversations, article storage, a
 
 ## Recent Changes
 
-### Prompt 7 - Perplexity-Style Redesign (Current)
+### Phase 2.25 - Critical Bug Fixes (Current)
+- Fixed URL hallucination: Added "HALLUCINATION = FAILURE" warning in Judge prompt with sample valid URLs
+- Added post-Judge URL whitelist validation - strips any URL not in search results
+- Fixed institusi misplacement: Changed to "TRACKED INSTITUSI ONLY" with explicit list constraint
+- Fixed untracked tokoh: Changed to "TRACKED TOKOH ONLY" with @username ban
+- Added cross-section validation - moves misplaced institusi from tokohInsights to institusiInsights
+- Added filter for untracked tokoh - removes stories not mentioning tracked tokoh names
+
+### Phase 2.24 - Three-Way Brief Separation
+- Added `institusiInsights` section for company/institution news (48h freshness gate)
+- Brief now has three sections: topStories (topics, 24h), institusiInsights (companies, 48h), tokohInsights (people, 7d)
+- Updated frontend Landing.tsx and email template to render 🏢 Update Institusi section
+
+### Prompt 7 - Perplexity-Style Redesign
 - Complete Landing page redesign with Perplexity-style sidebar navigation
 - Kurasi speaks first - opens conversation to draw users in
 - Clean white/slate aesthetic (moved from dark navy/gold)
