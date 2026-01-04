@@ -574,10 +574,10 @@ function generateSearchQueries(ctx: SearchContext): SearchQueryResult {
 
     if (entityType === "tokoh") {
       mustCoverTokoh.push(entity);
-      // Add tokoh-specific queries
-      queries.push(`${entity} latest interview OR podcast OR talk ${year}`);
-      queries.push(`${entity} thoughts venture capital ${year}`);
-      queries.push(`${entity} X Twitter recent insights`);
+      // X-friendly queries - works for ANY tokoh name (no hardcoded handles)
+      queries.push(`"${entity}" site:x.com ${year}`);
+      queries.push(`"${entity}" tweet OR thread OR says ${year}`);
+      queries.push(`"${entity}" interview OR podcast ${year}`);
     } else {
       mustCoverInstitusi.push(entity);
       // Add institusi-specific queries
@@ -1550,7 +1550,7 @@ async function searchWithGrok(profile: UserProfile): Promise<SearchResult> {
   const now = new Date();
   const today = now.toISOString().split("T")[0];
   const todayIndo = now.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
-  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
   const ctx = buildSearchContext(profile);
 
   // Phase 1.1: Get mandatory queries for enforcement
@@ -1621,7 +1621,7 @@ Return JSON in ${ctx.languageName}:
           mode: "on",
           sources: [{ type: "web" }, { type: "x" }],
           max_search_results: 20,
-          from_date: yesterday, // Last 24 hours only
+          from_date: sevenDaysAgo, // Extended for tokoh search (7 days)
         },
       }),
     });
