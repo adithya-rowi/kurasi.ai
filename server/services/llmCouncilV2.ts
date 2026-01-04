@@ -1926,6 +1926,15 @@ async function claudeJudge(
   const searchModels = searchResults.filter((r) => !r.error && r.articles.length > 0).map((r) => r.model);
   const analysisModels = analysisResults.filter((r) => !r.error && r.themes.length > 0).map((r) => r.model);
 
+  // Phase 2.25: Build URL whitelist from search results for anti-hallucination
+  const validUrlsFromSearch = new Set<string>();
+  allArticles.forEach(a => {
+    if (a.url && typeof a.url === 'string' && a.url.trim().length > 0) {
+      validUrlsFromSearch.add(a.url.trim());
+    }
+  });
+  const sampleValidUrls = Array.from(validUrlsFromSearch).slice(0, 10);
+
   const judgePrompt = `${ECONOMIST_ESPRESSO_PROMPT}
 
 ═══════════════════════════════════════════════════════════════
@@ -2009,19 +2018,23 @@ INSTRUKSI HAKIM AKHIR
 ║       - add acknowledgment in theWorldInBrief:                ║
 ║         'Hari ini relatif tenang untuk topik Anda'            ║
 ║                                                               ║
-║  2. "institusiInsights" (1-2 stories) - INSTITUSI ONLY:       ║
-║     • Stories about: ${coverage.institusiCovered.join(", ") || "none"}
-║     • ✅ PUT ALL institusi stories HERE, not in topStories    ║
+║  2. "institusiInsights" (1-2 stories) - TRACKED INSTITUSI ONLY: ║
+║     • ONLY these institusi allowed: ${coverage.institusiCovered.join(", ") || "none"}
+║     • ⛔ Other companies mentioned in articles → topStories    ║
+║     • ⛔ If company is NOT in tracked list above → EXCLUDE     ║
+║     • ✅ PUT ALL tracked institusi stories HERE                ║
 ║     • Can be up to 48h old (show actual date)                 ║
 ║     • Category: Institusi                                     ║
-║     • If no institusi found in search, return empty array []  ║
+║     • If no news about tracked institusi → return empty []    ║
 ║                                                               ║
-║  3. "tokohInsights" (1-2 stories) - TOKOH ONLY:               ║
-║     • Stories about: ${coverage.tokohCovered.join(", ") || "none"}
-║     • ✅ PUT ALL tokoh stories HERE, not in topStories        ║
+║  3. "tokohInsights" (1-2 stories) - TRACKED TOKOH ONLY:       ║
+║     • ONLY these tokoh allowed: ${coverage.tokohCovered.join(", ") || "none"}
+║     • ⛔ @usernames, journalists, random names → NEVER include ║
+║     • ⛔ If person is NOT in tracked list above → EXCLUDE      ║
+║     • ✅ PUT ALL tracked tokoh stories HERE                    ║
 ║     • Can be up to 7 days old (show actual date)              ║
 ║     • Category: Insight                                       ║
-║     • If no tokoh found in search, return empty array []      ║
+║     • If no news about tracked tokoh → return empty []        ║
 ║                                                               ║
 ║  ⚠️ VALIDATION: If any story in topStories mentions           ║
 ║  ${coverage.institusiCovered.join(" or ") || "a tracked institusi"} or
@@ -2035,25 +2048,17 @@ INSTRUKSI HAKIM AKHIR
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
 ║  • story.url MUST be copied EXACTLY from SearchArticle.url    ║
-║  • DO NOT invent, modify, guess, or construct URLs            ║
-║  • DO NOT create plausible-looking URLs                       ║
+║  • ⛔ HALLUCINATION = FAILURE: If you cannot find exact URL   ║
+║     in input articles, set url to "" - NEVER invent URLs      ║
+║  • DO NOT create plausible-looking URLs from titles           ║
 ║  • If no valid URL exists, set url to empty string ""         ║
+║                                                               ║
+║  VALID URLs FROM INPUT (use ONLY these):                      ║
+${sampleValidUrls.map(u => `║  • ${u.substring(0, 55)}${u.length > 55 ? '...' : ''}`).join('\n') || '║  (no URLs in search results)'}
 ║                                                               ║
 ║  • story.publishedDate MUST be from same SearchArticle        ║
 ║  • If date unknown, set publishedDate to empty string ""      ║
 ║  • NEVER pretend old content is fresh                         ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
-
-╔═══════════════════════════════════════════════════════════════╗
-║  📋 URL SOURCE RULE (Phase 2.20)                              ║
-╠═══════════════════════════════════════════════════════════════╣
-║                                                               ║
-║  • COPY URLs exactly from input SearchArticle.url             ║
-║  • NEVER construct, guess, or normalize URLs from titles      ║
-║  • If input article has no URL, leave url field as ""         ║
-║  • URLs like 'https://source.com/path-from-title' are         ║
-║    HALLUCINATIONS - do not create them                        ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 
@@ -2177,6 +2182,81 @@ OUTPUT JSON (Bahasa Indonesia yang elegan):
     // Phase 2.24: Ensure institusiInsights is always an array
     if (!brief.institusiInsights) {
       brief.institusiInsights = [];
+    }
+
+    // Phase 2.25: Post-Judge URL whitelist validation - strip hallucinated URLs
+    const stripHallucinatedUrls = (stories: any[] | undefined, sectionName: string): void => {
+      if (!stories) return;
+      let strippedCount = 0;
+      for (const story of stories) {
+        if (story.url && !validUrlsFromSearch.has(story.url.trim())) {
+          console.log(`⚠️ [${sectionName}] Stripped hallucinated URL: ${story.url.substring(0, 60)}...`);
+          story.url = "";
+          story.isUrlVerified = false;
+          strippedCount++;
+        }
+      }
+      if (strippedCount > 0) {
+        console.log(`✅ Phase 2.25: Stripped ${strippedCount} hallucinated URLs from ${sectionName}`);
+      }
+    };
+    stripHallucinatedUrls(brief.topStories, "topStories");
+    stripHallucinatedUrls(brief.tokohInsights, "tokohInsights");
+    stripHallucinatedUrls(brief.institusiInsights, "institusiInsights");
+
+    // Phase 2.25: Cross-section validation - move misplaced institusi from tokohInsights
+    if (brief.tokohInsights && brief.tokohInsights.length > 0 && coverage.institusiCovered.length > 0) {
+      const misplacedInstitusi: typeof brief.tokohInsights = [];
+      const cleanedTokohInsights: typeof brief.tokohInsights = [];
+      
+      for (const story of brief.tokohInsights) {
+        const headline = (story.headline || "").toLowerCase();
+        const body = (story.body || "").toLowerCase();
+        const content = headline + " " + body;
+        
+        // Check if this story mentions a tracked institusi
+        const mentionsInstitusi = coverage.institusiCovered.some(inst => 
+          content.includes(inst.toLowerCase())
+        );
+        
+        if (mentionsInstitusi) {
+          console.log(`⚠️ Moving misplaced institusi from tokohInsights: ${story.headline?.substring(0, 50)}...`);
+          misplacedInstitusi.push(story);
+        } else {
+          cleanedTokohInsights.push(story);
+        }
+      }
+      
+      if (misplacedInstitusi.length > 0) {
+        brief.tokohInsights = cleanedTokohInsights;
+        brief.institusiInsights = [...(brief.institusiInsights || []), ...misplacedInstitusi];
+        console.log(`✅ Phase 2.25: Moved ${misplacedInstitusi.length} misplaced institusi stories`);
+      }
+    }
+
+    // Phase 2.25: Filter untracked tokoh from tokohInsights
+    if (brief.tokohInsights && brief.tokohInsights.length > 0 && coverage.tokohCovered.length > 0) {
+      const originalCount = brief.tokohInsights.length;
+      brief.tokohInsights = brief.tokohInsights.filter(story => {
+        const headline = (story.headline || "").toLowerCase();
+        const body = (story.body || "").toLowerCase();
+        const content = headline + " " + body;
+        
+        // Check if this story mentions a tracked tokoh
+        const mentionsTrackedTokoh = coverage.tokohCovered.some(tokoh => 
+          content.includes(tokoh.toLowerCase())
+        );
+        
+        if (!mentionsTrackedTokoh) {
+          console.log(`⚠️ Filtering untracked tokoh from tokohInsights: ${story.headline?.substring(0, 50)}...`);
+        }
+        return mentionsTrackedTokoh;
+      });
+      
+      const filteredCount = originalCount - brief.tokohInsights.length;
+      if (filteredCount > 0) {
+        console.log(`✅ Phase 2.25: Filtered ${filteredCount} untracked tokoh from tokohInsights`);
+      }
     }
 
     // Phase 2.2: Validate whyItMatters and auto-repair if needed
