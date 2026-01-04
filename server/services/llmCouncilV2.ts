@@ -98,6 +98,30 @@ export function enforceFreshTopStories(
   };
 }
 
+/**
+ * Phase 2.20: HTTP URL verification - check if URL is reachable
+ */
+async function verifyUrl(url: string, timeoutMs: number = 3000): Promise<boolean> {
+  if (!url || url.trim() === "") return false;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    const response = await fetch(url, {
+      method: "HEAD",
+      signal: controller.signal,
+      redirect: "follow",
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; LoperBot/1.0)" }
+    });
+
+    clearTimeout(timeout);
+    return response.status >= 200 && response.status < 400;
+  } catch {
+    return false;
+  }
+}
+
 // =============================================================================
 // AI COUNCIL CONFIGURATION
 // =============================================================================
@@ -1900,6 +1924,18 @@ INSTRUKSI HAKIM AKHIR
 ╚═══════════════════════════════════════════════════════════════╝
 
 ╔═══════════════════════════════════════════════════════════════╗
+║  📋 URL SOURCE RULE (Phase 2.20)                              ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  • COPY URLs exactly from input SearchArticle.url             ║
+║  • NEVER construct, guess, or normalize URLs from titles      ║
+║  • If input article has no URL, leave url field as ""         ║
+║  • URLs like 'https://source.com/path-from-title' are         ║
+║    HALLUCINATIONS - do not create them                        ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+
+╔═══════════════════════════════════════════════════════════════╗
 ║  ⚠️ MANDATORY UNIQUENESS RULE (Phase 2.18) ⚠️                  ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
@@ -2307,33 +2343,42 @@ export async function runCouncilV2(
   console.log(`   📰 Stories: ${brief.topStories?.length || 0}`);
   console.log(`   🎯 Confidence: ${brief.confidenceScore}/10`);
 
-  // Phase 2.19: URL validation - remove hallucinated URLs
-  const allowedUrls = new Set<string>();
-  for (const result of searchResults) {
-    for (const article of result.articles) {
-      if (article.url && article.url.trim()) {
-        allowedUrls.add(article.url);
-      }
-    }
+  // Phase 2.20: HTTP URL verification - remove hallucinated/broken URLs
+  const urlsToVerify = new Set<string>();
+  for (const story of brief.topStories || []) {
+    if (story.url) urlsToVerify.add(story.url);
   }
-
-  // Validate topStories URLs
-  for (const story of brief.topStories) {
-    if (story.url && !allowedUrls.has(story.url)) {
-      console.log(`⚠️ Hallucinated URL removed from topStories: ${story.url}`);
-      story.url = "";
-    }
-  }
-
-  // Validate tokohInsights URLs
   for (const story of brief.tokohInsights || []) {
-    if (story.url && !allowedUrls.has(story.url)) {
-      console.log(`⚠️ Hallucinated URL removed from tokohInsights: ${story.url}`);
+    if (story.url) urlsToVerify.add(story.url);
+  }
+
+  console.log(`🔗 Verifying ${urlsToVerify.size} URLs...`);
+
+  const verifiedUrls = new Set<string>();
+  await Promise.all(
+    Array.from(urlsToVerify).map(async (url) => {
+      const isValid = await verifyUrl(url);
+      if (isValid) {
+        verifiedUrls.add(url);
+      } else {
+        console.log(`❌ Broken/fake URL: ${url}`);
+      }
+    })
+  );
+
+  console.log(`✅ URL verification: ${verifiedUrls.size}/${urlsToVerify.size} valid`);
+
+  // Clear invalid URLs from stories
+  for (const story of brief.topStories || []) {
+    if (story.url && !verifiedUrls.has(story.url)) {
       story.url = "";
     }
   }
-
-  console.log(`✅ URL validation complete. ${allowedUrls.size} allowed URLs.`);
+  for (const story of brief.tokohInsights || []) {
+    if (story.url && !verifiedUrls.has(story.url)) {
+      story.url = "";
+    }
+  }
 
   // Phase 2.19-B: Enforce 24h freshness for topStories (hard gate)
   brief = enforceFreshTopStories(brief, new Date());
