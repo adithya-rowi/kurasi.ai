@@ -1,0 +1,49 @@
+Generate brief for: adithyarowi@gmail.com
+   Role: CEO / Founder
+   Decision Context: mendapatkan funding dari venture capital untuk startup AI saya
+   Sources: (none)
+   Topics: Startup & Venture, Teknologi & AI
+   Entities: Y Combinator, Paul Graham, Naval Ravikant
+
+🏛️ ══════════════════════════════════════════════════════════════
+🏛️  KURASI.AI COUNCIL V2 - 3-LAYER ARCHITECTURE
+🏛️ ══════════════════════════════════════════════════════════════
+
+👤 Guest User (onboarding) - Role: CEO / Founder
+
+📊 API Status:
+   SEARCH:   Perplexity ✅ | Gemini ✅ | Grok ✅
+   ANALYSIS: DeepSeek ✅ | GPT-5 mini ✅
+   JUDGE:    Claude Sonnet 4.5 ✅
+
+────────────────────────────────────────────────────────────
+🔍 LAYER 1: SEARCH (parallel)
+────────────────────────────────────────────────────────────
+🔴 Perplexity searching web/news... (attempt 1/2)
+🔵 Gemini searching with Google grounding...
+🟠 Grok searching X/Twitter + web...
+🔴 Perplexity raw (3310 chars): {"articles":[{"title":"Siapa yang Mendanai Masa Depan? 10 VC Visioner yang Mendorong Inovasi AI","summary":"Artikel ini membahas 10 venture capital terkemuka di Asia Tenggara yang mendanai startup AI, termasuk Gobi Partners, AC Ventures, dan Cento Ventures yang fokus pada Indonesia. Mereka berinvest
+✅ Perplexity returned 7 articles on attempt 1
+⚠️ Gemini JSON parse failed, trying bracket-depth extraction...
+   Parse error: Expected ',' or '}' after property value in JSON at position 1091
+   📝 Response (first 200): {   "articles": [     {       "title": "Startup AI Diramal Bakal Ramai Gulung Tikar di 2026, Ada Apa?",       "summary": "Investor modal ventura bersiap menarik diri dari startup AI pada tahun 2026 ka
+   📝 Response (last 200): sourceType": "regional",       "publishedDate": "2026-01-04",       "confidence": 8,       "matchedQuery": "mendapatkan funding dari venture capital untuk startup AI saya business strategy 2026"     }
+   Trying regex salvage as last resort...
+✅ Regex salvage recovered 2 articles
+⚠️ Stripped Google grounding redirect URL from: Startup AI Diramal Bakal Ramai Gulung Tikar di 202
+⚠️ Stripped Google grounding redirect URL from: Startup AI Diramal Bakal Ramai Gulung Tikar di 202
+
+📊 Raw Search Results (47478ms):
+   ✅ Perplexity: 7 articles (7262ms)
+   ✅ Gemini: 2 articles (47464ms)
+   ✅ Grok: 7 articles (28108ms)
+   📚 Total: 16 articles → 15 after dedupe (1 duplicates removed)
+⚠️ Dropped article (invalid URL): Startup AI Diramal Bakal Ramai Gulung Tikar di 202
+📉 URL format filter: dropped 1 articles with invalid URLs
+   🔗 URL filter: 15 → 14 articles with valid URLs
+   👤 Tokoh: 0 covered, 3 missing
+   ⚠️  Coverage warnings: 4
+      - Tidak ditemukan berita relevan untuk tokoh: Y Combinator (7 hari terakhir)
+      - Tidak ditemukan berita relevan untuk tokoh: Paul Graham (7 hari terakhir)
+      - Tidak ditemukan berita relevan untuk tokoh: Naval Ravikant (7 hari terakhir)
+      - Tidak ditemukan berita untuk topik: Teknologi & AI (48 jam terakhir)

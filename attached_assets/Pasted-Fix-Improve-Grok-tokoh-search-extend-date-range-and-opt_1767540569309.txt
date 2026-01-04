@@ -1,0 +1,120 @@
+Fix: Improve Grok tokoh search - extend date range and optimize query format.
+
+In server/services/llmCouncilV2.ts:
+
+STEP 1: Fix from_date in searchWithGrok (around line 1640)
+
+FIND:
+search_parameters: {
+  mode: "on",
+  sources: [{ type: "web" }, { type: "x" }],
+  max_search_results: 20,
+  from_date: yesterday,
+}
+
+REPLACE WITH:
+search_parameters: {
+  mode: "on",
+  sources: [{ type: "web" }, { type: "x" }],
+  max_search_results: 20,
+  from_date: sevenDaysAgo,  // Extended for tokoh search
+}
+
+STEP 2: Add sevenDaysAgo variable (near yesterday variable)
+
+FIND where yesterday is defined, ADD:
+
+const sevenDaysAgo = new Date();
+sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+
+Then use sevenDaysAgoStr in from_date.
+
+STEP 3: Fix tokoh query format (lines 575-580)
+
+FIND:
+if (entityType === "tokoh") {
+  mustCoverTokoh.push(entity);
+  queries.push(`${entity} latest interview OR podcast OR talk ${year}`);
+  queries.push(`${entity} thoughts venture capital ${year}`);
+  queries.push(`${entity} X Twitter recent insights`);
+}
+
+REPLACE WITH:
+if (entityType === "tokoh") {
+  mustCoverTokoh.push(entity);
+  // Tokoh Twitter handles mapping
+  const tokohHandles: Record<string, string> = {
+    "Paul Graham": "paulg",
+    "Naval Ravikant": "naval",
+    "Y Combinator": "ycombinator",
+    "Elon Musk": "elonmusk",
+    "Sam Altman": "sama",
+    "James Clear": "JamesClear",
+    "Amjad Masad": "amasad",
+  };
+  const handle = tokohHandles[entity];
+  
+  if (handle) {
+    // Optimized X/Twitter queries
+    queries.push(`from:${handle} ${year}`);
+    queries.push(`"${entity}" site:x.com OR site:twitter.com ${year}`);
+  } else {
+    // Fallback for unknown handles
+    queries.push(`"${entity}" tweet OR thread ${year}`);
+    queries.push(`"${entity}" site:x.com ${year}`);
+  }
+  // Also search interviews/podcasts (web)
+  queries.push(`"${entity}" interview OR podcast ${year}`);
+}
+
+STEP 4: Unit test
+
+Create tests/phase2_22_tokoh_search.test.ts:
+
+console.log("=== Tokoh Search Query Tests ===\n");
+
+const tokohHandles: Record<string, string> = {
+  "Paul Graham": "paulg",
+  "Naval Ravikant": "naval",
+  "Y Combinator": "ycombinator",
+};
+
+function generateTokohQueries(entity: string, year: number): string[] {
+  const queries: string[] = [];
+  const handle = tokohHandles[entity];
+  
+  if (handle) {
+    queries.push(`from:${handle} ${year}`);
+    queries.push(`"${entity}" site:x.com OR site:twitter.com ${year}`);
+  } else {
+    queries.push(`"${entity}" tweet OR thread ${year}`);
+  }
+  queries.push(`"${entity}" interview OR podcast ${year}`);
+  return queries;
+}
+
+// Test 1: Known tokoh (Paul Graham)
+const pg = generateTokohQueries("Paul Graham", 2026);
+console.assert(pg.includes("from:paulg 2026"), "FAIL: Missing from:paulg query");
+console.log("✅ Test 1: Paul Graham queries include from:paulg");
+
+// Test 2: Known tokoh (Naval)
+const naval = generateTokohQueries("Naval Ravikant", 2026);
+console.assert(naval.includes("from:naval 2026"), "FAIL: Missing from:naval query");
+console.log("✅ Test 2: Naval queries include from:naval");
+
+// Test 3: Unknown tokoh (fallback)
+const unknown = generateTokohQueries("Some Random Person", 2026);
+console.assert(unknown.some(q => q.includes("tweet OR thread")), "FAIL: Missing fallback query");
+console.log("✅ Test 3: Unknown tokoh uses fallback queries");
+
+// Test 4: All include interview/podcast search
+console.assert(pg.some(q => q.includes("interview OR podcast")), "FAIL: Missing interview query");
+console.log("✅ Test 4: All tokoh include interview/podcast query");
+
+console.log("\n=== All 4 tests passed ===");
+
+Run: npx tsx tests/phase2_22_tokoh_search.test.ts
+
+Commit: "fix: improve tokoh search - 7 day range + optimized X/Twitter queries"

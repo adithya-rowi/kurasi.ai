@@ -1,0 +1,77 @@
+Fix: Improve tokoh search - 7 day range + scalable X-friendly queries (no hardcoded handles).
+
+In server/services/llmCouncilV2.ts:
+
+STEP 1: Add sevenDaysAgo variable in searchWithGrok (near where yesterday is defined)
+
+FIND where date variables are set, ADD:
+
+const sevenDaysAgo = new Date();
+sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+
+STEP 2: Fix from_date in searchWithGrok search_parameters
+
+FIND:
+from_date: yesterday
+
+REPLACE WITH:
+from_date: sevenDaysAgoStr
+
+STEP 3: Fix tokoh query format (lines 575-580) - NO HARDCODED HANDLES
+
+FIND:
+if (entityType === "tokoh") {
+  mustCoverTokoh.push(entity);
+  queries.push(`${entity} latest interview OR podcast OR talk ${year}`);
+  queries.push(`${entity} thoughts venture capital ${year}`);
+  queries.push(`${entity} X Twitter recent insights`);
+}
+
+REPLACE WITH:
+if (entityType === "tokoh") {
+  mustCoverTokoh.push(entity);
+  // X-friendly queries - works for ANY tokoh name
+  queries.push(`"${entity}" site:x.com recent ${year}`);
+  queries.push(`"${entity}" tweet OR thread OR says ${year}`);
+  queries.push(`"${entity}" interview OR podcast ${year}`);
+}
+
+STEP 4: Unit test - create tests/phase2_22_tokoh_search.test.ts
+
+console.log("=== Tokoh Search Query Tests ===\n");
+
+function generateTokohQueries(entity: string, year: number): string[] {
+  const queries: string[] = [];
+  queries.push(`"${entity}" site:x.com recent ${year}`);
+  queries.push(`"${entity}" tweet OR thread OR says ${year}`);
+  queries.push(`"${entity}" interview OR podcast ${year}`);
+  return queries;
+}
+
+// Test 1: Paul Graham (international)
+const pg = generateTokohQueries("Paul Graham", 2026);
+console.assert(pg.length === 3, "FAIL: Should have 3 queries");
+console.assert(pg[0].includes('"Paul Graham"'), "FAIL: Should quote name");
+console.assert(pg[0].includes('site:x.com'), "FAIL: Should include site:x.com");
+console.log("✅ Test 1: Paul Graham queries correct");
+
+// Test 2: Indonesian tokoh (Sandiaga Uno)
+const sandi = generateTokohQueries("Sandiaga Uno", 2026);
+console.assert(sandi[0].includes('"Sandiaga Uno"'), "FAIL: Should quote Indonesian name");
+console.log("✅ Test 2: Indonesian tokoh queries correct");
+
+// Test 3: All queries include year
+const naval = generateTokohQueries("Naval Ravikant", 2026);
+console.assert(naval.every(q => q.includes("2026")), "FAIL: All should include year");
+console.log("✅ Test 3: All queries include year");
+
+// Test 4: Interview/podcast query exists
+console.assert(pg.some(q => q.includes("interview OR podcast")), "FAIL: Missing interview query");
+console.log("✅ Test 4: Interview/podcast query exists");
+
+console.log("\n=== All 4 tests passed ===");
+
+Run: npx tsx tests/phase2_22_tokoh_search.test.ts
+
+Commit: "fix: tokoh search - 7 day range + scalable X-friendly queries"
