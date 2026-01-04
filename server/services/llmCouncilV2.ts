@@ -862,12 +862,8 @@ export function validateWhyItMatters(
         reasons.push("missing_prefix");
       }
 
-      // Rule 3: if decisionContext is non-null and not empty, must include it
-      if (decisionContext && decisionContext.trim().length > 0) {
-        if (!trimmed.toLowerCase().includes(decisionContext.toLowerCase())) {
-          reasons.push("missing_decision_context");
-        }
-      }
+      // Rule 3: REMOVED - decision context should inform Claude's thinking, not be copy-pasted
+      // We trust Claude to make the advice contextually relevant without exact string match
 
       // Rule 4: generic phrase ban (unless role is Eksekutif Korporat)
       if (role !== "Eksekutif Korporat (CFO/COO/Head)") {
@@ -2122,7 +2118,7 @@ DECISION CONTEXT: ${ctx.decisionContext || "(none)"}
 
 RULES:
 1. Every whyItMatters MUST start with: "Sebagai ${ctx.role}, ..."
-2. If DECISION CONTEXT exists, whyItMatters MUST mention connection to: "${ctx.decisionContext || "(none)"}"
+2. Make the advice RELEVANT to the user's goals, but DO NOT copy their decision context word-for-word. Paraphrase naturally and add specific, actionable advice.
 3. BANNED: Generic phrases like "Bagi eksekutif" (unless role is "Eksekutif Korporat (CFO/COO/Head)")
 
 VIOLATIONS TO FIX:

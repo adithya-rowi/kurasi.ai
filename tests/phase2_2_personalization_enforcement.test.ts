@@ -4,7 +4,7 @@
  * Tests that the whyItMatters validator works correctly:
  * (a) Detects missing whyItMatters
  * (b) Detects missing "Sebagai <ROLE>," prefix
- * (c) Detects missing decision context reference (when decisionContext is set)
+ * (c) [REMOVED] - decision context match removed to allow natural writing
  * (d) Detects banned "Bagi eksekutif" phrase (for non-Eksekutif roles)
  * (e) Allows "Bagi eksekutif" for Eksekutif Korporat role
  * (f) Returns empty array when all rules pass
@@ -82,12 +82,8 @@ function validateWhyItMatters(
         reasons.push("missing_prefix");
       }
 
-      // Rule 3: if decisionContext is non-null and not empty, must include it
-      if (decisionContext && decisionContext.trim().length > 0) {
-        if (!trimmed.toLowerCase().includes(decisionContext.toLowerCase())) {
-          reasons.push("missing_decision_context");
-        }
-      }
+      // Rule 3: REMOVED - decision context should inform Claude's thinking, not be copy-pasted
+      // We trust Claude to make the advice contextually relevant without exact string match
 
       // Rule 4: generic phrase ban (unless role is Eksekutif Korporat)
       if (role !== "Eksekutif Korporat (CFO/COO/Head)") {
@@ -169,51 +165,26 @@ const correctPrefixViolations = validateWhyItMatters(
 assertEqual(correctPrefixViolations.length, 0, "Correct prefix passes validation");
 
 // ============================================================================
-// TEST CASE 3: Detects missing decision context reference
+// TEST CASE 3: [REMOVED] Decision context exact match removed
 // ============================================================================
 
-console.log("\n=== Test Case 3: Detects missing decision context ===\n");
+console.log("\n=== Test Case 3: Decision context NOT enforced (allow natural writing) ===\n");
 
 const decisionContext = "alokasi portofolio 2026";
 
-const missingDCItems = [
-  { headline: "Test", whyItMatters: "Sebagai Investor / Fund Manager, ini penting untuk investasi Anda." },
+// whyItMatters that is contextually relevant but doesn't contain exact decision context
+const naturalWritingItems = [
+  { headline: "Test", whyItMatters: "Sebagai Investor / Fund Manager, ini penting untuk strategi investasi Anda menjelang tahun depan." },
 ];
 
-const missingDCViolations = validateWhyItMatters(
+const naturalWritingViolations = validateWhyItMatters(
   "Investor / Fund Manager",
   decisionContext,
-  missingDCItems
+  naturalWritingItems
 );
 
-assertEqual(missingDCViolations.length, 1, "Detects missing decision context");
-assertIncludes(missingDCViolations[0].reasons, "missing_decision_context", "Has missing_decision_context reason");
-
-// Including decision context should pass
-const withDCItems = [
-  { headline: "Test", whyItMatters: "Sebagai Investor / Fund Manager, ini relevan untuk alokasi portofolio 2026 Anda." },
-];
-
-const withDCViolations = validateWhyItMatters(
-  "Investor / Fund Manager",
-  decisionContext,
-  withDCItems
-);
-
-assertEqual(withDCViolations.length, 0, "Including decision context passes validation");
-
-// Case-insensitive check
-const caseInsensitiveDCItems = [
-  { headline: "Test", whyItMatters: "Sebagai Investor / Fund Manager, ini relevan untuk ALOKASI PORTOFOLIO 2026 Anda." },
-];
-
-const caseInsensitiveViolations = validateWhyItMatters(
-  "Investor / Fund Manager",
-  decisionContext,
-  caseInsensitiveDCItems
-);
-
-assertEqual(caseInsensitiveViolations.length, 0, "Decision context check is case-insensitive");
+// Should pass because we no longer require exact decision context match
+assertEqual(naturalWritingViolations.length, 0, "Natural writing without exact decision context passes");
 
 // ============================================================================
 // TEST CASE 4: Detects banned "Bagi eksekutif" phrase
@@ -297,7 +268,7 @@ assertEqual(validWithDCViolations.length, 0, "Valid items with decision context 
 console.log("\n=== Test Case 7: Multiple violations on single item ===\n");
 
 const multiViolationItems = [
-  { headline: "Test", whyItMatters: "Bagi eksekutif, ini sangat penting." }, // missing_prefix + missing_decision_context + uses_generic_exec_phrase
+  { headline: "Test", whyItMatters: "Bagi eksekutif, ini sangat penting." }, // missing_prefix + uses_generic_exec_phrase
 ];
 
 const multiViolations = validateWhyItMatters(
@@ -307,9 +278,8 @@ const multiViolations = validateWhyItMatters(
 );
 
 assertEqual(multiViolations.length, 1, "Single item with multiple violations");
-assert(multiViolations[0].reasons.length >= 3, "Has at least 3 reasons");
+assert(multiViolations[0].reasons.length >= 2, "Has at least 2 reasons");
 assertIncludes(multiViolations[0].reasons, "missing_prefix", "Has missing_prefix");
-assertIncludes(multiViolations[0].reasons, "missing_decision_context", "Has missing_decision_context");
 assertIncludes(multiViolations[0].reasons, "uses_generic_exec_phrase", "Has uses_generic_exec_phrase");
 
 // ============================================================================
