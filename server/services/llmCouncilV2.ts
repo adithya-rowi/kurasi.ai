@@ -99,6 +99,62 @@ export function enforceFreshTopStories(
 }
 
 /**
+ * Phase 2.24: Enforce 48h freshness for institusiInsights with graceful degradation.
+ * Similar to topStories but allows 48h window for company news.
+ */
+export function enforceFreshInstitusiInsights(
+  brief: EspressoBrief,
+  now: Date,
+  freshnessHours: number = 48
+): EspressoBrief {
+  const parseStoryDate = (d?: string): Date | null => {
+    if (!d || !d.trim()) return null;
+    const dt = new Date(d);
+    return isNaN(dt.getTime()) ? null : dt;
+  };
+
+  const isFresh = (d?: string): boolean => {
+    const dt = parseStoryDate(d);
+    if (!dt) return false;
+    const hoursAgo = (now.getTime() - dt.getTime()) / (1000 * 60 * 60);
+    return hoursAgo >= 0 && hoursAgo <= freshnessHours;
+  };
+
+  const freshInsights = (brief.institusiInsights || []).filter((s) => {
+    const ok = isFresh(s.publishedDate);
+    if (!ok) {
+      console.log(
+        `⚠️ Stale/undated institusiInsight: ${s.headline} | date=${s.publishedDate || ""}`
+      );
+    }
+    return ok;
+  });
+
+  let resultInsights: typeof brief.institusiInsights;
+
+  // If freshness gate would remove ALL insights, keep originals BUT mark clearly
+  if (freshInsights.length === 0 && brief.institusiInsights && brief.institusiInsights.length > 0) {
+    console.log(
+      `⚠️ Institusi freshness gate would remove ALL ${brief.institusiInsights.length} insights - keeping originals with unverified dates`
+    );
+
+    resultInsights = brief.institusiInsights.map((s) => ({
+      ...s,
+      recencyLabel: s.publishedDate ? s.recencyLabel : "",
+    }));
+  } else {
+    resultInsights = freshInsights;
+  }
+
+  console.log(`✅ Institusi freshness gate: ${resultInsights?.length || 0} insights retained`);
+
+  return {
+    ...brief,
+    institusiInsights: resultInsights,
+  };
+}
+
+/**
  * Phase 2.20: HTTP URL verification - check if URL is reachable
  */
 async function verifyUrl(url: string, timeoutMs: number = 3000): Promise<boolean> {
@@ -347,6 +403,7 @@ interface EspressoBrief {
   theWorldInBrief: string;
   topStories: EspressoStory[];
   tokohInsights?: EspressoStory[]; // Phase 2.19: Separate section for tracked tokoh
+  institusiInsights?: EspressoStory[]; // Phase 2.24: Separate section for tracked companies
   marketsSnapshot?: string;
   quotaOfTheDay?: {
     quote: string;
@@ -373,6 +430,7 @@ interface EspressoStory {
   sentiment?: "positive" | "negative" | "neutral" | "mixed";
   isBreaking?: boolean;
   isSocialTrending?: boolean;
+  publishedDate?: string; // Phase 2.19-B: For freshness verification
   recencyLabel?: string; // Phase 2.19: For tokoh insights that may be older
   isUrlVerified?: boolean; // Phase 2.21: True if URL was HTTP verified
 }
@@ -1930,14 +1988,14 @@ INSTRUKSI HAKIM AKHIR
 ═══════════════════════════════════════════════════════════════
 
 ╔═══════════════════════════════════════════════════════════════╗
-║  📰 BRIEF STRUCTURE (Phase 2.19) - STRICT SEPARATION          ║
+║  📰 BRIEF STRUCTURE (Phase 2.24) - THREE-WAY SEPARATION       ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
-║  You MUST output TWO separate arrays:                         ║
+║  You MUST output THREE separate arrays:                       ║
 ║                                                               ║
-║  1. "topStories" (3-4 stories) - FRESH NEWS ONLY:             ║
-║     • News from last 24 hours                                 ║
-║     • Topic news + Institusi announcements                    ║
+║  1. "topStories" (3-4 stories) - TOPIC NEWS ONLY:             ║
+║     • News from last 24 hours about TOPICS                    ║
+║     • ⛔ NEVER put tracked institusi here (${coverage.institusiCovered.join(", ") || "none"})
 ║     • ⛔ NEVER put tracked tokoh here (${coverage.tokohCovered.join(", ") || "none"})
 ║     • Categories: Kritis, Penting, Konteks                    ║
 ║                                                               ║
@@ -1950,18 +2008,25 @@ INSTRUKSI HAKIM AKHIR
 ║       - reduce topStories to 2–3 items                        ║
 ║       - add acknowledgment in theWorldInBrief:                ║
 ║         'Hari ini relatif tenang untuk topik Anda'            ║
-║     • Tokoh Insights are exempt from freshness rules          ║
 ║                                                               ║
-║  2. "tokohInsights" (1-2 stories) - TOKOH ONLY:               ║
+║  2. "institusiInsights" (1-2 stories) - INSTITUSI ONLY:       ║
+║     • Stories about: ${coverage.institusiCovered.join(", ") || "none"}
+║     • ✅ PUT ALL institusi stories HERE, not in topStories    ║
+║     • Can be up to 48h old (show actual date)                 ║
+║     • Category: Institusi                                     ║
+║     • If no institusi found in search, return empty array []  ║
+║                                                               ║
+║  3. "tokohInsights" (1-2 stories) - TOKOH ONLY:               ║
 ║     • Stories about: ${coverage.tokohCovered.join(", ") || "none"}
 ║     • ✅ PUT ALL tokoh stories HERE, not in topStories        ║
-║     • Can be older content (show actual date)                 ║
+║     • Can be up to 7 days old (show actual date)              ║
 ║     • Category: Insight                                       ║
 ║     • If no tokoh found in search, return empty array []      ║
 ║                                                               ║
 ║  ⚠️ VALIDATION: If any story in topStories mentions           ║
+║  ${coverage.institusiCovered.join(" or ") || "a tracked institusi"} or
 ║  ${coverage.tokohCovered.join(" or ") || "a tracked tokoh"}, you have made an error.
-║  Move it to tokohInsights immediately.                        ║
+║  Move it to the appropriate section immediately.              ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 
@@ -2053,6 +2118,19 @@ OUTPUT JSON (Bahasa Indonesia yang elegan):
       "isSocialTrending": false
     }
   ],
+  "institusiInsights": [
+    {
+      "headline": "Institusi update headline",
+      "body": "2-3 sentences about company news",
+      "whyItMatters": "Why this matters for user role",
+      "category": "Institusi",
+      "verificationScore": 8,
+      "source": "Source name",
+      "url": "EXACT URL from search results or empty string",
+      "publishedDate": "Actual date or empty string",
+      "recencyLabel": "48h"
+    }
+  ],
   "tokohInsights": [
     {
       "headline": "Tokoh insight headline",
@@ -2095,6 +2173,10 @@ OUTPUT JSON (Bahasa Indonesia yang elegan):
     // Phase 2.19: Ensure tokohInsights is always an array
     if (!brief.tokohInsights) {
       brief.tokohInsights = [];
+    }
+    // Phase 2.24: Ensure institusiInsights is always an array
+    if (!brief.institusiInsights) {
+      brief.institusiInsights = [];
     }
 
     // Phase 2.2: Validate whyItMatters and auto-repair if needed
@@ -2428,6 +2510,9 @@ export async function runCouncilV2(
   for (const story of brief.tokohInsights || []) {
     if (story.url) urlsToVerify.add(story.url);
   }
+  for (const story of brief.institusiInsights || []) {
+    if (story.url) urlsToVerify.add(story.url);
+  }
 
   console.log(`🔗 Verifying ${urlsToVerify.size} URLs...`);
 
@@ -2466,6 +2551,16 @@ export async function runCouncilV2(
       }
     }
   }
+  for (const story of brief.institusiInsights || []) {
+    if (story.url && verifiedUrls.has(story.url)) {
+      story.isUrlVerified = true;
+    } else {
+      story.isUrlVerified = false;
+      if (story.url && !verifiedUrls.has(story.url)) {
+        story.url = "";
+      }
+    }
+  }
 
   // Phase 2.21: Trust gate — every TopStory must have verified URL
   const urlGateResult = requireVerifiedUrlForTopStories(brief.topStories || []);
@@ -2481,15 +2576,27 @@ export async function runCouncilV2(
       console.log(`ℹ️ Tokoh kept without URL: ${String(t?.headline || '').slice(0, 60)}`);
     }
   }
+  // Institusi insights: keep even without URL (company updates matter)
+  for (const i of brief.institusiInsights || []) {
+    if (!i?.url || !String(i.url).trim()) {
+      console.log(`ℹ️ Institusi kept without URL: ${String(i?.headline || '').slice(0, 60)}`);
+    }
+  }
 
   // Phase 2.19-B: Enforce 24h freshness for topStories (hard gate)
   brief = enforceFreshTopStories(brief, new Date());
+
+  // Phase 2.24: Enforce 48h freshness for institusiInsights
+  brief = enforceFreshInstitusiInsights(brief, new Date());
 
   // Phase 2.19: Add recency labels
   for (const story of brief.topStories) {
     story.recencyLabel = computeRecencyLabel(story.publishedDate || "");
   }
   for (const story of brief.tokohInsights || []) {
+    story.recencyLabel = computeRecencyLabel(story.publishedDate || "");
+  }
+  for (const story of brief.institusiInsights || []) {
     story.recencyLabel = computeRecencyLabel(story.publishedDate || "");
   }
 
