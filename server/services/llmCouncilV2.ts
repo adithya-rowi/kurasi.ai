@@ -2363,6 +2363,16 @@ export async function runCouncilV2(
   console.log(`   📰 Stories: ${brief.topStories?.length || 0}`);
   console.log(`   🎯 Confidence: ${brief.confidenceScore}/10`);
 
+  // === URL DIAGNOSTIC (Phase 2.21 Debug) ===
+  console.log("\n=== URL DIAGNOSTIC ===");
+  console.log("Stories from Claude:", brief.topStories?.length);
+  brief.topStories?.forEach((story, i) => {
+    console.log(`Story ${i}: "${story.headline?.substring(0, 50)}..."`);
+    console.log(`  URL: ${story.url || 'MISSING'}`);
+    console.log(`  Source: ${story.source || 'MISSING'}`);
+  });
+  console.log("=== END DIAGNOSTIC ===\n");
+
   // Phase 2.20: HTTP URL verification - remove hallucinated/broken URLs
   const urlsToVerify = new Set<string>();
   for (const story of brief.topStories || []) {
