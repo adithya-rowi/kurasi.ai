@@ -122,6 +122,16 @@ async function verifyUrl(url: string, timeoutMs: number = 3000): Promise<boolean
   }
 }
 
+/**
+ * Phase 2.21: Filter topStories to only those with verified URLs.
+ * Every topStory must have a "Baca selengkapnya" link.
+ */
+export function requireVerifiedUrlForTopStories(stories: any[] = []): { before: number; after: number; filtered: any[] } {
+  const before = stories.length;
+  const filtered = stories.filter(s => s?.url && String(s.url).trim().length > 0);
+  return { before, after: filtered.length, filtered };
+}
+
 // =============================================================================
 // AI COUNCIL CONFIGURATION
 // =============================================================================
@@ -2397,6 +2407,21 @@ export async function runCouncilV2(
       if (story.url && !verifiedUrls.has(story.url)) {
         story.url = "";
       }
+    }
+  }
+
+  // Phase 2.21: Trust gate — every TopStory must have verified URL
+  const urlGateResult = requireVerifiedUrlForTopStories(brief.topStories || []);
+  if (urlGateResult.before !== urlGateResult.after) {
+    console.log(`⚠️ Dropped ${urlGateResult.before - urlGateResult.after} topStories without valid URLs`);
+  }
+  console.log(`✅ URL gate: ${urlGateResult.after} topStories with verified URLs`);
+  brief.topStories = urlGateResult.filtered;
+
+  // Tokoh insights: keep even without URL (wisdom stands alone)
+  for (const t of brief.tokohInsights || []) {
+    if (!t?.url || !String(t.url).trim()) {
+      console.log(`ℹ️ Tokoh kept without URL: ${String(t?.headline || '').slice(0, 60)}`);
     }
   }
 
