@@ -16,6 +16,7 @@ interface EspressoStory {
   sentiment?: 'positive' | 'negative' | 'neutral' | 'mixed';
   recencyLabel?: string;
   publishedDate?: string;
+  isUrlVerified?: boolean;
 }
 
 interface EspressoBrief {
@@ -752,13 +753,15 @@ export default function Landing() {
                       </div>
 
                       {/* Date & Source (above headline) */}
-                      <div style={{
-                        fontSize: '0.75rem',
-                        color: '#94a3b8',
-                        marginBottom: '0.5rem'
-                      }}>
-                        {story.recencyLabel || ''}{story.publishedDate ? ` · ${story.publishedDate}` : ''} · {story.source || ''}
-                      </div>
+                      {[story.recencyLabel, story.publishedDate, story.source].filter(Boolean).length > 0 && (
+                        <div style={{
+                          fontSize: '0.75rem',
+                          color: '#94a3b8',
+                          marginBottom: '0.5rem'
+                        }}>
+                          {[story.recencyLabel, story.publishedDate, story.source].filter(Boolean).join(' · ')}
+                        </div>
+                      )}
 
                       {/* Headline */}
                       <h3 className="serif" style={{
@@ -805,7 +808,7 @@ export default function Landing() {
                       </div>
 
                       {/* Link */}
-                      {story.url && (
+                      {story.url && story.isUrlVerified && (
                         <a
                           href={story.url}
                           target="_blank"
@@ -843,9 +846,11 @@ export default function Landing() {
                     </h2>
                     {brief.tokohInsights.map((story, index) => (
                       <div key={`tokoh-${index}`} style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid #f0f0f0' }}>
-                        <p style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.25rem' }}>
-                          {story.recencyLabel || 'Insight'}{story.publishedDate ? ` · ${story.publishedDate}` : ''} · {story.source || 'Sumber tidak tersedia'}
-                        </p>
+                        {[story.recencyLabel, story.publishedDate, story.source].filter(Boolean).length > 0 && (
+                          <p style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.25rem' }}>
+                            {[story.recencyLabel, story.publishedDate, story.source].filter(Boolean).join(' · ')}
+                          </p>
+                        )}
                         <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1a2a3a', marginBottom: '0.5rem' }}>
                           {story.headline}
                         </h3>
@@ -865,7 +870,7 @@ export default function Landing() {
                             {story.whyItMatters}
                           </span>
                         </div>
-                        {story.url && (
+                        {story.url && story.isUrlVerified && (
                           <a href={story.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.85rem', color: '#cc2936', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
                             Baca selengkapnya <ExternalLink size={10} />
                           </a>

@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { formatMetaLine } from "../utils/formatters";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -15,6 +16,7 @@ interface EspressoStory {
   sentiment?: "positive" | "negative" | "neutral" | "mixed";
   recencyLabel?: string;
   publishedDate?: string;
+  isUrlVerified?: boolean;
 }
 
 interface EspressoBrief {
@@ -96,9 +98,11 @@ function generateStoryHTML(story: EspressoStory, isLast: boolean): string {
         </table>
 
         <!-- Date & Source (above headline) -->
+        ${formatMetaLine(story.recencyLabel, story.publishedDate, story.source) ? `
         <p style="font-family: 'DM Sans', Arial, sans-serif; font-size: 12px; color: ${colors.silver}; margin: 0 0 8px 0;">
-          ${story.recencyLabel || ''}${story.publishedDate ? ` · ${story.publishedDate}` : ''} · ${story.source || ''}
+          ${formatMetaLine(story.recencyLabel, story.publishedDate, story.source)}
         </p>
+        ` : ""}
 
         <!-- Headline -->
         <h3 style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 22px; font-weight: 500; color: ${colors.midnight}; margin: 0 0 12px 0; line-height: 1.3;">
@@ -121,7 +125,7 @@ function generateStoryHTML(story: EspressoStory, isLast: boolean): string {
         </table>
 
         <!-- Link -->
-        ${story.url ? `
+        ${story.url && story.isUrlVerified ? `
         <a href="${story.url}" target="_blank" style="font-family: 'DM Sans', Arial, sans-serif; font-size: 12px; color: ${colors.red}; text-decoration: none;">
           Baca selengkapnya →
         </a>
@@ -243,9 +247,11 @@ function generateBriefEmailHTML(brief: EspressoBrief, userName?: string): string
                 ${brief.tokohInsights.map((story, idx) => `
                 <tr>
                   <td style="padding: 0 0 ${idx === (brief.tokohInsights?.length || 1) - 1 ? '0' : '24px'} 0; border-bottom: ${idx === (brief.tokohInsights?.length || 1) - 1 ? 'none' : `1px solid ${colors.border}`};">
+                    ${formatMetaLine(story.recencyLabel, story.publishedDate, story.source) ? `
                     <p style="font-family: 'DM Sans', Arial, sans-serif; font-size: 12px; color: ${colors.silver}; margin: 0 0 8px 0;">
-                      ${story.recencyLabel || 'Insight'}${story.publishedDate ? ` · ${story.publishedDate}` : ''} · ${story.source || 'Sumber tidak tersedia'}
+                      ${formatMetaLine(story.recencyLabel, story.publishedDate, story.source)}
                     </p>
+                    ` : ""}
                     <h3 style="font-family: 'Cormorant Garamond', Georgia, serif; font-size: 18px; font-weight: 500; color: ${colors.midnight}; margin: 0 0 8px 0; line-height: 1.3;">
                       ${story.headline}
                     </h3>
@@ -260,7 +266,7 @@ function generateBriefEmailHTML(brief: EspressoBrief, userName?: string): string
                         </td>
                       </tr>
                     </table>
-                    ${story.url ? `
+                    ${story.url && story.isUrlVerified ? `
                     <a href="${story.url}" target="_blank" style="font-family: 'DM Sans', Arial, sans-serif; font-size: 12px; color: ${colors.red}; text-decoration: none;">
                       Baca selengkapnya →
                     </a>
