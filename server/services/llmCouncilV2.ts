@@ -2299,7 +2299,7 @@ export async function runCouncilV2(
   const judgeStart = Date.now();
   // Phase 0.3: Pass searchContext to judge function (contains role and decisionContext)
   // Phase 2.17: Pass coverage to enforce mandatory tokoh rule
-  const brief = await claudeJudge(profile, searchResults, analysisResults, searchContext, coverage);
+  let brief = await claudeJudge(profile, searchResults, analysisResults, searchContext, coverage);
   const judgeLayerMs = Date.now() - judgeStart;
 
   console.log(`\n✅ Brief generated (${judgeLayerMs}ms)`);
