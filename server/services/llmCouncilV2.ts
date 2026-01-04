@@ -132,6 +132,46 @@ export function requireVerifiedUrlForTopStories(stories: any[] = []): { before: 
   return { before, after: filtered.length, filtered };
 }
 
+/**
+ * Phase 2.22: Fast URL format validation (no HTTP request)
+ * Filters out articles with invalid/hallucinated URLs before Judge
+ */
+function isValidUrlFormat(url: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+  try {
+    const parsed = new URL(url.trim());
+    // Must be http/https and have real domain
+    return ['http:', 'https:'].includes(parsed.protocol) 
+      && parsed.hostname.includes('.')
+      && !parsed.hostname.includes('vertexaisearch.cloud.google.com'); // Block Google redirects
+  } catch {
+    return false;
+  }
+}
+
+function filterArticlesWithValidUrls(searchResults: SearchResult[]): SearchResult[] {
+  let totalDropped = 0;
+  
+  const filtered = searchResults.map(result => {
+    const beforeCount = result.articles.length;
+    const validArticles = result.articles.filter(article => {
+      const isValid = isValidUrlFormat(article.url);
+      if (!isValid) {
+        console.log(`⚠️ Dropped article (invalid URL): ${article.title?.substring(0, 50)}`);
+      }
+      return isValid;
+    });
+    totalDropped += beforeCount - validArticles.length;
+    return { ...result, articles: validArticles };
+  });
+  
+  if (totalDropped > 0) {
+    console.log(`📉 URL format filter: dropped ${totalDropped} articles with invalid URLs`);
+  }
+  
+  return filtered;
+}
+
 // =============================================================================
 // AI COUNCIL CONFIGURATION
 // =============================================================================
@@ -2277,9 +2317,19 @@ export async function runCouncilV2(
 
   console.log(`   📚 Total: ${rawTotalArticles} articles → ${dedupedTotalArticles} after dedupe (${duplicatesRemoved} duplicates removed)`);
 
+  // Phase 2.22: Filter articles with invalid URL format BEFORE analysis/judge
+  const urlFilteredResults = filterArticlesWithValidUrls(dedupedResults);
+  const urlFilteredTotal = urlFilteredResults.reduce((sum, r) => sum + r.articles.length, 0);
+  if (urlFilteredTotal < dedupedTotalArticles) {
+    console.log(`   🔗 URL filter: ${dedupedTotalArticles} → ${urlFilteredTotal} articles with valid URLs`);
+  }
+  if (urlFilteredTotal < 3) {
+    console.log(`⚠️ Warning: Only ${urlFilteredTotal} articles with verified URLs`);
+  }
+
   // Phase 1.2: Compute coverage and generate warnings
   const queryResult = generateSearchQueries(searchContext);
-  const coverage = computeCoverage(dedupedResults, queryResult.requirements);
+  const coverage = computeCoverage(urlFilteredResults, queryResult.requirements);
 
   // Log coverage status
   if (coverage.tokohCovered.length > 0 || coverage.tokohMissing.length > 0) {
@@ -2296,15 +2346,15 @@ export async function runCouncilV2(
   // Add coverage warnings as synthetic search result for downstream layers
   const coverageWarningResult = createCoverageWarningResult(coverage);
 
-  // Phase 1.3: Apply safe cap AFTER dedupe + coverage guardrail
+  // Phase 1.3: Apply safe cap AFTER dedupe + URL filter + coverage guardrail
   // Cap real results to MAX_CANDIDATES_FOR_ANALYSIS, but never drop CoverageGuardrail
-  let cappedResults = dedupedResults;
-  const totalBeforeCap = dedupedResults.reduce((sum, r) => sum + r.articles.length, 0);
+  let cappedResults = urlFilteredResults;
+  const totalBeforeCap = urlFilteredResults.reduce((sum, r) => sum + r.articles.length, 0);
 
   if (totalBeforeCap > MAX_CANDIDATES_FOR_ANALYSIS) {
     // Cap articles across all search results proportionally
     let remaining = MAX_CANDIDATES_FOR_ANALYSIS;
-    cappedResults = dedupedResults.map(r => {
+    cappedResults = urlFilteredResults.map(r => {
       if (remaining <= 0) {
         return { ...r, articles: [] };
       }

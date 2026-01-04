@@ -1,0 +1,104 @@
+Fix: Add fast URL validation after dedupe, before Judge.
+
+In server/services/llmCouncilV2.ts:
+
+STEP 1: Add fast URL validation helper (around line 100)
+
+function isValidUrlFormat(url: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+  try {
+    const parsed = new URL(url.trim());
+    // Must be http/https and have real domain
+    return ['http:', 'https:'].includes(parsed.protocol) 
+      && parsed.hostname.includes('.')
+      && !parsed.hostname.includes('vertexaisearch.cloud.google.com'); // Block Google redirects
+  } catch {
+    return false;
+  }
+}
+
+function filterArticlesWithValidUrls(searchResults: SearchResult[]): SearchResult[] {
+  let totalDropped = 0;
+  
+  const filtered = searchResults.map(result => {
+    const beforeCount = result.articles.length;
+    const validArticles = result.articles.filter(article => {
+      const isValid = isValidUrlFormat(article.url);
+      if (!isValid) {
+        console.log(`⚠️ Dropped article (invalid URL): ${article.title?.substring(0, 50)}`);
+      }
+      return isValid;
+    });
+    totalDropped += beforeCount - validArticles.length;
+    return { ...result, articles: validArticles };
+  });
+  
+  if (totalDropped > 0) {
+    console.log(`📉 URL format filter: dropped ${totalDropped} articles with invalid URLs`);
+  }
+  
+  return filtered;
+}
+
+STEP 2: Call it after dedupe (find line ~2274)
+
+FIND:
+const dedupedResults = dedupeSearchResults(rawSearchResults);
+
+ADD AFTER:
+// Filter articles with invalid URL format BEFORE analysis/judge
+const urlFilteredResults = filterArticlesWithValidUrls(dedupedResults);
+
+Then use urlFilteredResults instead of dedupedResults for the rest of the pipeline.
+
+STEP 3: Keep existing HTTP verification after Judge (don't remove)
+
+The existing verifyUrl() HTTP HEAD check stays as final safety net.
+It will now have fewer URLs to check since garbage is already filtered.
+
+STEP 4: Unit test - create tests/phase2_22_url_format_validation.test.ts
+
+console.log("=== URL Format Validation Tests ===\n");
+
+function isValidUrlFormat(url: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+  try {
+    const parsed = new URL(url.trim());
+    return ['http:', 'https:'].includes(parsed.protocol) 
+      && parsed.hostname.includes('.')
+      && !parsed.hostname.includes('vertexaisearch.cloud.google.com');
+  } catch {
+    return false;
+  }
+}
+
+// Test 1: Valid URL
+console.assert(isValidUrlFormat("https://cnbc.com/article/123") === true, "FAIL: valid URL rejected");
+console.log("✅ Test 1: Valid URL accepted");
+
+// Test 2: Empty URL
+console.assert(isValidUrlFormat("") === false, "FAIL: empty URL accepted");
+console.log("✅ Test 2: Empty URL rejected");
+
+// Test 3: Google redirect
+console.assert(isValidUrlFormat("https://vertexaisearch.cloud.google.com/grounding-api-redirect/xyz") === false, "FAIL: Google redirect accepted");
+console.log("✅ Test 3: Google redirect URL rejected");
+
+// Test 4: No domain
+console.assert(isValidUrlFormat("https://localhost/test") === false, "FAIL: localhost accepted");
+console.log("✅ Test 4: No real domain rejected");
+
+// Test 5: Invalid protocol
+console.assert(isValidUrlFormat("ftp://example.com") === false, "FAIL: ftp accepted");
+console.log("✅ Test 5: Invalid protocol rejected");
+
+// Test 6: Null/undefined
+console.assert(isValidUrlFormat(null as any) === false, "FAIL: null accepted");
+console.assert(isValidUrlFormat(undefined as any) === false, "FAIL: undefined accepted");
+console.log("✅ Test 6: Null/undefined rejected");
+
+console.log("\n=== All 6 tests passed ===");
+
+Run: npx tsx tests/phase2_22_url_format_validation.test.ts
+
+Commit: "fix: add URL format validation after dedupe - filter invalid URLs before Judge"
