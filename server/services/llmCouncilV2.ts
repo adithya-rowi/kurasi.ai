@@ -39,6 +39,64 @@ function computeRecencyLabel(publishedDate: string): string {
   return "Insight";
 }
 
+/**
+ * Phase 2.19-B: Enforce 24h freshness for topStories (hard gate)
+ * Filters out stories older than freshnessHours or with missing/invalid dates.
+ * If topStories < 2 after filtering, adds acknowledgment to theWorldInBrief.
+ * Does NOT modify tokohInsights.
+ */
+export function enforceFreshTopStories(
+  brief: EspressoBrief,
+  now: Date,
+  freshnessHours: number = 24
+): EspressoBrief {
+  const QUIET_DAY_MESSAGE = "Hari ini relatif tenang untuk topik Anda.";
+
+  const parseStoryDate = (d?: string): Date | null => {
+    if (!d || !d.trim()) return null;
+    const dt = new Date(d);
+    return isNaN(dt.getTime()) ? null : dt;
+  };
+
+  const isFresh = (d?: string): boolean => {
+    const dt = parseStoryDate(d);
+    if (!dt) return false;
+    const hoursAgo = (now.getTime() - dt.getTime()) / (1000 * 60 * 60);
+    return hoursAgo >= 0 && hoursAgo <= freshnessHours;
+  };
+
+  const beforeCount = brief.topStories?.length || 0;
+  const filteredStories = (brief.topStories || []).filter((s) => {
+    const ok = isFresh(s.publishedDate);
+    if (!ok) {
+      console.log(
+        `⚠️ Removed stale/undated topStory: ${s.headline} | date=${s.publishedDate || ""}`
+      );
+    }
+    return ok;
+  });
+
+  console.log(
+    `✅ Freshness gate: ${beforeCount} -> ${filteredStories.length} stories within ${freshnessHours}h`
+  );
+
+  // If fewer than 2 stories remain, add quiet day acknowledgment
+  let theWorldInBrief = brief.theWorldInBrief || "";
+  if (filteredStories.length < 2 && !theWorldInBrief.includes(QUIET_DAY_MESSAGE)) {
+    theWorldInBrief = theWorldInBrief.trim();
+    if (theWorldInBrief && !theWorldInBrief.endsWith(".")) {
+      theWorldInBrief += ".";
+    }
+    theWorldInBrief += (theWorldInBrief ? " " : "") + QUIET_DAY_MESSAGE;
+  }
+
+  return {
+    ...brief,
+    topStories: filteredStories,
+    theWorldInBrief,
+  };
+}
+
 // =============================================================================
 // AI COUNCIL CONFIGURATION
 // =============================================================================
@@ -1796,10 +1854,21 @@ INSTRUKSI HAKIM AKHIR
 ║  You MUST output TWO separate arrays:                         ║
 ║                                                               ║
 ║  1. "topStories" (3-4 stories) - FRESH NEWS ONLY:             ║
-║     • News from last 48 hours                                 ║
+║     • News from last 24 hours                                 ║
 ║     • Topic news + Institusi announcements                    ║
 ║     • ⛔ NEVER put tracked tokoh here (${coverage.tokohCovered.join(", ") || "none"})
 ║     • Categories: Kritis, Penting, Konteks                    ║
+║                                                               ║
+║     ⏰ FRESHNESS RULE (MANDATORY):                            ║
+║     • topStories MUST contain news from the LAST 24 HOURS only║
+║     • Every story MUST have publishedDate                     ║
+║     • If publishedDate is missing → story cannot be in topStories
+║     • If story is older than 24h → story cannot be in topStories
+║     • If insufficient fresh news exists:                      ║
+║       - reduce topStories to 2–3 items                        ║
+║       - add acknowledgment in theWorldInBrief:                ║
+║         'Hari ini relatif tenang untuk topik Anda'            ║
+║     • Tokoh Insights are exempt from freshness rules          ║
 ║                                                               ║
 ║  2. "tokohInsights" (1-2 stories) - TOKOH ONLY:               ║
 ║     • Stories about: ${coverage.tokohCovered.join(", ") || "none"}
@@ -2264,6 +2333,9 @@ export async function runCouncilV2(
   }
 
   console.log(`✅ URL validation complete. ${allowedUrls.size} allowed URLs.`);
+
+  // Phase 2.19-B: Enforce 24h freshness for topStories (hard gate)
+  brief = enforceFreshTopStories(brief, new Date());
 
   // Phase 2.19: Add recency labels
   for (const story of brief.topStories) {
