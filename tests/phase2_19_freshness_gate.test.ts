@@ -76,7 +76,7 @@ interface EspressoBrief {
 }
 
 /**
- * Phase 2.19-B: Enforce 24h freshness for topStories (hard gate)
+ * Phase 2.19-B: Enforce 24h freshness for topStories with graceful degradation.
  * Copied from llmCouncilV2.ts for standalone testing.
  */
 function enforceFreshTopStories(
@@ -84,8 +84,6 @@ function enforceFreshTopStories(
   now: Date,
   freshnessHours: number = 24
 ): EspressoBrief {
-  const QUIET_DAY_MESSAGE = "Hari ini relatif tenang untuk topik Anda.";
-
   const parseStoryDate = (d?: string): Date | null => {
     if (!d || !d.trim()) return null;
     const dt = new Date(d);
@@ -99,24 +97,26 @@ function enforceFreshTopStories(
     return hoursAgo >= 0 && hoursAgo <= freshnessHours;
   };
 
-  const filteredStories = (brief.topStories || []).filter((s) => {
+  // Phase 2.19: Freshness gate with graceful degradation
+  const freshStories = (brief.topStories || []).filter((s) => {
     return isFresh(s.publishedDate);
   });
 
-  // If fewer than 2 stories remain, add quiet day acknowledgment
-  let theWorldInBrief = brief.theWorldInBrief || "";
-  if (filteredStories.length < 2 && !theWorldInBrief.includes(QUIET_DAY_MESSAGE)) {
-    theWorldInBrief = theWorldInBrief.trim();
-    if (theWorldInBrief && !theWorldInBrief.endsWith(".")) {
-      theWorldInBrief += ".";
-    }
-    theWorldInBrief += (theWorldInBrief ? " " : "") + QUIET_DAY_MESSAGE;
+  let resultStories: typeof brief.topStories;
+
+  // If freshness gate would remove ALL stories, keep originals BUT mark clearly
+  if (freshStories.length === 0 && brief.topStories && brief.topStories.length > 0) {
+    resultStories = brief.topStories.map((s) => ({
+      ...s,
+      recencyLabel: s.publishedDate ? s.recencyLabel : "Tanggal belum diverifikasi",
+    }));
+  } else {
+    resultStories = freshStories;
   }
 
   return {
     ...brief,
-    topStories: filteredStories,
-    theWorldInBrief,
+    topStories: resultStories,
   };
 }
 
@@ -205,9 +205,9 @@ assert(
   "Test 1: Story D (missing date) is dropped"
 );
 
-// Test 2: All stale triggers quiet day acknowledgment
+// Test 2: All stale → graceful degradation (keep originals)
 console.log("\n" + "─".repeat(60));
-console.log("Test 2: All stale/missing → triggers quiet day acknowledgment");
+console.log("Test 2: All stale → graceful degradation (keep originals)");
 console.log("─".repeat(60));
 
 const test2Brief = createTestBrief([
@@ -220,13 +220,13 @@ const result2 = enforceFreshTopStories(test2Brief, NOW);
 
 assertEqual(
   result2.topStories.length,
-  0,
-  "Test 2: All 3 stories older than 24h → 0 remain"
+  3,
+  "Test 2: All 3 stories stale → graceful degradation keeps all 3"
 );
 
 assert(
-  result2.theWorldInBrief.includes("Hari ini relatif tenang untuk topik Anda."),
-  "Test 2: theWorldInBrief contains quiet day acknowledgment"
+  result2.topStories.every((s) => s.headline.startsWith("Old Story")),
+  "Test 2: Original stories preserved in graceful degradation"
 );
 
 // Test 3: Invalid date string treated as missing
@@ -311,23 +311,27 @@ assert(
   "Test 5: tokohInsights content unchanged"
 );
 
-// Test 6: Quiet day message not duplicated
+// Test 6: Graceful degradation marks undated stories
 console.log("\n" + "─".repeat(60));
-console.log("Test 6: Quiet day message not duplicated if already present");
+console.log("Test 6: Graceful degradation marks undated stories");
 console.log("─".repeat(60));
 
 const test6Brief = createTestBrief([
-  { headline: "Stale Story", publishedDate: hoursAgo(48) },
+  { headline: "Undated Story 1", publishedDate: "" },
+  { headline: "Undated Story 2" },  // undefined publishedDate
 ]);
-test6Brief.theWorldInBrief = "Existing brief. Hari ini relatif tenang untuk topik Anda.";
 
 const result6 = enforceFreshTopStories(test6Brief, NOW);
 
-const count = (result6.theWorldInBrief.match(/Hari ini relatif tenang untuk topik Anda\./g) || []).length;
 assertEqual(
-  count,
-  1,
-  "Test 6: Quiet day message appears exactly once (not duplicated)"
+  result6.topStories.length,
+  2,
+  "Test 6: 2 undated stories → graceful degradation keeps both"
+);
+
+assert(
+  result6.topStories.every((s) => s.recencyLabel === "Tanggal belum diverifikasi"),
+  "Test 6: Undated stories marked with 'Tanggal belum diverifikasi'"
 );
 
 // ============================================================================

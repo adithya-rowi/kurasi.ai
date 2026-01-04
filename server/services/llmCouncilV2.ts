@@ -40,9 +40,9 @@ function computeRecencyLabel(publishedDate: string): string {
 }
 
 /**
- * Phase 2.19-B: Enforce 24h freshness for topStories (hard gate)
+ * Phase 2.19-B: Enforce 24h freshness for topStories with graceful degradation.
  * Filters out stories older than freshnessHours or with missing/invalid dates.
- * If topStories < 2 after filtering, adds acknowledgment to theWorldInBrief.
+ * If ALL stories would be removed, keeps originals but marks with unverified label.
  * Does NOT modify tokohInsights.
  */
 export function enforceFreshTopStories(
@@ -50,8 +50,6 @@ export function enforceFreshTopStories(
   now: Date,
   freshnessHours: number = 24
 ): EspressoBrief {
-  const QUIET_DAY_MESSAGE = "Hari ini relatif tenang untuk topik Anda.";
-
   const parseStoryDate = (d?: string): Date | null => {
     if (!d || !d.trim()) return null;
     const dt = new Date(d);
@@ -65,35 +63,38 @@ export function enforceFreshTopStories(
     return hoursAgo >= 0 && hoursAgo <= freshnessHours;
   };
 
-  const beforeCount = brief.topStories?.length || 0;
-  const filteredStories = (brief.topStories || []).filter((s) => {
+  // Phase 2.19: Freshness gate with graceful degradation
+  const freshStories = (brief.topStories || []).filter((s) => {
     const ok = isFresh(s.publishedDate);
     if (!ok) {
       console.log(
-        `⚠️ Removed stale/undated topStory: ${s.headline} | date=${s.publishedDate || ""}`
+        `⚠️ Stale/undated topStory: ${s.headline} | date=${s.publishedDate || ""}`
       );
     }
     return ok;
   });
 
-  console.log(
-    `✅ Freshness gate: ${beforeCount} -> ${filteredStories.length} stories within ${freshnessHours}h`
-  );
+  let resultStories: typeof brief.topStories;
 
-  // If fewer than 2 stories remain, add quiet day acknowledgment
-  let theWorldInBrief = brief.theWorldInBrief || "";
-  if (filteredStories.length < 2 && !theWorldInBrief.includes(QUIET_DAY_MESSAGE)) {
-    theWorldInBrief = theWorldInBrief.trim();
-    if (theWorldInBrief && !theWorldInBrief.endsWith(".")) {
-      theWorldInBrief += ".";
-    }
-    theWorldInBrief += (theWorldInBrief ? " " : "") + QUIET_DAY_MESSAGE;
+  // If freshness gate would remove ALL stories, keep originals BUT mark clearly
+  if (freshStories.length === 0 && brief.topStories && brief.topStories.length > 0) {
+    console.log(
+      `⚠️ Freshness gate would remove ALL ${brief.topStories.length} stories - keeping originals with unverified dates`
+    );
+
+    resultStories = brief.topStories.map((s) => ({
+      ...s,
+      recencyLabel: s.publishedDate ? s.recencyLabel : "Tanggal belum diverifikasi",
+    }));
+  } else {
+    resultStories = freshStories;
   }
+
+  console.log(`✅ Freshness gate: ${resultStories?.length || 0} stories retained`);
 
   return {
     ...brief,
-    topStories: filteredStories,
-    theWorldInBrief,
+    topStories: resultStories,
   };
 }
 
