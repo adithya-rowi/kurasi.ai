@@ -324,6 +324,7 @@ interface EspressoStory {
   isBreaking?: boolean;
   isSocialTrending?: boolean;
   recencyLabel?: string; // Phase 2.19: For tokoh insights that may be older
+  isUrlVerified?: boolean; // Phase 2.21: True if URL was HTTP verified
 }
 
 // =============================================================================
@@ -1453,11 +1454,20 @@ YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
     }));
 
     // Keep all articles - don't drop based on date. Mark missing dates later.
-    const articles = rawArticles;
+    let articles = rawArticles;
     const noDateCount = rawArticles.filter(a => !a.publishedDate || a.publishedDate.trim() === "").length;
     if (noDateCount > 0) {
       console.log(`⚠️ Gemini: ${noDateCount} articles have no publishedDate (will be marked as unverified)`);
     }
+
+    // Strip Google grounding redirect URLs
+    articles = articles.map(a => {
+      if (a.url && a.url.includes('vertexaisearch.cloud.google.com/grounding-api-redirect')) {
+        console.log(`⚠️ Stripped Google grounding redirect URL from: ${a.title?.substring(0, 50)}`);
+        return { ...a, url: "" };
+      }
+      return a;
+    });
 
     const result: SearchResult = {
       model: "Gemini",
@@ -2368,15 +2378,25 @@ export async function runCouncilV2(
 
   console.log(`✅ URL verification: ${verifiedUrls.size}/${urlsToVerify.size} valid`);
 
-  // Clear invalid URLs from stories
+  // Set isUrlVerified and clear invalid URLs from stories
   for (const story of brief.topStories || []) {
-    if (story.url && !verifiedUrls.has(story.url)) {
-      story.url = "";
+    if (story.url && verifiedUrls.has(story.url)) {
+      story.isUrlVerified = true;
+    } else {
+      story.isUrlVerified = false;
+      if (story.url && !verifiedUrls.has(story.url)) {
+        story.url = "";
+      }
     }
   }
   for (const story of brief.tokohInsights || []) {
-    if (story.url && !verifiedUrls.has(story.url)) {
-      story.url = "";
+    if (story.url && verifiedUrls.has(story.url)) {
+      story.isUrlVerified = true;
+    } else {
+      story.isUrlVerified = false;
+      if (story.url && !verifiedUrls.has(story.url)) {
+        story.url = "";
+      }
     }
   }
 
