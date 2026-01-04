@@ -1038,8 +1038,10 @@ CRITICAL INSTRUCTIONS:
 3. For each query, find at least 1 relevant article
 4. DO NOT output searchQueries. Return ONLY the articles array.
 
+CRITICAL: If you cannot determine a publishedDate, DO NOT include the article.
+
 Search for 7-10 LATEST news articles published TODAY. Return ONLY this JSON structure:
-{"articles":[{"title":"Article title","summary":"2-3 sentence summary in ${ctx.languageName}","source":"Source name","url":"Full URL","publishedDate":"${today}","confidence":8}]}
+{"articles":[{"title":"Article title","summary":"2-3 sentence summary in ${ctx.languageName}","source":"Source name","url":"Full URL","publishedDate":"REQUIRED. Format YYYY-MM-DD. Extract from article metadata, byline, or page header. If article says today/hari ini use ${today}. If yesterday/kemarin calculate. If X days ago calculate. EVERY news article has a publish date. MUST NOT be empty.","confidence":8}]}
 
 RULES:
 - PRIORITIZE articles from the last 24 hours (today's date: ${todayIndo})
@@ -1128,7 +1130,7 @@ YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
       // Extract citations from Perplexity response
       const citations = (response as any).citations || [];
 
-      const articles: SearchArticle[] = (parsed.articles || []).map((a: any) => ({
+      const rawArticles: SearchArticle[] = (parsed.articles || []).map((a: any) => ({
         title: a.title || "",
         summary: a.summary || "",
         source: a.source || "",
@@ -1140,6 +1142,13 @@ YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
         isRealTime: true,
         citations,
       }));
+
+      // Phase 2.19: Filter out articles without publishedDate
+      const articles = rawArticles.filter(a => a.publishedDate && a.publishedDate.trim() !== "");
+      const droppedCount = rawArticles.length - articles.length;
+      if (droppedCount > 0) {
+        console.log(`⚠️ Perplexity: Dropped ${droppedCount} articles without publishedDate`);
+      }
 
       // Phase 2.10: Check for empty articles
       if (articles.length === 0) {
@@ -1210,8 +1219,10 @@ CRITICAL INSTRUCTIONS:
 5. If a tokoh has no recent news, note in summary: "Tidak ditemukan berita terkini"
 6. DO NOT include any URLs in the JSON - URLs will be added from search metadata
 
+CRITICAL: If you cannot determine a publishedDate, DO NOT include the article.
+
 Search for 7-10 LATEST news articles published TODAY. Your response must be ONLY this JSON structure:
-{"articles":[{"title":"Article title","summary":"2-3 sentence summary in ${ctx.languageName}","source":"Source name","sourceType":"local|regional|global","publishedDate":"${today}","confidence":8,"matchedQuery":"which mandatory query this answers"}]}
+{"articles":[{"title":"Article title","summary":"2-3 sentence summary in ${ctx.languageName}","source":"Source name","sourceType":"local|regional|global","publishedDate":"REQUIRED. Format YYYY-MM-DD. Extract from article metadata, byline, or page header. If article says today/hari ini use ${today}. If yesterday/kemarin calculate. If X days ago calculate. EVERY news article has a publish date. MUST NOT be empty.","confidence":8,"matchedQuery":"which mandatory query this answers"}]}
 
 YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
 
@@ -1347,7 +1358,7 @@ YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
     }
 
     // Phase 2.8: Map citations to article URLs (url removed from JSON to prevent truncation)
-    const articles: SearchArticle[] = (parsed.articles || []).map((a: any, i: number) => ({
+    const rawArticles: SearchArticle[] = (parsed.articles || []).map((a: any, i: number) => ({
       title: a.title || "",
       summary: a.summary || "",
       source: a.source || "",
@@ -1358,6 +1369,13 @@ YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
       isRealTime: true,
       citations,
     }));
+
+    // Phase 2.19: Filter out articles without publishedDate
+    const articles = rawArticles.filter(a => a.publishedDate && a.publishedDate.trim() !== "");
+    const droppedCount = rawArticles.length - articles.length;
+    if (droppedCount > 0) {
+      console.log(`⚠️ Gemini: Dropped ${droppedCount} articles without publishedDate`);
+    }
 
     const result: SearchResult = {
       model: "Gemini",
@@ -1416,6 +1434,8 @@ FOCUS:
 - Public sentiment and market reactions
 - Breaking news and trending discussions about specified topics
 
+CRITICAL: If you cannot determine a publishedDate, DO NOT include the article.
+
 Return JSON in ${ctx.languageName}:
 {
   "articles": [{
@@ -1424,7 +1444,7 @@ Return JSON in ${ctx.languageName}:
     "source": "Source name or @username",
     "sourceType": "social|local|global",
     "url": "Tweet or article URL",
-    "publishedDate": "${today}",
+    "publishedDate": "REQUIRED. Format YYYY-MM-DD. Extract from article metadata, byline, or page header. If article says today/hari ini use ${today}. If yesterday/kemarin calculate. If X days ago calculate. EVERY news article has a publish date. MUST NOT be empty.",
     "confidence": 7,
     "isSocialMedia": true,
     "sentiment": "positive|negative|neutral|mixed",
@@ -1474,7 +1494,7 @@ Return JSON in ${ctx.languageName}:
 
     const parsed = JSON.parse(content.replace(/```json\n?|\n?```/g, "").trim());
 
-    const articles: SearchArticle[] = (parsed.articles || []).map((a: any) => ({
+    const rawArticles: SearchArticle[] = (parsed.articles || []).map((a: any) => ({
       title: a.title || "",
       summary: a.summary || "",
       source: a.source || "",
@@ -1486,6 +1506,13 @@ Return JSON in ${ctx.languageName}:
       isSocialMedia: a.isSocialMedia || a.sourceType === "social",
       citations,
     }));
+
+    // Phase 2.19: Filter out articles without publishedDate
+    const articles = rawArticles.filter(a => a.publishedDate && a.publishedDate.trim() !== "");
+    const droppedCount = rawArticles.length - articles.length;
+    if (droppedCount > 0) {
+      console.log(`⚠️ Grok: Dropped ${droppedCount} articles without publishedDate`);
+    }
 
     return {
       model: "Grok",
