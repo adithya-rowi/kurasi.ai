@@ -1438,12 +1438,24 @@ YOUR ENTIRE RESPONSE MUST BE VALID JSON STARTING WITH { AND ENDING WITH }`;
 
     const data = await response.json();
 
+    // Debug: Log raw Gemini response structure
+    const rawTextLength = JSON.stringify(data).length;
+    console.log(`🔵 Gemini raw response length: ${rawTextLength} chars`);
+    if (!data.candidates || data.candidates.length === 0) {
+      console.log(`⚠️ Gemini: No candidates in response`);
+      console.log(`🔵 Gemini response preview: ${JSON.stringify(data).substring(0, 500)}`);
+    }
+
     if (data.error) {
       throw new Error(data.error.message);
     }
 
     const candidate = data.candidates?.[0];
     let textContent = candidate?.content?.parts?.map((p: any) => p.text).join("") || "{}";
+    console.log(`🔵 Gemini text content length: ${textContent.length} chars`);
+    if (textContent.length < 50) {
+      console.log(`⚠️ Gemini text content very short: "${textContent}"`);
+    }
     const groundingMetadata = candidate?.groundingMetadata;
 
     // Extract grounding sources
@@ -1909,15 +1921,26 @@ async function claudeJudge(
   ctx: SearchContext, // Phase 0.3: receive SearchContext with role and decisionContext
   coverage: CoverageResult // Phase 2.17: receive coverage info for mandatory tokoh enforcement
 ): Promise<EspressoBrief> {
+  // Use Indonesia timezone (WIB = UTC+7) for correct day-of-week
   const today = new Date();
-  const dateStr = today.toISOString().split("T")[0];
+  const indonesiaDate = new Date(today.toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+  const dateStr = indonesiaDate.toISOString().split("T")[0];
   const dayNames = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
   const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-  const formattedDate = `${dayNames[today.getDay()]}, ${today.getDate()} ${monthNames[today.getMonth()]} ${today.getFullYear()}`;
+  const formattedDate = `${dayNames[indonesiaDate.getDay()]}, ${indonesiaDate.getDate()} ${monthNames[indonesiaDate.getMonth()]} ${indonesiaDate.getFullYear()}`;
+  console.log(`📅 Brief date: ${formattedDate} (WIB)`);
 
   const allArticles = searchResults.flatMap((r) =>
     r.articles.map((a) => ({ ...a, foundBy: r.model }))
   );
+
+  // Debug: Check which articles have publishedDate
+  const articlesWithDates = allArticles.filter(a => a.publishedDate && a.publishedDate.trim());
+  const articlesWithoutDates = allArticles.filter(a => !a.publishedDate || !a.publishedDate.trim());
+  console.log(`📅 Date coverage: ${articlesWithDates.length}/${allArticles.length} articles have publishedDate`);
+  if (articlesWithoutDates.length > 0) {
+    console.log(`⚠️ Articles without dates: ${articlesWithoutDates.map(a => a.title?.substring(0, 40)).join(', ')}`);
+  }
 
   const allThemes = analysisResults.flatMap((r) =>
     r.themes.map((t) => ({ ...t, analyzedBy: r.model }))
@@ -2183,6 +2206,12 @@ OUTPUT JSON (Bahasa Indonesia yang elegan):
     if (!brief.institusiInsights) {
       brief.institusiInsights = [];
     }
+
+    // Debug: Check if Judge included dates
+    console.log(`📅 TopStories dates from Judge:`);
+    brief.topStories?.forEach((s, i) => {
+      console.log(`   Story ${i}: publishedDate="${s.publishedDate || 'MISSING'}"`);
+    });
 
     // Phase 2.25: Post-Judge URL whitelist validation - strip hallucinated URLs
     const stripHallucinatedUrls = (stories: any[] | undefined, sectionName: string): void => {
