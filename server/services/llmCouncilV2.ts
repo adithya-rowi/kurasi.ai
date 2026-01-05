@@ -285,8 +285,8 @@ const AI_COUNCIL_V2 = {
   },
   // Judge Layer
   claude: {
-    name: "Claude Sonnet 4.5",
-    model: "claude-sonnet-4-5-20250929",
+    name: "Claude Opus 4.5",
+    model: "claude-opus-4-5-20251101",
     provider: "Anthropic",
     layer: "judge",
     icon: "🟤",
@@ -2188,7 +2188,7 @@ OUTPUT JSON (Bahasa Indonesia yang elegan):
 
   try {
     const judgeModel = AI_COUNCIL_V2.claude.model;
-    console.log("🟤 Claude Sonnet 4.5 - HAKIM AKHIR deliberating...");
+    console.log("🟤 Claude Opus 4.5 - HAKIM AKHIR deliberating...");
     const response = await anthropic.messages.create({
       model: judgeModel,
       max_tokens: 4096,
@@ -2197,6 +2197,10 @@ OUTPUT JSON (Bahasa Indonesia yang elegan):
 
     const content = response.content[0].type === "text" ? response.content[0].text : "{}";
     let brief: EspressoBrief = JSON.parse(content.replace(/```json\n?|\n?```/g, "").trim());
+
+    // Fix: Overwrite edition with our correctly calculated date (Claude's calendar is unreliable)
+    brief.edition = formattedDate;
+    brief.briefDate = dateStr;
 
     // Phase 2.19: Ensure tokohInsights is always an array
     if (!brief.tokohInsights) {
