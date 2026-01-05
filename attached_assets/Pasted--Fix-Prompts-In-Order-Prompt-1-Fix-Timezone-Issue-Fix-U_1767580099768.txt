@@ -1,0 +1,98 @@
+## Fix Prompts (In Order)
+
+### Prompt 1: Fix Timezone Issue
+
+```
+Fix: Use Indonesia timezone (WIB/UTC+7) for date formatting.
+
+In server/services/llmCouncilV2.ts:
+
+FIND (around lines 1914-1916):
+const today = new Date();
+const dayNames = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+const formattedDate = `${dayNames[today.getDay()]}, ${today.getDate()} ${monthNames[today.getMonth()]} ${today.getFullYear()}`;
+
+REPLACE WITH:
+// Use Indonesia timezone (WIB = UTC+7)
+const today = new Date();
+const indonesiaDate = new Date(today.toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+const dayNames = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+const formattedDate = `${dayNames[indonesiaDate.getDay()]}, ${indonesiaDate.getDate()} ${monthNames[indonesiaDate.getMonth()]} ${indonesiaDate.getFullYear()}`;
+
+console.log(`📅 Brief date: ${formattedDate} (WIB)`);
+
+Commit: "fix: use Indonesia timezone for brief date"
+```
+
+---
+
+### Prompt 2: Fix Missing Dates - Add Logging First
+
+```
+Debug: Add logging to trace publishedDate from search to brief.
+
+In server/services/llmCouncilV2.ts:
+
+STEP 1: Log dates from search results (after dedupe, around line 1700)
+
+ADD after deduplication:
+// Debug: Check which articles have publishedDate
+const articlesWithDates = allArticles.filter(a => a.publishedDate && a.publishedDate.trim());
+const articlesWithoutDates = allArticles.filter(a => !a.publishedDate || !a.publishedDate.trim());
+console.log(`📅 Date coverage: ${articlesWithDates.length}/${allArticles.length} articles have publishedDate`);
+if (articlesWithoutDates.length > 0) {
+  console.log(`⚠️ Articles without dates: ${articlesWithoutDates.map(a => a.title?.substring(0, 40)).join(', ')}`);
+}
+
+STEP 2: Log dates from Judge output (after brief generated, around line 2300)
+
+ADD after brief is parsed:
+// Debug: Check if Judge included dates
+console.log(`📅 TopStories dates from Judge:`);
+brief.topStories?.forEach((s, i) => {
+  console.log(`   Story ${i}: publishedDate="${s.publishedDate || 'MISSING'}"`);
+});
+
+Commit: "debug: add publishedDate logging from search to Judge"
+```
+
+---
+
+### Prompt 3: Fix Gemini Silent Failure - Add Logging
+
+```
+Debug: Add raw response logging to Gemini search.
+
+In server/services/llmCouncilV2.ts, in searchWithGemini function:
+
+FIND where Gemini response is received (around line 1450).
+
+ADD logging BEFORE any parsing:
+console.log(`🔵 Gemini raw response length: ${response?.length || 0} chars`);
+if (!response || response.length === 0) {
+  console.log(`❌ Gemini returned empty response`);
+}
+// Log first 500 chars to see what we got
+console.log(`🔵 Gemini preview: ${response?.substring(0, 500)}`);
+
+Also ADD after article extraction:
+console.log(`🔵 Gemini extracted ${articles.length} articles`);
+if (articles.length === 0) {
+  console.log(`⚠️ Gemini: No articles extracted from response`);
+}
+
+Commit: "debug: add Gemini raw response logging"
+```
+
+---
+
+## Run Order
+
+1. **Prompt 1** (timezone fix) → commit
+2. **Prompt 2** (date logging) → run brief, check logs
+3. **Prompt 3** (Gemini logging) → run brief, check logs
+
+After logging, we'll know the exact root cause for missing dates and Gemini failures.
+
+Go! 🔧
