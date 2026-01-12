@@ -392,6 +392,7 @@ interface UserProfile {
   languagePreference: string | null;
   councilSystemPrompt: string | null;
   successDefinition: string | null;
+  regulatorSources?: string[];
 }
 
 interface EspressoBrief {
@@ -456,6 +457,7 @@ interface SearchContext {
   hasIndonesianFocus: boolean;
   hasInternationalFocus: boolean;
   persona: string;
+  regulatorSources?: string[];
 }
 
 function buildSearchContext(profile: UserProfile): SearchContext {
@@ -511,6 +513,7 @@ function buildSearchContext(profile: UserProfile): SearchContext {
     hasIndonesianFocus,
     hasInternationalFocus,
     persona,
+    regulatorSources: profile.regulatorSources,
   };
 }
 
@@ -651,7 +654,26 @@ function generateSearchQueries(ctx: SearchContext): SearchQueryResult {
     queries.push(`${topic} global latest today ${year}`);
   }
 
-  // 4. Truncate intelligently to 8-12 queries
+  // 4. Regulatory source queries
+  if (ctx.regulatorSources && ctx.regulatorSources.length > 0) {
+    const siteMap: Record<string, string> = {
+      "OJK": "ojk.go.id",
+      "BI": "bi.go.id",
+      "LPS": "lps.go.id",
+      "Kemenkeu": "kemenkeu.go.id",
+      "BPS": "bps.go.id"
+    };
+
+    for (const source of ctx.regulatorSources) {
+      const site = siteMap[source];
+      if (site) {
+        queries.push(`site:${site} siaran pers berita terbaru ${year}`);
+        console.log(`📋 Added regulatory query: site:${site}`);
+      }
+    }
+  }
+
+  // 5. Truncate intelligently to 8-12 queries
   // Priority: role queries > tokoh queries > institusi queries > topic queries
   let finalQueries = queries;
   if (finalQueries.length > 12) {

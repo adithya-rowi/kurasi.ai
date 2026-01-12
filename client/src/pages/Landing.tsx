@@ -129,6 +129,11 @@ export default function Landing() {
         ...state.regulators.map(r => REGULATORS.find(reg => reg.id === r)?.label || r)
       ].filter(Boolean).join(', ');
 
+      // Get regulator labels for search queries
+      const regulatorLabels = state.regulators
+        .map(r => REGULATORS.find(reg => reg.id === r)?.label)
+        .filter(Boolean) as string[];
+
       const res = await fetch('/api/generate-brief', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -140,7 +145,8 @@ export default function Landing() {
           topics: derivedTopics,
           institutions: allInstitutions,
           voices: '',
-          email: state.email
+          email: state.email,
+          regulatorSources: regulatorLabels
         })
       });
 
