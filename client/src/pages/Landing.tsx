@@ -43,21 +43,12 @@ interface EspressoBrief {
   };
 }
 
-const TOPICS = [
-  'Ekonomi Makro', 'Perbankan & Keuangan', 'Kebijakan Pemerintah',
-  'Teknologi & AI', 'Startup & Venture', 'Energi & Resources',
-  'Properti', 'Pasar Modal'
-];
-
-const ROLES = [
-  'Investor / Fund Manager',
-  'CEO / Founder',
-  'Eksekutif Korporat (CFO/COO/Head)',
-  'Komisaris / Penasihat Senior',
-  'Konsultan / Advisor',
-  'Regulator / Pemerintahan',
-  'Akademisi / Peneliti',
-  'Lainnya'
+const REGULATORS = [
+  { id: 'ojk', label: 'OJK' },
+  { id: 'bi', label: 'BI' },
+  { id: 'lps', label: 'LPS' },
+  { id: 'kemenkeu', label: 'Kemenkeu' },
+  { id: 'bps', label: 'BPS' }
 ];
 
 export default function Landing() {
@@ -72,11 +63,8 @@ export default function Landing() {
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
   const [state, setState] = useState({
-    role: '',
-    decisionContext: '',
-    topics: [] as string[],
     institutions: '',
-    voices: '',
+    regulators: [] as string[],
     time: '06:00',
     email: ''
   });
@@ -104,39 +92,54 @@ export default function Landing() {
     return () => clearInterval(interval);
   }, [loading]);
 
-  const toggleTopic = (topic: string) => {
+  const toggleRegulator = (regulator: string) => {
     setState(prev => ({
       ...prev,
-      topics: prev.topics.includes(topic) 
-        ? prev.topics.filter(t => t !== topic)
-        : [...prev.topics, topic]
+      regulators: prev.regulators.includes(regulator)
+        ? prev.regulators.filter(r => r !== regulator)
+        : [...prev.regulators, regulator]
     }));
   };
 
-  // Flexible validation: topics OR institutions OR voices
-  const hasAnyFocus = state.topics.length > 0 || state.institutions.trim().length > 0 || state.voices.trim().length > 0;
+  // Auto-derive topics from institusi name
+  const deriveTopics = (institusi: string): string[] => {
+    const lowerInstitusi = institusi.toLowerCase();
+    if (lowerInstitusi.includes('bank')) {
+      return ['Perbankan & Keuangan'];
+    }
+    return ['Ekonomi Makro'];
+  };
 
-  // Step 1: role is required AND (topics OR institutions OR voices)
-  const canProceedStep1 = state.role !== '' && hasAnyFocus;
-  // Step 2: email required + at least one focus preference
-  const canSubmit = state.email.includes('@') && hasAnyFocus;
+  // Validation: institusi is required
+  const canProceedStep1 = state.institutions.trim().length > 0;
+  // Step 2: email required
+  const canSubmit = state.email.includes('@');
 
   const handleSubmit = async () => {
     setLoading(true);
     setError(null);
 
     try {
+      // Auto-derive topics from institusi name
+      const derivedTopics = deriveTopics(state.institutions);
+
+      // Build institutions string including selected regulators
+      const allInstitutions = [
+        state.institutions,
+        ...state.regulators.map(r => REGULATORS.find(reg => reg.id === r)?.label || r)
+      ].filter(Boolean).join(', ');
+
       const res = await fetch('/api/generate-brief', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          role: state.role,
-          decisionContext: state.decisionContext || null,
+          role: 'Komisaris / Penasihat Senior',
+          decisionContext: 'pengawasan dan governance',
           sources: [],
           customSources: '',
-          topics: state.topics,
-          institutions: state.institutions,
-          voices: state.voices,
+          topics: derivedTopics,
+          institutions: allInstitutions,
+          voices: '',
           email: state.email
         })
       });
@@ -154,7 +157,7 @@ export default function Landing() {
         sessionStorage.setItem('loperBrief', JSON.stringify(data.brief));
         sessionStorage.setItem('loperEmail', state.email);
         sessionStorage.setItem('loperTime', state.time);
-        setCurrentStep(3); // Go to Step 3: Show brief
+        setCurrentStep(2); // Go to Step 2: Show brief
       } else {
         setError('Gagal membuat brief. Silakan coba lagi.');
       }
@@ -179,7 +182,7 @@ export default function Landing() {
     setFeedbackSubmitted(true);
   };
 
-  const progressWidth = brief ? 100 : loading ? 75 : (currentStep / 2) * 100;
+  const progressWidth = brief ? 100 : loading ? 50 : 0;
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#fff', color: '#0a1628', minHeight: '100vh' }}>
@@ -293,70 +296,26 @@ export default function Landing() {
               <div style={{ height: '100%', background: '#cc2936', width: `${progressWidth}%`, transition: 'width 0.3s ease' }} />
             </div>
 
-            {/* Step 1: Focus */}
+            {/* Step 1: Simplified - Institusi, Regulators, Email */}
             {currentStep === 1 && (
               <div className="animate-fade-in">
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '1rem', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '1.125rem', fontWeight: 700, color: '#0a1628' }}>1. Ceritakan kebutuhan Anda</span>
-                  <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>1/2</span>
+                  <span style={{ fontSize: '1.125rem', fontWeight: 700, color: '#0a1628' }}>Ceritakan institusi Anda</span>
                 </div>
                 <p style={{ fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '1.5rem' }}>
-                  Ini membantu AI menulis 'Mengapa penting' sesuai peran Anda.
+                  AI akan mempersonalisasi brief untuk Komisaris & Penasihat Senior.
                 </p>
 
-                {/* Role Selection */}
-                <p className="serif" style={{ fontSize: '1.5rem', fontWeight: 500, color: '#0a1628', marginBottom: '1rem' }}>Peran Anda</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '2rem' }}>
-                  {ROLES.map(role => (
-                    <Chip
-                      key={role}
-                      label={role}
-                      selected={state.role === role}
-                      onClick={() => setState(prev => ({ ...prev, role }))}
-                    />
-                  ))}
-                </div>
-
-                {/* Decision Context */}
+                {/* Institusi Input */}
                 <div style={{ marginBottom: '2rem' }}>
-                  <label style={{ fontSize: '0.875rem', color: '#2a3f5f', marginBottom: '0.5rem', display: 'block' }}>
-                    Keputusan yang sedang dipikirkan (opsional)
-                  </label>
-                  <input
-                    type="text"
-                    value={state.decisionContext}
-                    onChange={(e) => setState(prev => ({ ...prev, decisionContext: e.target.value }))}
-                    placeholder="Contoh: alokasi portofolio 2026, ekspansi bisnis ke Vietnam"
-                    style={{
-                      width: '100%',
-                      padding: '1rem 1.25rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: 4,
-                      fontSize: '1rem',
-                      fontFamily: "'DM Sans', sans-serif",
-                      color: '#0a1628',
-                      outline: 'none'
-                    }}
-                    data-testid="input-decision-context"
-                  />
-                </div>
-
-                <p className="serif" style={{ fontSize: '1.5rem', fontWeight: 500, color: '#0a1628', marginBottom: '1.5rem' }}>Fokus (pilih beberapa)</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '2rem' }}>
-                  {TOPICS.map(topic => (
-                    <Chip key={topic} label={topic} selected={state.topics.includes(topic)} onClick={() => toggleTopic(topic)} />
-                  ))}
-                </div>
-
-                <div style={{ marginBottom: '2rem' }}>
-                  <label style={{ fontSize: '0.875rem', color: '#2a3f5f', marginBottom: '0.5rem', display: 'block' }}>
-                    Institusi yang ingin dipantau
+                  <label style={{ fontSize: '0.875rem', color: '#2a3f5f', marginBottom: '0.5rem', display: 'block', fontWeight: 500 }}>
+                    Nama Institusi Anda
                   </label>
                   <input
                     type="text"
                     value={state.institutions}
                     onChange={(e) => setState(prev => ({ ...prev, institutions: e.target.value }))}
-                    placeholder="Contoh: Bank Indonesia, OJK, Kementerian Keuangan, The Fed"
+                    placeholder="Contoh: Bank Mandiri, Telkom Indonesia, Astra International"
                     style={{
                       width: '100%',
                       padding: '1rem 1.25rem',
@@ -371,94 +330,45 @@ export default function Landing() {
                   />
                 </div>
 
+                {/* Regulator Checkboxes */}
                 <div style={{ marginBottom: '2rem' }}>
-                  <label style={{ fontSize: '0.875rem', color: '#2a3f5f', marginBottom: '0.5rem', display: 'block' }}>
-                    Tokoh atau pemikir yang Anda ikuti
+                  <label style={{ fontSize: '0.875rem', color: '#2a3f5f', marginBottom: '0.75rem', display: 'block', fontWeight: 500 }}>
+                    Regulator yang ingin dipantau
                   </label>
-                  <input
-                    type="text"
-                    value={state.voices}
-                    onChange={(e) => setState(prev => ({ ...prev, voices: e.target.value }))}
-                    placeholder="Contoh: Paul Krugman, Martin Wolf, Sri Mulyani, Chatib Basri"
-                    style={{
-                      width: '100%',
-                      padding: '1rem 1.25rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: 4,
-                      fontSize: '1rem',
-                      fontFamily: "'DM Sans', sans-serif",
-                      color: '#0a1628',
-                      outline: 'none'
-                    }}
-                    data-testid="input-voices"
-                  />
-                  <div style={{ fontSize: '0.8125rem', color: '#94a3b8', marginTop: '0.5rem' }}>
-                    Bisa dari Substack, X, podcast, atau kolumnis yang Anda nilai
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                    {REGULATORS.map(regulator => (
+                      <label
+                        key={regulator.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.75rem 1rem',
+                          border: `1px solid ${state.regulators.includes(regulator.id) ? '#cc2936' : '#d1d5db'}`,
+                          borderRadius: 4,
+                          cursor: 'pointer',
+                          background: state.regulators.includes(regulator.id) ? 'rgba(204, 41, 54, 0.04)' : '#fff',
+                          transition: 'all 0.2s ease'
+                        }}
+                        data-testid={`checkbox-${regulator.id}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={state.regulators.includes(regulator.id)}
+                          onChange={() => toggleRegulator(regulator.id)}
+                          style={{ accentColor: '#cc2936' }}
+                        />
+                        <span style={{ fontSize: '0.9375rem', color: '#0a1628', fontWeight: 500 }}>
+                          {regulator.label}
+                        </span>
+                      </label>
+                    ))}
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginTop: '2rem' }}>
-                  <button
-                    onClick={() => setCurrentStep(2)}
-                    disabled={!canProceedStep1}
-                    style={{
-                      background: canProceedStep1 ? '#cc2936' : '#d1d5db',
-                      color: '#fff',
-                      padding: '1rem 2rem',
-                      fontSize: '0.9375rem',
-                      fontWeight: 600,
-                      border: 'none',
-                      cursor: canProceedStep1 ? 'pointer' : 'not-allowed',
-                      fontFamily: "'DM Sans', sans-serif"
-                    }}
-                    data-testid="button-next-1"
-                  >
-                    Lanjut →
-                  </button>
-                  {!canProceedStep1 && (
-                    <span style={{ fontSize: '0.8125rem', color: '#94a3b8', fontStyle: 'italic' }}>
-                      {state.role === '' ? 'Pilih peran Anda' : 'Pilih minimal satu topik, institusi, atau tokoh'}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Step 2: Delivery */}
-            {currentStep === 2 && (
-              <div className="animate-fade-in">
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '1rem', marginBottom: '1.5rem' }}>
-                  <span style={{ fontSize: '1.125rem', fontWeight: 700, color: '#0a1628' }}>2. Kapan brief Anda dikirim?</span>
-                  <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>2/2</span>
-                </div>
-
-                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-                  {['06:00', '12:00', '18:00'].map((time, idx) => (
-                    <div
-                      key={time}
-                      onClick={() => setState(prev => ({ ...prev, time }))}
-                      style={{
-                        flex: 1,
-                        padding: '1rem',
-                        border: `1px solid ${state.time === time ? '#cc2936' : '#d1d5db'}`,
-                        borderRadius: 4,
-                        textAlign: 'center',
-                        cursor: 'pointer',
-                        background: state.time === time ? 'rgba(204, 41, 54, 0.04)' : 'transparent',
-                        transition: 'all 0.2s ease'
-                      }}
-                      data-testid={`time-option-${time}`}
-                    >
-                      <div style={{ fontSize: '1.25rem', fontWeight: 600, color: '#0a1628' }}>{time}</div>
-                      <div style={{ fontSize: '0.8125rem', color: '#2a3f5f' }}>
-                        {idx === 0 ? 'Pagi' : idx === 1 ? 'Siang' : 'Sore'}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#0a1628', marginBottom: '0.5rem' }}>
+                {/* Email Input */}
+                <div style={{ marginBottom: '2rem' }}>
+                  <label style={{ fontSize: '0.875rem', color: '#2a3f5f', marginBottom: '0.5rem', display: 'block', fontWeight: 500 }}>
                     Email Anda
                   </label>
                   <input
@@ -497,53 +407,6 @@ export default function Landing() {
                   </p>
                 </div>
 
-                {/* Summary Panel */}
-                <div style={{
-                  background: '#f9fafb',
-                  borderLeft: '3px solid #cc2936',
-                  padding: '1.5rem',
-                  marginTop: '2rem'
-                }}>
-                  <div style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    letterSpacing: '0.1em',
-                    textTransform: 'uppercase',
-                    color: '#2a3f5f',
-                    marginBottom: '1rem'
-                  }}>Ringkasan Preferensi Anda</div>
-                  <div style={{ marginBottom: '0.75rem' }}>
-                    <div style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>Peran</div>
-                    <div style={{ fontSize: '0.9375rem', color: '#0a1628', fontWeight: 500 }}>
-                      {state.role || '-'}
-                    </div>
-                  </div>
-                  {state.decisionContext && (
-                    <div style={{ marginBottom: '0.75rem' }}>
-                      <div style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>Konteks Keputusan</div>
-                      <div style={{ fontSize: '0.9375rem', color: '#0a1628', fontWeight: 500 }}>{state.decisionContext}</div>
-                    </div>
-                  )}
-                  <div style={{ marginBottom: '0.75rem' }}>
-                    <div style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>Topik</div>
-                    <div style={{ fontSize: '0.9375rem', color: '#0a1628', fontWeight: 500 }}>
-                      {state.topics.join(', ') || '-'}
-                    </div>
-                  </div>
-                  {state.institutions && (
-                    <div style={{ marginBottom: '0.75rem' }}>
-                      <div style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>Institusi</div>
-                      <div style={{ fontSize: '0.9375rem', color: '#0a1628', fontWeight: 500 }}>{state.institutions}</div>
-                    </div>
-                  )}
-                  {state.voices && (
-                    <div>
-                      <div style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>Tokoh</div>
-                      <div style={{ fontSize: '0.9375rem', color: '#0a1628', fontWeight: 500 }}>{state.voices}</div>
-                    </div>
-                  )}
-                </div>
-
                 {/* Error Message */}
                 {error && (
                   <div style={{
@@ -561,32 +424,16 @@ export default function Landing() {
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginTop: '2rem' }}>
                   <button
-                    onClick={() => setCurrentStep(1)}
-                    disabled={loading}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: loading ? '#94a3b8' : '#2a3f5f',
-                      fontSize: '0.875rem',
-                      cursor: loading ? 'not-allowed' : 'pointer',
-                      padding: '0.5rem 0',
-                      fontFamily: "'DM Sans', sans-serif"
-                    }}
-                    data-testid="button-back-2"
-                  >
-                    ← Kembali
-                  </button>
-                  <button
                     onClick={handleSubmit}
-                    disabled={!canSubmit || loading}
+                    disabled={!canProceedStep1 || !canSubmit || loading}
                     style={{
-                      background: canSubmit && !loading ? '#cc2936' : '#d1d5db',
+                      background: canProceedStep1 && canSubmit && !loading ? '#cc2936' : '#d1d5db',
                       color: '#fff',
                       padding: '1rem 2rem',
                       fontSize: '0.9375rem',
                       fontWeight: 600,
                       border: 'none',
-                      cursor: canSubmit && !loading ? 'pointer' : 'not-allowed',
+                      cursor: canProceedStep1 && canSubmit && !loading ? 'pointer' : 'not-allowed',
                       fontFamily: "'DM Sans', sans-serif",
                       display: 'flex',
                       alignItems: 'center',
@@ -604,6 +451,11 @@ export default function Landing() {
                       'Lihat Brief Pertama Saya →'
                     )}
                   </button>
+                  {(!canProceedStep1 || !canSubmit) && !loading && (
+                    <span style={{ fontSize: '0.8125rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                      {!state.institutions.trim() ? 'Masukkan nama institusi' : 'Masukkan email yang valid'}
+                    </span>
+                  )}
                 </div>
 
                 {/* Loading Explanation */}
@@ -622,8 +474,8 @@ export default function Landing() {
               </div>
             )}
 
-            {/* Step 3: Brief Preview + Feedback */}
-            {currentStep === 3 && brief && (
+            {/* Step 2: Brief Preview + Feedback */}
+            {currentStep === 2 && brief && (
               <div className="animate-fade-in">
                 {/* Brief Header - Economist Espresso style */}
                 <div style={{ marginBottom: '2.5rem' }}>
@@ -1104,28 +956,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-    </div>
-  );
-}
-
-function Chip({ label, selected, onClick }: { label: string; selected: boolean; onClick: () => void }) {
-  return (
-    <div
-      onClick={onClick}
-      style={{
-        padding: '0.625rem 1.25rem',
-        border: `1px solid ${selected ? '#cc2936' : '#d1d5db'}`,
-        borderRadius: 100,
-        fontSize: '0.9375rem',
-        color: selected ? '#fff' : '#cc2936',
-        background: selected ? '#cc2936' : '#fff',
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        fontWeight: 500
-      }}
-      data-testid={`chip-${label.toLowerCase().replace(/\s+/g, '-')}`}
-    >
-      {label}
     </div>
   );
 }
