@@ -169,6 +169,7 @@ Respond with valid JSON only, no markdown.`;
     voices: z.string().default(""),
     email: z.string().email(),
     regulatorSources: z.array(z.string()).default([]),
+    focusAreas: z.array(z.string()).default([]),
   });
 
   app.post("/api/generate-brief", async (req, res) => {
@@ -178,7 +179,7 @@ Respond with valid JSON only, no markdown.`;
         return res.status(400).json({ error: validated.error.issues[0]?.message || "Invalid request" });
       }
 
-      const { role, decisionContext, sources, customSources, topics, institutions, voices, email, regulatorSources } = validated.data;
+      const { role, decisionContext, sources, customSources, topics, institutions, voices, email, regulatorSources, focusAreas } = validated.data;
 
       // Validate: at least ONE preference field has content
       const hasAnySources = sources.length > 0 || customSources.trim().length > 0;
@@ -215,6 +216,7 @@ Respond with valid JSON only, no markdown.`;
         entitiesToTrack: entitiesList,
         languagePreference: "id",
         regulatorSources,
+        focusAreas,
       };
 
       console.log(`📧 Generate brief for: ${email}`);
@@ -224,6 +226,7 @@ Respond with valid JSON only, no markdown.`;
       console.log(`   Topics: ${profile.primaryTopics.join(", ") || "(none)"}`);
       console.log(`   Entities: ${profile.entitiesToTrack.join(", ") || "(none)"}`);
       console.log(`   Regulators: ${profile.regulatorSources.join(", ") || "(none)"}`);
+      console.log(`   Focus Areas: ${profile.focusAreas.join(", ") || "(none)"}`);
 
       // Run council with the profile (no DB user required)
       const result = await runCouncilV2(`guest-${email}`, profile);

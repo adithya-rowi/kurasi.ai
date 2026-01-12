@@ -393,6 +393,7 @@ interface UserProfile {
   councilSystemPrompt: string | null;
   successDefinition: string | null;
   regulatorSources?: string[];
+  focusAreas?: string[];
 }
 
 interface EspressoBrief {
@@ -458,6 +459,7 @@ interface SearchContext {
   hasInternationalFocus: boolean;
   persona: string;
   regulatorSources?: string[];
+  focusAreas?: string[];
 }
 
 function buildSearchContext(profile: UserProfile): SearchContext {
@@ -514,6 +516,7 @@ function buildSearchContext(profile: UserProfile): SearchContext {
     hasInternationalFocus,
     persona,
     regulatorSources: profile.regulatorSources,
+    focusAreas: profile.focusAreas,
   };
 }
 
@@ -673,7 +676,46 @@ function generateSearchQueries(ctx: SearchContext): SearchQueryResult {
     }
   }
 
-  // 5. Truncate intelligently to 8-12 queries
+  // 5. Focus area queries (commissioner-specific)
+  if (ctx.focusAreas && ctx.focusAreas.length > 0) {
+    const focusKeywords: Record<string, string[]> = {
+      "Kualitas kredit & NPL": ["NPL", "kredit macet", "non performing loan"],
+      "Likuiditas & biaya dana": ["LDR", "likuiditas", "cost of funds"],
+      "Kepatuhan regulasi BI/OJK": ["regulasi OJK", "POJK", "PBI"],
+      "Risiko siber": ["cybersecurity", "serangan siber", "data breach"],
+      "Transformasi digital": ["digital banking", "fintech", "digitalisasi"],
+      "Kinerja Direksi": ["kinerja direksi", "RUPS", "kompensasi eksekutif"],
+      "Solvabilitas & RBC": ["RBC", "solvabilitas", "modal minimum"],
+      "Klaim ratio": ["klaim asuransi", "loss ratio", "combined ratio"],
+      "Kepatuhan OJK": ["POJK asuransi", "regulasi OJK"],
+      "Distribusi digital": ["insurtech", "asuransi digital"],
+      "Kinerja keuangan": ["laporan keuangan", "laba rugi", "neraca"],
+      "Kepatuhan regulasi": ["kepatuhan", "compliance", "audit"],
+      "Risiko operasional": ["risiko operasional", "operational risk", "internal control"],
+    };
+
+    // Get primary institusi (first entity that's not a regulator)
+    const institusi = ctx.entities.find(e =>
+      !["OJK", "BI", "LPS", "Kemenkeu", "BPS"].includes(e)
+    ) || "";
+
+    for (const focus of ctx.focusAreas) {
+      const keywords = focusKeywords[focus];
+      if (keywords && keywords.length > 0) {
+        // Use first keyword for query
+        const keyword = keywords[0];
+        if (institusi) {
+          queries.push(`"${institusi}" ${keyword} ${year}`);
+          console.log(`🎯 Added focus query: "${institusi}" ${keyword}`);
+        } else {
+          queries.push(`${keyword} Indonesia bank ${year}`);
+          console.log(`🎯 Added focus query: ${keyword} Indonesia bank`);
+        }
+      }
+    }
+  }
+
+  // 6. Truncate intelligently to 8-12 queries
   // Priority: role queries > tokoh queries > institusi queries > topic queries
   let finalQueries = queries;
   if (finalQueries.length > 12) {
@@ -1995,29 +2037,33 @@ PERSONALIZATION CONTRACT (Phase 2.1 - NON-NEGOTIABLE)
 ═══════════════════════════════════════════════════════════════
 
 ROLE: ${ctx.role}
-DECISION CONTEXT: ${ctx.decisionContext || "(none)"}
+USER'S FOCUS AREAS: ${ctx.focusAreas?.join(', ') || 'general governance'}
 
-STRICT RULES FOR "Mengapa penting" (whyItMatters):
+"whyItMatters" RULES:
 
 1. WAJIB: Setiap "Mengapa penting" HARUS dimulai dengan:
-   "Sebagai ${ctx.role}, ..."
+   "Sebagai Komisaris, ..."
 
-2. JIKA DECISION CONTEXT ada (bukan "(none)"):
-   - "Mengapa penting" HARUS menyebut koneksi langsung ke: "${ctx.decisionContext || "(none)"}"
-   - Contoh: "Sebagai ${ctx.role}, ini relevan untuk ${ctx.decisionContext || "keputusan Anda"}..."
+2. CONNECT each story to ONE of the user's focus areas above:
+   - Be SPECIFIC: "...yang fokus pada kualitas kredit, tren NPL ini menunjukkan..."
+   - Each story should use a DIFFERENT focus area if possible
+   - Give ACTIONABLE advice: questions for Direksi, agenda items, risk flags
 
-3. DILARANG: Frasa generik seperti "Bagi eksekutif" atau "Untuk para pemimpin"
-   - KECUALI jika ROLE adalah "Eksekutif Korporat (CFO/COO/Head)"
+3. DILARANG (BANNED):
+   - Generic "relevan untuk pengawasan" atau "relevan untuk governance" (too vague)
+   - Same structure/phrase repeated across stories
+   - Frasa generik seperti "Bagi eksekutif" atau "Untuk para pemimpin"
 
-4. KHUSUS untuk ROLE "Konsultan / Advisor":
-   - Framing HARUS tentang: implikasi klien, peluang advisory, packaging penawaran,
-     sudut pitch, rate card, partnership/subcontracting, atau langkah konkret berikutnya
-   - Contoh yang BENAR:
-     "Sebagai Konsultan / Advisor, kekurangan talenta cyber ini membuka peluang
-     partnership dengan vendor training untuk menawarkan paket upskilling ke klien
-     enterprise Anda dengan margin konsultasi 30-40%."
-   - Contoh yang SALAH:
-     "Bagi eksekutif, keamanan siber penting untuk bisnis." (terlalu generik)
+4. CONTOH YANG BENAR:
+   - "Sebagai Komisaris yang fokus pada kualitas kredit, lonjakan NPL sektor properti ini
+     perlu masuk agenda rapat komite risiko minggu depan. Tanyakan ke Direksi: bagaimana
+     exposure kita ke developer kategori B?"
+   - "Sebagai Komisaris yang mengawasi transformasi digital, inisiatif open banking BCA
+     ini bisa jadi benchmark. Minta Direksi presentasikan roadmap digital kita Q1 2026."
+
+5. CONTOH YANG SALAH:
+   - "Sebagai Komisaris, ini relevan untuk pengawasan dan governance." (terlalu generik, DILARANG)
+   - "Sebagai Komisaris, penting untuk diperhatikan." (tidak spesifik, DILARANG)
 
 ═══════════════════════════════════════════════════════════════
 DATA DARI SEARCH LAYER (${searchModels.join(", ")})
