@@ -51,6 +51,38 @@ const REGULATORS = [
   { id: 'bps', label: 'BPS' }
 ];
 
+// Sector-specific focus areas for commissioners
+const SECTOR_FOCUS_MAP: Record<string, string[]> = {
+  Bank: [
+    "Kualitas kredit & NPL",
+    "Likuiditas & biaya dana",
+    "Kepatuhan regulasi BI/OJK",
+    "Risiko siber",
+    "Transformasi digital",
+    "Kinerja Direksi"
+  ],
+  Asuransi: [
+    "Solvabilitas & RBC",
+    "Klaim ratio",
+    "Kepatuhan OJK",
+    "Distribusi digital"
+  ],
+  default: [
+    "Kinerja keuangan",
+    "Kepatuhan regulasi",
+    "Risiko operasional",
+    "Transformasi digital"
+  ]
+};
+
+// Detect sector from institusi name
+function detectSector(institusi: string): string {
+  const lower = institusi.toLowerCase();
+  if (lower.includes('bank')) return 'Bank';
+  if (lower.includes('asuransi') || lower.includes('insurance')) return 'Asuransi';
+  return 'default';
+}
+
 export default function Landing() {
   const [, setLocation] = useLocation();
   const [currentStep, setCurrentStep] = useState(1);
@@ -65,9 +97,26 @@ export default function Landing() {
   const [state, setState] = useState({
     institutions: '',
     regulators: [] as string[],
+    focusAreas: [] as string[],
     time: '06:00',
     email: ''
   });
+
+  // Detected sector for UI display
+  const detectedSector = detectSector(state.institutions);
+  const availableFocusAreas = SECTOR_FOCUS_MAP[detectedSector] || SECTOR_FOCUS_MAP.default;
+
+  // Auto-suggest focus areas when institusi changes
+  useEffect(() => {
+    if (!state.institutions.trim()) {
+      setState(prev => ({ ...prev, focusAreas: [] }));
+      return;
+    }
+    const sector = detectSector(state.institutions);
+    const focusOptions = SECTOR_FOCUS_MAP[sector] || SECTOR_FOCUS_MAP.default;
+    // Pre-select first 3 focus areas
+    setState(prev => ({ ...prev, focusAreas: focusOptions.slice(0, 3) }));
+  }, [state.institutions]);
 
   // Loading messages rotation
   useEffect(() => {
@@ -98,6 +147,15 @@ export default function Landing() {
       regulators: prev.regulators.includes(regulator)
         ? prev.regulators.filter(r => r !== regulator)
         : [...prev.regulators, regulator]
+    }));
+  };
+
+  const toggleFocusArea = (focus: string) => {
+    setState(prev => ({
+      ...prev,
+      focusAreas: prev.focusAreas.includes(focus)
+        ? prev.focusAreas.filter(f => f !== focus)
+        : [...prev.focusAreas, focus]
     }));
   };
 
@@ -134,19 +192,25 @@ export default function Landing() {
         .map(r => REGULATORS.find(reg => reg.id === r)?.label)
         .filter(Boolean) as string[];
 
+      // Build dynamic decisionContext from focus areas
+      const dynamicDecisionContext = state.focusAreas.length > 0
+        ? state.focusAreas.join(', ')
+        : 'pengawasan umum';
+
       const res = await fetch('/api/generate-brief', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           role: 'Komisaris / Penasihat Senior',
-          decisionContext: 'pengawasan dan governance',
+          decisionContext: dynamicDecisionContext,
           sources: [],
           customSources: '',
           topics: derivedTopics,
           institutions: allInstitutions,
           voices: '',
           email: state.email,
-          regulatorSources: regulatorLabels
+          regulatorSources: regulatorLabels,
+          focusAreas: state.focusAreas
         })
       });
 
@@ -371,6 +435,47 @@ export default function Landing() {
                     ))}
                   </div>
                 </div>
+
+                {/* Focus Areas Picker */}
+                {state.institutions.trim() && (
+                  <div style={{ marginBottom: '2rem' }}>
+                    <label style={{ fontSize: '0.875rem', color: '#2a3f5f', marginBottom: '0.5rem', display: 'block', fontWeight: 500 }}>
+                      Fokus Pengawasan Anda
+                    </label>
+                    <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.75rem' }}>
+                      {detectedSector !== 'default' ? `Sektor terdeteksi: ${detectedSector}` : 'Pilih area yang ingin dipantau'}
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                      {availableFocusAreas.map(focus => (
+                        <label
+                          key={focus}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            padding: '0.75rem 1rem',
+                            border: `1px solid ${state.focusAreas.includes(focus) ? '#cc2936' : '#d1d5db'}`,
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            background: state.focusAreas.includes(focus) ? 'rgba(204, 41, 54, 0.04)' : '#fff',
+                            transition: 'all 0.2s ease'
+                          }}
+                          data-testid={`focus-${focus.toLowerCase().replace(/\s+/g, '-')}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={state.focusAreas.includes(focus)}
+                            onChange={() => toggleFocusArea(focus)}
+                            style={{ accentColor: '#cc2936' }}
+                          />
+                          <span style={{ fontSize: '0.9375rem', color: '#0a1628', fontWeight: 500 }}>
+                            {focus}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Email Input */}
                 <div style={{ marginBottom: '2rem' }}>
